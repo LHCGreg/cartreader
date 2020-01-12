@@ -2,6 +2,13 @@
 // GB SMART MODULE
 // Supports 32M cart with LH28F016SUT flash
 //******************************************
+
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "GBSmart.h"
+#include "GB.h"
+#include "filebrowser.h"
+
 #define GB_SMART_GAMES_PER_PAGE  6
 
 /******************************************

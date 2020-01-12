@@ -4,6 +4,12 @@
 // Added BSX Sram, copied from skamans enhanced sketch //sanni
 //******************************************
 
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "SV.h"
+#include "SNES.h"
+#include "filebrowser.h"
+
 /******************************************
    Satellaview 8M Memory Pack
 ******************************************/

@@ -3,13 +3,18 @@
 //******************************************
 // Writes to Sega CD Backup RAM Cart require an extra wire from MRES (B02) to VRES (B27)
 
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "options.h"
+#include "MD.h"
+#include "filebrowser.h"
+#include "FLASH.h"
+
 /******************************************
    Variables
  *****************************************/
 unsigned long sramEnd;
-byte eepbit[8];
 int eepSize;
-byte eeptemp;
 word addrhi;
 word addrlo;
 word chksum;

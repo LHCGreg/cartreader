@@ -5,6 +5,15 @@
 // also based on "CoolArduino" by HardWareMan
 // Pinout changes: LED and CIRAM_A10
 
+#include <Arduino.h>
+#include <SdFat.h>
+#include <Adafruit_GFX.h>
+#include "Cart_Reader.h"
+#include "options.h"
+#include "NES.h"
+#include "OLED_menu.h"
+#include "filebrowser.h"
+
 //Line Content
 //26   Supported Mappers
 //101  Defines
@@ -618,7 +627,7 @@ uint32_t crc32EEP(File &file, uint32_t &charcnt) {
   return ~oldcrc32;
 }
 
-void calcCRC(char* checkFile, unsigned long filesize) {
+void calcCRC(char* checkFile, uint32_t filesize) {
   uint32_t crc;
   crcFile = sd.open(checkFile);
   if (filesize < 1024)
@@ -973,7 +982,7 @@ setmapper:
 
 void checkMapperSize() {
   for (int i = 0; i < mapcount; i++) {
-    index = i * 7;
+    int index = i * 7;
     byte mapcheck = pgm_read_byte(mapsize + index);
     if (mapcheck == mapper) {
       prglo = pgm_read_byte(mapsize + index + 1);
@@ -998,7 +1007,7 @@ void setPRGSize() {
     while (1) {
       display_Clear();
       print_Msg(F("PRG Size: "));
-      println_Msg(PRG[i]);
+      println_Msg(String(PRG[i]));
       println_Msg(F(""));
       println_Msg(F("Press to Change"));
       println_Msg(F("Hold to Select"));

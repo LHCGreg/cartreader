@@ -2,6 +2,14 @@
 // GAME BOY MODULE
 //******************************************
 
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "GB.h"
+#include "filebrowser.h"
+#include "GBA.h"
+#include "NP.h"
+#include "GBSmart.h"
+
 /******************************************
    Variables
  *****************************************/

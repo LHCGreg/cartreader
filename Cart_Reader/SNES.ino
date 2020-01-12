@@ -2,6 +2,16 @@
 // SUPER NINTENDO MODULE
 //******************************************
 
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "options.h"
+#include "SNES.h"
+#include "NP.h"
+#include "SV.h"
+#include "FLASH.h"
+#include "RGB_LED.h"
+#include "filebrowser.h"
+
 /******************************************
   Defines
  *****************************************/
@@ -1301,7 +1311,7 @@ void writeSRAM (boolean browseFile) {
 
       if ((romChips == 19) || (romChips == 20) || (romChips == 21) || (romChips == 26)) { // SuperFX
         if (lastByte > 0x10000) { // Large SuperFX SRAM (no known carts)
-          sramBanks = lastByte / 0x10000;
+          int sramBanks = lastByte / 0x10000; // TODO: Changed this to local instead of GB global, is it ok?
           for (int currBank = 0x70; currBank < sramBanks + 0x70; currBank++) {
             for (long currByte = 0x0000; currByte < 0x10000; currByte++) {
               writeBank_SNES(currBank, currByte, myFile.read());
@@ -1315,7 +1325,7 @@ void writeSRAM (boolean browseFile) {
         }
       }
       else if (lastByte > 0x8000) { // Large SRAM Fix
-        sramBanks = lastByte / 0x8000;
+        int sramBanks = lastByte / 0x8000; // TODO: Changed this to local instead of GB global, is it ok?
         for (int currBank = 0x70; currBank < sramBanks + 0x70; currBank++) {
           for (long currByte = 0x0000; currByte < 0x8000; currByte++) {
             writeBank_SNES(currBank, currByte, myFile.read());
@@ -1352,7 +1362,7 @@ void writeSRAM (boolean browseFile) {
         // Sram size
         long lastByte = (long(sramSize) * 128);
         if (lastByte > 0x2000) { // Large SRAM Fix
-          sramBanks = lastByte / 0x2000;
+          int sramBanks = lastByte / 0x2000; // TODO: Changed this to local instead of GB global, is it ok?
           for (int currBank = 0x30; currBank < sramBanks + 0x30; currBank++) {
             for (long currByte = 0x6000; currByte < 0x8000; currByte++) {
               writeBank_SNES(currBank, currByte, myFile.read());

@@ -2,6 +2,11 @@
 // GAME BOY ADVANCE MODULE
 //******************************************
 
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "GBA.h"
+#include "filebrowser.h"
+
 /******************************************
    Variables
  *****************************************/
