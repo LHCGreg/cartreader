@@ -11,6 +11,13 @@
 //
 //******************************************
 
+#include <Arduino.h>
+#include "PCE.h"
+#include "filebrowser.h"
+#include "menu.h"
+#include "globals.h"
+#include "utils.h"
+
 /******************************************
   Defines
  *****************************************/

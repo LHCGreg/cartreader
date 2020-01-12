@@ -2,12 +2,22 @@
 // GAME BOY MODULE
 //******************************************
 
+#include <Arduino.h>
+#include "GB.h"
+#include "filebrowser.h"
+#include "GBA.h"
+#include "NP.h"
+#include "GBSmart.h"
+#include "menu.h"
+#include "globals.h"
+#include "utils.h"
+
 /******************************************
    Variables
  *****************************************/
 // Game Boy
 int sramBanks;
-int romBanks;
+unsigned int romBanks;
 uint16_t sramEndAddress = 0;
 
 /******************************************
@@ -714,6 +724,7 @@ unsigned long verifySRAM_GB() {
   }
   else {
     print_Error(F("Can't open file"), true);
+    return 0;
   }
 }
 
@@ -845,7 +856,7 @@ void writeFlash_GB(byte MBC) {
     display_Update();
 
     // Read x number of banks
-    for (int currBank = 0; currBank < romBanks; currBank++) {
+    for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
       // Blink led
       PORTB ^= (1 << 4);
 
@@ -879,7 +890,7 @@ void writeFlash_GB(byte MBC) {
       uint16_t currAddr = 0;
       uint16_t endAddr = 0x3FFF;
 
-      for (int currBank = 0; currBank < romBanks; currBank++) {
+      for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
         // Blink led
         PORTB ^= (1 << 4);
 
@@ -930,7 +941,7 @@ void writeFlash_GB(byte MBC) {
       // Write flash
       dataOut();
 
-      for (int currBank = 0; currBank < romBanks; currBank++) {
+      for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
         // Blink led
         PORTB ^= (1 << 4);
 

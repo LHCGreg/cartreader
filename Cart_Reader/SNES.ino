@@ -2,6 +2,18 @@
 // SUPER NINTENDO MODULE
 //******************************************
 
+#include <Arduino.h>
+#include "options.h"
+#include "SNES.h"
+#include "NP.h"
+#include "SV.h"
+#include "FLASH.h"
+#include "RGB_LED.h"
+#include "filebrowser.h"
+#include "menu.h"
+#include "globals.h"
+#include "utils.h"
+
 /******************************************
   Defines
  *****************************************/
@@ -468,7 +480,7 @@ void readLoRomBanks( unsigned int start, unsigned int total, SdFile *file)
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
   draw_progressbar(0, totalProgressBar);
 
-  for (int currBank = start; currBank < total; currBank++) {
+  for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
 
     // Blink led
@@ -515,7 +527,7 @@ void readHiRomBanks( unsigned int start, unsigned int total, SdFile *file)
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
   draw_progressbar(0, totalProgressBar);
 
-  for (int currBank = start; currBank < total; currBank++) {
+  for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
 
     // Blink led
@@ -559,7 +571,6 @@ void getCartInfo_SNES() {
   //Prime SA1 cartridge
   uint16_t c = 0;
   uint16_t currByte = 0;
-  byte buffer[1024] = { 0 };
   PORTL = 192;
   while (c < 1024) {
     PORTF = (currByte & 0xFF);
@@ -571,7 +582,7 @@ void getCartInfo_SNES() {
     // let's be conservative and use 6 x 62.5 = 375ns
     NOP; NOP; NOP; NOP; NOP; NOP;
 
-    buffer[c] = PINC;
+    byte value [[gnu::unused]] = PINC;
     c++;
     currByte++;
   }
@@ -1301,7 +1312,7 @@ void writeSRAM (boolean browseFile) {
 
       if ((romChips == 19) || (romChips == 20) || (romChips == 21) || (romChips == 26)) { // SuperFX
         if (lastByte > 0x10000) { // Large SuperFX SRAM (no known carts)
-          sramBanks = lastByte / 0x10000;
+          int sramBanks = lastByte / 0x10000; // TODO: Changed this to local instead of GB global, is it ok?
           for (int currBank = 0x70; currBank < sramBanks + 0x70; currBank++) {
             for (long currByte = 0x0000; currByte < 0x10000; currByte++) {
               writeBank_SNES(currBank, currByte, myFile.read());
@@ -1315,7 +1326,7 @@ void writeSRAM (boolean browseFile) {
         }
       }
       else if (lastByte > 0x8000) { // Large SRAM Fix
-        sramBanks = lastByte / 0x8000;
+        int sramBanks = lastByte / 0x8000; // TODO: Changed this to local instead of GB global, is it ok?
         for (int currBank = 0x70; currBank < sramBanks + 0x70; currBank++) {
           for (long currByte = 0x0000; currByte < 0x8000; currByte++) {
             writeBank_SNES(currBank, currByte, myFile.read());
@@ -1352,7 +1363,7 @@ void writeSRAM (boolean browseFile) {
         // Sram size
         long lastByte = (long(sramSize) * 128);
         if (lastByte > 0x2000) { // Large SRAM Fix
-          sramBanks = lastByte / 0x2000;
+          int sramBanks = lastByte / 0x2000; // TODO: Changed this to local instead of GB global, is it ok?
           for (int currBank = 0x30; currBank < sramBanks + 0x30; currBank++) {
             for (long currByte = 0x6000; currByte < 0x8000; currByte++) {
               writeBank_SNES(currBank, currByte, myFile.read());
@@ -1775,6 +1786,7 @@ unsigned long verifySRAM() {
   }
   else {
     print_Error(F("Can't open file"), false);
+    return 0;
   }
 }
 

@@ -3,6 +3,16 @@
 //******************************************
 //  (GB Memory starts at around line 1740)
 
+#include <Arduino.h>
+#include "NP.h"
+#include "SNES.h"
+#include "FLASH.h"
+#include "filebrowser.h"
+#include "RGB_LED.h"
+#include "menu.h"
+#include "globals.h"
+#include "utils.h"
+
 /******************************************
    SF Memory Cassette
 ******************************************/
@@ -1297,10 +1307,10 @@ void printMapping() {
   // Read the mapping out of the first chip
   char buffer[3];
 
-  for (int currByte = 0xFF00; currByte < 0xFF50; currByte += 10) {
+  for (unsigned int currByte = 0xFF00; currByte < 0xFF50; currByte += 10) {
     for (int c = 0; c < 10; c++) {
       itoa (readBank_SFM(0xC0, currByte + c), buffer, 16);
-      for (int i = 0; i < 2 - strlen(buffer); i++) {
+      for (size_t i = 0; i < 2 - strlen(buffer); i++) {
         print_Msg("0");
       }
       // Now print the significant bits
@@ -2017,7 +2027,7 @@ void writeByte_GBM(word myAddress, byte myData) {
   HELPER FUNCTIONS
 **********************/
 void printSdBuffer(word startByte, word numBytes) {
-  for (int currByte = 0; currByte < numBytes; currByte += 10) {
+  for (unsigned int currByte = 0; currByte < numBytes; currByte += 10) {
     for (byte c = 0; c < 10; c++) {
       // Convert to char array so we don't lose leading zeros
       char currByteStr[2];

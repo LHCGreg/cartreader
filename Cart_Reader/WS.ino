@@ -22,6 +22,13 @@
 // C46         : INT (for RTC alarm interrupt)
 // C47         : CLK (384KHz on WS)
 
+#include <Arduino.h>
+#include "WS.h"
+#include "filebrowser.h"
+#include "menu.h"
+#include "globals.h"
+#include "utils.h"
+
 /******************************************
   Menu
 *****************************************/
@@ -355,7 +362,7 @@ void getDeveloperName(uint8_t id, char *buf, size_t length)
   if (buf == NULL)
     return;
 
-  char *devName = NULL;
+  const char *devName = NULL;
 
   switch (id)
   {
@@ -964,8 +971,8 @@ boolean compareChecksum_WS(const char *wsFilePath)
   // don't know why formating string "%04X(%04X)" always output "xxxx(0000)"
   // so split into two snprintf
   char result[11];
-  snprintf(result, 5, "%04X", calLength);
-  snprintf(result + 4, 11 - 4, "(%04X)", checksum);
+  snprintf(result, 5, "%04" PRIX32, calLength);
+  snprintf(result + 4, 11 - 4, "(%04" PRIX32 ")", checksum);
   print_Msg(F("Result: "));
   println_Msg(result);
 

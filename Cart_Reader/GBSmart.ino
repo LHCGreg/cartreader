@@ -2,6 +2,15 @@
 // GB SMART MODULE
 // Supports 32M cart with LH28F016SUT flash
 //******************************************
+
+#include <Arduino.h>
+#include "GBSmart.h"
+#include "GB.h"
+#include "filebrowser.h"
+#include "menu.h"
+#include "globals.h"
+#include "utils.h"
+
 #define GB_SMART_GAMES_PER_PAGE  6
 
 /******************************************
@@ -386,7 +395,7 @@ void gbSmartReadFlash()
     print_Error(F("Can't create file on SD"), true);
 
   // reset flash to read array state
-  for (int i = 0x00; i < gbSmartBanks; i += gbSmartBanksPerFlashChip)
+  for (unsigned int i = 0x00; i < gbSmartBanks; i += gbSmartBanksPerFlashChip)
     gbSmartResetFlash(i);
 
   // remaps mmc to full access
@@ -429,7 +438,7 @@ void gbSmartReadFlash()
 
 void gbSmartWriteFlash()
 {
-  for (int bank = 0x00; bank < gbSmartBanks; bank += gbSmartBanksPerFlashChip)
+  for (unsigned int bank = 0x00; bank < gbSmartBanks; bank += gbSmartBanksPerFlashChip)
   {
     display_Clear();
 
