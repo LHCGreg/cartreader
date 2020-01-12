@@ -478,7 +478,7 @@ void readLoRomBanks( unsigned int start, unsigned int total, SdFile *file)
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
   draw_progressbar(0, totalProgressBar);
 
-  for (int currBank = start; currBank < total; currBank++) {
+  for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
 
     // Blink led
@@ -525,7 +525,7 @@ void readHiRomBanks( unsigned int start, unsigned int total, SdFile *file)
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
   draw_progressbar(0, totalProgressBar);
 
-  for (int currBank = start; currBank < total; currBank++) {
+  for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
 
     // Blink led
@@ -569,7 +569,6 @@ void getCartInfo_SNES() {
   //Prime SA1 cartridge
   uint16_t c = 0;
   uint16_t currByte = 0;
-  byte buffer[1024] = { 0 };
   PORTL = 192;
   while (c < 1024) {
     PORTF = (currByte & 0xFF);
@@ -581,7 +580,7 @@ void getCartInfo_SNES() {
     // let's be conservative and use 6 x 62.5 = 375ns
     NOP; NOP; NOP; NOP; NOP; NOP;
 
-    buffer[c] = PINC;
+    byte value [[gnu::unused]] = PINC;
     c++;
     currByte++;
   }
@@ -1785,6 +1784,7 @@ unsigned long verifySRAM() {
   }
   else {
     print_Error(F("Can't open file"), false);
+    return 0;
   }
 }
 

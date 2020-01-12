@@ -14,7 +14,7 @@
    Variables
  *****************************************/
 unsigned long sramEnd;
-int eepSize;
+unsigned int eepSize;
 word addrhi;
 word addrlo;
 word chksum;

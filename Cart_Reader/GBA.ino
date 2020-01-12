@@ -895,7 +895,7 @@ void readROM_GBA() {
   }
 
   // Read rom
-  for (int myAddress = 0; myAddress < cartSize; myAddress += 512) {
+  for (unsigned int myAddress = 0; myAddress < cartSize; myAddress += 512) {
     // Blink led
     if (myAddress % 16384 == 0)
       PORTB ^= (1 << 4);
@@ -1078,6 +1078,7 @@ unsigned long verifySRAM_GBA(unsigned long sramSize, uint32_t pos) {
   }
   else {
     print_Error(F("Can't open file"), false);
+    return 0;
   }
 }
 
@@ -1279,6 +1280,7 @@ unsigned long verifyFRAM_GBA(unsigned long framSize) {
   }
   else {
     print_Error(F("Can't open file"), false);
+    return 0;
   }
 }
 

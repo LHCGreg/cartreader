@@ -969,8 +969,8 @@ boolean compareChecksum_WS(const char *wsFilePath)
   // don't know why formating string "%04X(%04X)" always output "xxxx(0000)"
   // so split into two snprintf
   char result[11];
-  snprintf(result, 5, "%04X", calLength);
-  snprintf(result + 4, 11 - 4, "(%04X)", checksum);
+  snprintf(result, 5, "%04" PRIX32, calLength);
+  snprintf(result + 4, 11 - 4, "(%04" PRIX32 ")", checksum);
   print_Msg(F("Result: "));
   println_Msg(result);
 
