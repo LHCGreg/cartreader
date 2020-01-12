@@ -880,7 +880,6 @@ void controllerTest() {
   // Graph
   int xax = 22 + 24; // midpoint x
   int yax = 24; // midpoint y
-  int zax = 24; // size
 
   // variables to display test data of different sticks
   int upx = 0;
@@ -982,8 +981,6 @@ void controllerTest() {
           printSTR(sticky, 22 + 54, 18);
 
           // Draw Axis
-          //display.drawLine(xax - zax, yax, xax + zax, yax, WHITE);
-          //display.drawLine(xax, yax - zax, xax, yax + zax, WHITE);
           display.drawPixel(xax, yax, WHITE);
           display.drawPixel(xax, yax - 80 / 4, WHITE);
           display.drawPixel(xax, yax + 80 / 4, WHITE);
@@ -1711,6 +1708,7 @@ boolean searchCRC(char crcStr[9]) {
   }
   else {
     print_Error(F("N64.txt missing"), true);
+    return 0;
   }
 }
 
@@ -2062,6 +2060,7 @@ unsigned long verifyEeprom() {
   }
   else {
     print_Error(F("Savetype Error"), true);
+    return 0;
   }
 }
 

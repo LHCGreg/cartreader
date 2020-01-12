@@ -469,7 +469,7 @@ void readLoRomBanks( unsigned int start, unsigned int total, SdFile *file)
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
   draw_progressbar(0, totalProgressBar);
 
-  for (int currBank = start; currBank < total; currBank++) {
+  for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
 
     // Blink led
@@ -516,7 +516,7 @@ void readHiRomBanks( unsigned int start, unsigned int total, SdFile *file)
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
   draw_progressbar(0, totalProgressBar);
 
-  for (int currBank = start; currBank < total; currBank++) {
+  for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
 
     // Blink led
@@ -1740,6 +1740,7 @@ unsigned long verifySRAM() {
   }
   else {
     print_Error(F("Can't open file"), false);
+    return 0;
   }
 }
 

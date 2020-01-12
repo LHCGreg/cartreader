@@ -1616,7 +1616,7 @@ void printFlash(int numBytes) {
   for (int currByte = 0; currByte < numBytes; currByte += 10) {
     for (int c = 0; c < 10; c++) {
       itoa (readByte_Flash(currByte + c), myBuffer, 16);
-      for (int i = 0; i < 2 - strlen(myBuffer); i++) {
+      for (size_t i = 0; i < 2 - strlen(myBuffer); i++) {
         print_Msg("0");
       }
       // Now print the significant bits
@@ -1961,14 +1961,14 @@ void printFlash16(int numBytes) {
 
 
       sprintf (buf, "%x", left_byte);
-      for (int i = 0; i < 2 - strlen(buf); i++) {
+      for (size_t i = 0; i < 2 - strlen(buf); i++) {
         print_Msg("0");
       }
       // Now print the significant bits
       print_Msg(buf);
 
       sprintf (buf, "%x", right_byte);
-      for (int i = 0; i < 2 - strlen(buf); i++) {
+      for (size_t i = 0; i < 2 - strlen(buf); i++) {
         print_Msg("0");
       }
       // Now print the significant bits
@@ -2352,14 +2352,14 @@ void print_Eprom(int numBytes) {
 
 
       sprintf (buf, "%x", left_byte);
-      for (int i = 0; i < 2 - strlen(buf); i++) {
+      for (size_t i = 0; i < 2 - strlen(buf); i++) {
         print_Msg("0");
       }
       // Now print the significant bits
       print_Msg(buf);
 
       sprintf (buf, "%x", right_byte);
-      for (int i = 0; i < 2 - strlen(buf); i++) {
+      for (size_t i = 0; i < 2 - strlen(buf); i++) {
         print_Msg("0");
       }
       // Now print the significant bits
