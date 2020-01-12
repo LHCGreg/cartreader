@@ -2,6 +2,11 @@
 // FLASHROM MODULE
 //******************************************
 
+#include <Arduino.h>
+#include "FLASH.h"
+#include "Cart_Reader.h"
+#include "filebrowser.h"
+
 /******************************************
    Variables
  *****************************************/

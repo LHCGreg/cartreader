@@ -3,6 +3,14 @@
 //******************************************
 //  (GB Memory starts at around line 1740)
 
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "NP.h"
+#include "SNES.h"
+#include "FLASH.h"
+#include "filebrowser.h"
+#include "RGB_LED.h"
+
 /******************************************
    SF Memory Cassette
 ******************************************/

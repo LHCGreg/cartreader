@@ -22,6 +22,11 @@
 // C46         : INT (for RTC alarm interrupt)
 // C47         : CLK (384KHz on WS)
 
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "WS.h"
+#include "filebrowser.h"
+
 /******************************************
   Menu
 *****************************************/
@@ -355,7 +360,7 @@ void getDeveloperName(uint8_t id, char *buf, size_t length)
   if (buf == NULL)
     return;
 
-  char *devName = NULL;
+  const char *devName = NULL;
 
   switch (id)
   {

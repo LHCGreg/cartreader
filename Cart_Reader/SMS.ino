@@ -2,6 +2,12 @@
 // SEGA MASTER SYSTEM MODULE
 //******************************************
 
+#include <Arduino.h>
+#include "Cart_Reader.h"
+#include "options.h"
+#include "SMS.h"
+#include "RGB_LED.h"
+
 /******************************************
    Variables
  *****************************************/
