@@ -14,23 +14,23 @@
 #include "OLED_menu.h"
 #include "filebrowser.h"
 
-//Line Content
-//26   Supported Mappers
-//101  Defines
-//131  Variables
-//189  Menu
-//308  Setup
-//337  Low Level Functions
-//584  CRC Functions
-//639  File Functions
-//801  Config Functions
-//1397 ROM Functions
-//2490 RAM Functions
-//2925 Eeprom Functions
-//3115 NESmaker Flash Cart Functions
+// Contents
+// [Supported Mappers]
+// [Defines]
+// [Variables]
+// [Menu]
+// [Setup]
+// [Low Level Functions]
+// [CRC Functions]
+// [File Functions]
+// [Config Functions]
+// [ROM Functions]
+// [RAM Functions]
+// [Eeprom Functions]
+// [NESmaker Flash Cart Functions]
 
 /******************************************
-  Supported Mappers
+  [Supported Mappers]
  *****************************************/
 // Supported Mapper Array (iNES Mapper #s)
 // Format = {mapper,prglo,prghi,chrlo,chrhi,ramlo,ramhi}
@@ -105,7 +105,7 @@ static const byte PROGMEM mapsize [] = {
 };
 
 /******************************************
-  Defines
+  [Defines]
  *****************************************/
 #define ROMSEL_HI PORTF |= (1<<1)
 #define ROMSEL_LOW PORTF &= ~(1<<1)
@@ -135,7 +135,7 @@ static const byte PROGMEM mapsize [] = {
 #define longhold 4
 
 /******************************************
-  Variables
+  [Variables]
 *****************************************/
 // Mapper
 byte mapcount = (sizeof(mapsize) / sizeof(mapsize[0])) / 7;
@@ -193,7 +193,7 @@ byte newramsize;
 int b = 0;
 
 /******************************************
-  Menu
+  [Menu]
 *****************************************/
 static const char menuItem1[] PROGMEM = "Select Mapper";
 static const char menuItem2[] PROGMEM = "Read Complete Cart";
@@ -312,7 +312,7 @@ void nesCartWriteMenu() {
 }
 
 /******************************************
-   Setup
+   [Setup]
  *****************************************/
 void setup_NES() {
   // CPU R/W, IRQ, PPU /RD, PPU /A13, CIRAM /CE, PPU /WR, /ROMSEL, PHI2
@@ -341,7 +341,7 @@ void setup_NES() {
 }
 
 /******************************************
-   Low Level Functions
+   [Low Level Functions]
  *****************************************/
 
 static void set_address(unsigned int address) {
@@ -524,7 +524,7 @@ int int_pow(int base, int exp) { // Power for int
 }
 
 /******************************************
-   CRC Functions
+   [CRC Functions]
  *****************************************/
 File crcFile;
 char tempCRC[9];
@@ -579,7 +579,7 @@ void calcCRC(char* checkFile, uint32_t filesize) {
 }
 
 /******************************************
-   File Functions
+   [File Functions]
  *****************************************/
 void CreateROMFolderInSD() {
   sd.chdir();
@@ -741,7 +741,7 @@ void CartFinish() {
 }
 
 /******************************************
-   Config Functions
+   [Config Functions]
  *****************************************/
 void setMapper() {
 #ifdef enable_OLED
@@ -1337,7 +1337,7 @@ void checkStatus_NES() {
 }
 
 /******************************************
-   ROM Functions
+   [ROM Functions]
  *****************************************/
 void dumpPRG(word base, word address) {
   for (int x = 0; x < 512; x++) {
@@ -2430,7 +2430,7 @@ void readCHR() {
 }
 
 /******************************************
-   RAM Functions
+   [RAM Functions]
  *****************************************/
 void readRAM() {
   display_Clear();
@@ -2865,7 +2865,7 @@ void writeRAM() {
 }
 
 /******************************************
-   Eeprom Functions
+   [Eeprom Functions]
  *****************************************/
 // EEPROM MAPPING
 // 00-01 FOLDER #
@@ -3055,7 +3055,7 @@ void EepromWRITE(byte address) {
 }
 
 /******************************************
-   NESmaker Flash Cart [SST 39SF40]
+   [NESmaker Flash Cart Functions] [SST 39SF40]
  *****************************************/
 void NESmaker_ResetFlash() { // Reset Flash
   write_prg_byte(0xC000, 0x01);
