@@ -2,6 +2,5 @@
 #define cartreader_WS_h
 
 void wsMenu();
-void setup_WS();
 
 #endif

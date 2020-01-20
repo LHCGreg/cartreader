@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 
-void snsMenu();
 void snesMenu();
 
 void readSRAM();

@@ -18,4 +18,11 @@ extern RGBTools rgb;
 
 void rgbLed(byte Color);
 
+void ledRedOff();
+void ledRedOn();
+void ledGreenOff();
+void ledGreenOn();
+void ledBlueOff();
+void ledBlueOn();
+
 #endif

@@ -15,4 +15,6 @@
 // Enable the second button
 #define enable_Button2
 
+#define sdSpeed SPI_FULL_SPEED
+
 #endif

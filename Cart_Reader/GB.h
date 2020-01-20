@@ -4,7 +4,6 @@
 #include <Arduino.h>
 
 void gbxMenu();
-void gbMenu();
 void getCartInfo_GB();
 void showCartInfo_GB();
 byte readByte_GB(word myAddress);
@@ -13,7 +12,7 @@ void readROM_GB();
 boolean compare_checksum_GB();
 void readSRAM_GB();
 void writeSRAM_GB();
-unsigned long verifySRAM_GB();
+uint32_t verifySRAM_GB();
 
 // Switch data pins to read
 void dataIn_GB();
