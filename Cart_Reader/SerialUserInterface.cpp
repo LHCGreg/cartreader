@@ -28,7 +28,11 @@ String SerialUserInterface::readCommand() {
   while (Serial.available() == 0) {
     ;
   }
-  return Serial.readStringUntil('\n');
+  String command = Serial.readStringUntil('\n');
+  if (command.length() > 0 && command[command.length() - 1] == '\r') {
+    command.remove(command.length() - 1);
+  }
+  return command;
 }
 
 void SerialUserInterface::displayMessage(const __FlashStringHelper* message) {
