@@ -67,7 +67,7 @@ void SerialUserInterface::displaySDInfo(uint32_t capacityGB, uint8_t FATType) {
 
 uint32_t SerialUserInterface::readNumber(uint8_t numDigits, uint32_t defaultValue, uint32_t maxValue, const String& prompt, const __FlashStringHelper* outOfRangeMessage) {
   while (true) {
-    Serial.print(prompt);
+    Serial.println(prompt);
     String numberString = readCommand();
     Serial.println(numberString);
 
