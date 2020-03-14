@@ -1365,6 +1365,7 @@ bool getMapper(uint8_t mapperNumber, Mapper *outMapper) {
     uint16_t index = i * 7;
     byte mapcheck = pgm_read_byte(mapsize + index);
     if (mapcheck == mapperNumber) {
+      outMapper->inesNumber = mapperNumber;
       outMapper->prglo = pgm_read_byte(mapsize + index + 1);
       outMapper->prghi = pgm_read_byte(mapsize + index + 2);
       outMapper->chrlo = pgm_read_byte(mapsize + index + 3);
