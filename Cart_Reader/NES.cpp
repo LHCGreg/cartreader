@@ -145,11 +145,15 @@ const uint16_t PROGMEM PRG[] = {16, 32, 64, 128, 256, 512};
 const uint16_t PROGMEM CHR[] = {0, 8, 16, 32, 64, 128, 256, 512};
 const byte PROGMEM RAM[] = {0, 8, 16, 32};
 
-uint32_t getRamSizeBytes(uint8_t mapper, uint8_t ramIndex) {
+uint32_t getRamSizeBytes(uint8_t mapper, uint8_t ramIndex, bool mmc6) {
   uint8_t ram = pgm_read_byte(&RAM[ramIndex]);
+
   if (mapper == 0) {
     uint8_t sizeKb = ram / 4;
     return sizeKb * static_cast<uint32_t>(1024);
+  }
+  else if (mapper == 4 && mmc6 && ramIndex == 1) {
+    return 1024;
   }
   else if (mapper == 16) {
     return ram * static_cast<uint32_t>(32);
@@ -239,7 +243,7 @@ struct CartridgeConfig {
 
   uint8_t getINES2NvRamShiftCount() const {
     // 64 << nvramShiftCount = 64 * 2^nvramShiftCount = 2^(nvramShiftCount+6) = NVRAM bytes
-    uint32_t ramSizeBytes = getRamSizeBytes(mapper, ramSizeIndex);
+    uint32_t ramSizeBytes = getRamSizeBytes(mapper, ramSizeIndex, mmc6);
     
     if (ramSizeBytes == 0) {
       return 0;
@@ -337,7 +341,7 @@ void setup_NES();
 AdditionalInesHeaderFieldValues getAdditionalInesHeaderFieldValues(const CartridgeConfig &config);
 byte getPRGSizeIndex(const Mapper &mapper);
 byte getCHRSizeIndex(const Mapper &mapper);
-byte getRAMSize(const Mapper &mapper);
+byte getRAMSize(const Mapper &mapper, bool mmc6);
 String getOutputFolderPath();
 void readPRG(const String &outputFolderPath, const CartridgeConfig &config);
 void readCHR(const String &outputFolderPath, const CartridgeConfig &config);
@@ -392,10 +396,10 @@ void nesCartMenu(CartridgeConfig &config) {
       // Select Mapper
       Mapper mapper = getMapperFromUser();
       config.mapper = mapper.inesNumber;
+      config.updateMapperDependentFields();
       config.prgSizeIndex = getPRGSizeIndex(mapper);
       config.chrSizeIndex = getCHRSizeIndex(mapper);
-      config.ramSizeIndex = getRAMSize(mapper);
-      config.updateMapperDependentFields();
+      config.ramSizeIndex = getRAMSize(mapper, config.mmc6);
     }
     else if(answer == item_ReadEverything) {
       String outputFolderPath = getOutputFolderPath();
@@ -1422,7 +1426,7 @@ byte getCHRSizeIndex(const Mapper &mapper) {
   return chrSizeIndex;
 }
 
-byte getRAMSize(const Mapper &mapper) {
+byte getRAMSize(const Mapper &mapper, bool mmc6) {
   byte ramSizeIndex;
   // If only one possible RAM size for this mapper, use it, no need to ask for user input.
   if (mapper.ramlo == mapper.ramhi) {
@@ -1440,7 +1444,7 @@ byte getRAMSize(const Mapper &mapper) {
     uint8_t numChoices = mapper.ramhi - mapper.ramlo + 1;
     String ramSizeChoices[numChoices];
     for(uint8_t ramIndex = mapper.ramlo; ramIndex <= mapper.ramhi; ramIndex++) {
-      uint32_t ramSizeBytes = getRamSizeBytes(mapper.inesNumber, ramIndex);
+      uint32_t ramSizeBytes = getRamSizeBytes(mapper.inesNumber, ramIndex, mmc6);
       if (ramSizeBytes % 1024 == 0) {
         ramSizeChoices[ramIndex - mapper.ramlo] = String(ramSizeBytes / 1024) + F(" kB");
       }
@@ -1486,18 +1490,7 @@ CartridgeConfig checkStatus_NES() {
   else
     chrKb = (int_pow(2, config.chrSizeIndex)) * 4;
 
-  // ???
-  uint16_t ramSize;
-  if (config.ramSizeIndex == 0)
-    ramSize = 0; // 0K
-  else if (config.mapper == 82)
-    ramSize = 5; // 5K
-  else
-    ramSize = (int_pow(2, config.ramSizeIndex)) * 4;
-
-  if (config.mmc6) {
-    ramSize = 1; // 1K
-  }
+  uint32_t ramSizeBytes = getRamSizeBytes(config.mapper, config.ramSizeIndex, config.mmc6);
 
   ui->clearOutput();
   ui->printlnMsg(F("NES CART READER"));
@@ -1512,29 +1505,15 @@ CartridgeConfig checkStatus_NES() {
   ui->printMsg(chrKb);
   ui->printlnMsg(F("K"));
   ui->printMsg(F("RAM SIZE: "));
-  if (config.mapper == 0) {
-    ui->printMsg(ramSize / 4);
+  if (ramSizeBytes % 1024 == 0) {
+    ui->printMsg(ramSizeBytes / 1024);
     ui->printlnMsg(F("K"));
-  }
-  else if ((config.mapper == 16) || (config.mapper == 80) || (config.mapper == 159)) {
-    if (config.mapper == 16)
-      ui->printMsg(ramSize * 32);
-    else
-      ui->printMsg(ramSize * 16);
-    ui->printlnMsg(F("B"));
-  }
-  else if (config.mapper == 19) {
-    if (config.ramSizeIndex == 2)
-      ui->printlnMsg(F("128B"));
-    else {
-      ui->printMsg(ramSize);
-      ui->printlnMsg(F("K"));
-    }
   }
   else {
-    ui->printMsg(ramSize);
-    ui->printlnMsg(F("K"));
+    ui->printMsg(ramSizeBytes);
+    ui->printlnMsg(F("B"));
   }
+
   ui->flushOutput();
   ui->waitForUserInput();
   return config;
