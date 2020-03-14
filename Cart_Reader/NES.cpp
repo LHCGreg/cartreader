@@ -701,8 +701,10 @@ AdditionalInesHeaderFieldValues getAdditionalInesHeaderFieldValues(const Cartrid
     hasVRamItem_No,
   };
 
+  const __FlashStringHelper *defaultVramChoice = config.chrSizeIndex == 0 ? hasVRamItem_Yes : hasVRamItem_No;
+
   const __FlashStringHelper *hasVRamAnswer = ui->askMultipleChoiceQuestion(
-    F("vRAM/CHR-RAM?"), hasVRamMenu, ARRAY_LENGTH(hasVRamMenu), hasVRamItem_No);
+    F("vRAM/CHR-RAM?"), hasVRamMenu, ARRAY_LENGTH(hasVRamMenu), defaultVramChoice);
 
   if (hasVRamAnswer == hasVRamItem_No) {
     headerValues.vRAMShiftCount = 0;
