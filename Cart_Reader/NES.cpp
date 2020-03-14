@@ -249,6 +249,12 @@ struct CartridgeConfig {
       return 0;
     }
 
+    // Mapper 19 internal RAM is not considered PRG NVRAM for NES 2.0 header purposes
+    // https://wiki.nesdev.com/w/index.php/INES_Mapper_019
+    if (mapper == 19 && ramSizeBytes == 128) {
+      return 0;
+    }
+
     uint8_t shiftCount = 1;
     uint32_t bytesWithShiftCount = 128;
     while (bytesWithShiftCount < ramSizeBytes) {
@@ -256,6 +262,15 @@ struct CartridgeConfig {
       bytesWithShiftCount = bytesWithShiftCount * 2;
     }
     return shiftCount;
+  }
+
+  bool getINES2BatteryBit() const {
+    uint32_t ramSizeBytes = getRamSizeBytes(mapper, ramSizeIndex, mmc6);
+    
+    // Do not rely on the PRG NVRAM shift count. For mapper 19 for example, if a game uses the
+    // 128 bytes of internal RAM for game saves, the PRG NVRAM shift count should be 0, but
+    // the battery bit should be set.
+    return ramSizeBytes > 0;
   }
 };
 
@@ -303,9 +318,6 @@ struct AdditionalInesHeaderFieldValues {
   // setting is for games with four screen mirroring like Rad Racer II and Gauntlet.
   // HorizontalOrMapperControlled, I think.
   MirroringType mirroring;
-
-  // "Battery present" in bootgod's DB
-  bool hasNonVolatileMemory;
 
   // "Bit 3 is set only if 4 KiB of RAM are present at PPU $2000-2FFF, exclusive to that region,
   // and cannot be banked, replaced, or rearranged. Currently, only the four-screen variants of
@@ -479,23 +491,6 @@ AdditionalInesHeaderFieldValues getAdditionalInesHeaderFieldValues(const Cartrid
   else {
     headerValues.mirroring = MirroringType::Vertical;
   }
-
-  const __FlashStringHelper *batteryItem_Yes = F("Yes");
-  const __FlashStringHelper *batteryItem_No = F("No");
-  const __FlashStringHelper *batteryMenu[] = {
-    batteryItem_Yes,
-    batteryItem_No,
-  };
-
-  const __FlashStringHelper *defaultBatteryMenuItem = batteryItem_No;
-  if (config.ramSizeIndex > 0) {
-    defaultBatteryMenuItem = batteryItem_Yes;
-  }
-
-  const __FlashStringHelper *batteryAnswer = ui->askMultipleChoiceQuestion(
-    F("Battery or NV mem?"), batteryMenu, ARRAY_LENGTH(batteryMenu), defaultBatteryMenuItem);
-
-  headerValues.hasNonVolatileMemory = batteryAnswer == batteryItem_Yes;
 
   const __FlashStringHelper *hardwiredFourScreenMirroringItem_Yes = F("Yes");
   const __FlashStringHelper *hardwiredFourScreenMirroringItem_No = F("No");
@@ -1146,12 +1141,8 @@ void createINES2Header(const CartridgeConfig &config, const AdditionalInesHeader
     bitWrite(buffer[6], 0, 1);
   }
 
-  if (additionalFields.hasNonVolatileMemory) {
-    bitWrite(buffer[6], 1, 1);
-  }
-  else {
-    bitWrite(buffer[6], 1, 0);
-  }
+  bool batteryBit = config.getINES2BatteryBit();
+  bitWrite(buffer[6], 1, batteryBit);
 
   bitWrite(buffer[6], 2, 0); // 512-byte Trainer never present in real cartridge dumps
 
