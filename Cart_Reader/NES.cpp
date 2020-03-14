@@ -44,8 +44,6 @@ struct Mapper {
   byte ramhi;
 };
 
-const uint8_t mmc3mmc6Mapper = 4;
-const uint8_t unrom512Mapper = 30;
 
 // Supported Mapper Array (iNES Mapper #s)
 // Format = {mapper,prglo,prghi,chrlo,chrhi,ramlo,ramhi}
@@ -194,14 +192,14 @@ struct CartridgeConfig {
   String flashID; // NESmaker 39SF040 Flash Cart - empty string if not relevant.
 
   void updateMapperDependentFields() {
-    if (mapper != mmc3mmc6Mapper) {
+    if (mapper != 4) {
       mmc6 = false;
     }
     else {
       mmc6 = checkMMC6();
     }
 
-    if (mapper == unrom512Mapper) {
+    if (mapper == 30) {
       flashID = NESmaker_ID();
     }
   }
