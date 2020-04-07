@@ -1,0 +1,4 @@
+* text=auto eol=lf
+
+# The code to read the text files in sd/ depends on them being CRLF
+sd/*.txt text eol=crlf
