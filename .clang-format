@@ -1,0 +1,27 @@
+BasedOnStyle: LLVM
+UseTab: Never
+IndentWidth: 2
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+IndentCaseLabels: true
+ColumnLimit: 0
+AccessModifierOffset: 0
+ContinuationIndentWidth: 2
+Cpp11BracedListStyle: false
+SpaceAfterCStyleCast: true
+SpaceBeforeParens: ControlStatements
