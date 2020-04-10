@@ -30,6 +30,36 @@
 #include "utils.h"
 
 /******************************************
+   Function prototypes
+ *****************************************/
+uint8_t getCartInfo_WS();
+void showCartInfo_WS();
+void getDeveloperName(uint8_t id, char *buf, size_t length);
+void readROM_WS(char *outPathBuf, size_t bufferSize);
+void readSRAM_WS();
+void verifySRAM_WS();
+void writeSRAM_WS();
+void readEEPROM_WS();
+void verifyEEPROM_WS();
+void writeEEPROM_WS();
+void writeWitchOS_WS();
+void fastProgramWitchFlash_WS(uint32_t addr, uint16_t data);
+void eraseWitchFlashSector_WS(uint32_t sector_addr);
+boolean compareChecksum_WS(const char *wsFilePath);
+void writeByte_WSPort(uint8_t port, uint8_t data);
+uint8_t readByte_WSPort(uint8_t port);
+void writeWord_WS(uint32_t addr, uint16_t data);
+uint16_t readWord_WS(uint32_t addr);
+void writeByte_WS(uint32_t addr, uint8_t data);
+uint8_t readByte_WS(uint32_t addr);
+void unprotectEEPROM();
+void generateEepromInstruction_WS(uint8_t *instruction, uint8_t opcode, uint16_t addr);
+boolean unlockMMC2003_WS();
+void pulseCLK_WS(uint8_t count);
+void dataIn_WS();
+void dataOut_WS();
+
+/******************************************
   Menu
 *****************************************/
 static const char wsMenuItem1[] PROGMEM = "Read Rom";

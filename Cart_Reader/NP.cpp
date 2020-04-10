@@ -43,6 +43,40 @@ char gameCode[8][10];
 boolean hirom[8];
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void sfmGameMenu();
+void getGames();
+void controlIn_SFM();
+byte readBank_SFM(byte myBank, word myAddress);
+void getCartInfo_SFM();
+boolean checkcart_SFM();
+void readROM_SFM();
+void resetFlash_SFM(int startBank);
+void idFlash_SFM(int startBank);
+void busyCheck_SFM(byte startBank);
+void readFlash_SFM();
+void printMapping();
+void readMapping();
+void eraseMapping(byte startBank);
+byte blankcheckMapping_SFM();
+void writeMapping_SFM(byte startBank, uint32_t pos);
+boolean unlockHirom();
+byte send_SFM(byte command);
+void write_SFM(int startBank, uint32_t pos);
+byte readByte_GBM(word myAddress);
+void readROM_GBM(word numBanks);
+void send_GBM(byte myCommand);
+boolean readFlashID_GBM();
+void eraseFlash_GBM();
+boolean blankcheckFlash_GBM();
+void writeFlash_GBM();
+void readMapping_GBM();
+void eraseMapping_GBM();
+boolean blankcheckMapping_GBM();
+void writeMapping_GBM();
+
+/******************************************
   Menu
 *****************************************/
 // SFM menu items

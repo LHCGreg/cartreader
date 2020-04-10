@@ -1,9 +1,9 @@
-#include "options.h"
 #include "OLED_menu.h"
 #include "RGB_LED.h"
 #include "filebrowser.h"
 #include "globals.h"
 #include "utils.h"
+#include "options.h"
 
 /******************************************
   OLED Menu Module

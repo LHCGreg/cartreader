@@ -1,6 +1,7 @@
 #ifndef cartreader_OLED_menu_h
 #define cartreader_OLED_menu_h
 
+#include <Arduino.h>
 #include "options.h"
 
 #ifdef enable_OLED

@@ -4,13 +4,13 @@
 // Writes to Sega CD Backup RAM Cart require an extra wire from MRES (B02) to VRES (B27)
 
 #include <Arduino.h>
-#include "options.h"
 #include "MD.h"
 #include "filebrowser.h"
 #include "FLASH.h"
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "options.h"
 
 /******************************************
    Variables
@@ -92,6 +92,30 @@ unsigned long bramSize = 0;
 
 // REALTEC MAPPER
 boolean realtec = 0;
+
+/******************************************
+   Function prototypes
+ *****************************************/
+void setup_MD();
+void getCartInfo_MD();
+void readROM_MD();
+void enableSram_MD(boolean enableSram);
+void writeSram_MD();
+void readSram_MD();
+unsigned long verifySram_MD();
+void resetFlash_MD();
+void write29F1610_MD();
+void idFlash_MD();
+void eraseFlash_MD();
+void blankcheck_MD();
+void verifyFlash_MD();
+void busyCheck_MD();
+void readEEP_MD();
+void writeEEP_MD();
+void readBram_MD();
+void writeBram_MD();
+void readRealtec_MD();
+
 /******************************************
    Menu
  *****************************************/

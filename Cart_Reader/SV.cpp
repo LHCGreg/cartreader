@@ -37,6 +37,13 @@ void eraseAll_SV(void);
 //No global variables
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void readSRAM_SV();
+void writeSRAM_SV();
+unsigned long verifySRAM_SV();
+
+/******************************************
   Menu
 *****************************************/
 // SV flash menu items

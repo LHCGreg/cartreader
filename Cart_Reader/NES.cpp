@@ -195,6 +195,34 @@ byte newramsize;
 int b = 0;
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void nesCartMenu();
+void nesCartWriteMenu();
+void setup_NES();
+static void set_address(unsigned int address);
+void resetROM();
+static void write_reg_byte(unsigned int address, uint8_t data);
+void CreateROMFolderInSD();
+void outputNES();
+void CartStart();
+void CartFinish();
+void setMapper();
+void checkMapperSize();
+void setPRGSize();
+void setCHRSize();
+void setRAMSize();
+void checkStatus_NES();
+void readPRG();
+void readCHR();
+void readRAM();
+void writeRAM();
+void EepromREAD(byte address);
+void EepromWRITE(byte address);
+void NESmaker_ID();
+void writeFLASH();
+
+/******************************************
   Menu
 *****************************************/
 static const char menuItem1[] PROGMEM = "Select Mapper";

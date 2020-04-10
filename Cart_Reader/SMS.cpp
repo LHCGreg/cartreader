@@ -16,6 +16,14 @@
  *****************************************/
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void setup_SMS();
+void writeByte_SMS(word myAddress, byte myData);
+void getCartInfo_SMS();
+void readROM_SMS();
+
+/******************************************
    Menu
  *****************************************/
 // MD menu items

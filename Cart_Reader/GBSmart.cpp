@@ -14,6 +14,23 @@
 #define GB_SMART_GAMES_PER_PAGE  6
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void gbSmartGameMenu();
+void gbSmartGetGames();
+void gbSmartReadFlash();
+void gbSmartWriteFlash();
+void gbSmartWriteFlash(uint32_t start_bank);
+void gbSmartWriteFlashFromMyFile(uint32_t addr);
+uint32_t gbSmartVerifyFlash();
+byte gbSmartBlankCheckingFlash(uint8_t flash_start_bank);
+void gbSmartResetFlash(uint8_t flash_start_bank);
+void gbSmartEraseFlash(uint8_t flash_start_bank);
+void gbSmartWriteFlashByte(uint32_t myAddress, uint8_t myData);
+void gbSmartRemapStartBank(uint8_t rom_start_bank, uint8_t rom_size, uint8_t sram_size);
+uint8_t gbSmartGetResizeParam(uint8_t rom_size, uint8_t sram_size);
+
+/******************************************
    Menu
  *****************************************/
 // GB Smart menu items

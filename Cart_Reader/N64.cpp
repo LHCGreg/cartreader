@@ -54,6 +54,52 @@ boolean MN63F81MPN = false;
 bool quit = 1;
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void setup_N64_Controller();
+void setup_N64_Cart();
+void controllerTest();
+void readMPK();
+void writeMPK();
+void verifyMPK();
+void printCartInfo_N64();
+void getCartInfo_N64();
+void idCart();
+void writeEeprom();
+void readEeprom();
+unsigned long verifyEeprom();
+void writeSram(unsigned long sramSize);
+void readSram(unsigned long sramSize, byte flashramType);
+unsigned long verifySram(unsigned long sramSize, byte flashramType);
+void writeFram(byte flashramType);
+void eraseFram();
+void readFram(byte flashramType);
+unsigned long verifyFram(byte flashramType);
+unsigned long blankcheck_N64(byte flashramType);
+byte waitForFram(byte flashramType);
+void getFramType();
+void readRom_N64();
+void flashRepro_N64();
+void resetIntel4400_N64();
+void idFlashrom_N64();
+void eraseIntel4400_N64();
+void eraseMSP55LV100_N64();
+void eraseFlashrom_N64(unsigned long sectorSize);
+boolean blankcheckFlashrom_N64();
+void writeIntel4400_N64();
+void writeMSP55LV100_N64(unsigned long sectorSize);
+void writeFlashBuffer_N64(unsigned long sectorSize, byte bufferSize);
+void writeFlashrom_N64();
+unsigned long verifyFlashrom_N64();
+void flashGameshark_N64();
+void idGameshark_N64();
+void resetGameshark_N64();
+void backupGameshark_N64();
+void eraseGameshark_N64();
+void writeGameshark_N64();
+unsigned long verifyGameshark_N64();
+
+/******************************************
   Menu
 *****************************************/
 // N64 start menu

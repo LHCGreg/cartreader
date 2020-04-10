@@ -23,6 +23,52 @@ uint16_t bufferSize;
 bool hiROM = 1;
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void id_Flash16();
+void setup_Flash16();
+void setup_Eprom();
+byte readByte_Flash(unsigned long myAddress);
+void idFlash29F032();
+void eraseFlash29F032();
+void writeFlash29F032();
+void busyCheck29F032(byte c);
+void writeFlash29F1610();
+void writeFlash29F1601();
+void idFlash29F1610();
+void eraseFlash29F1610();
+void busyCheck29F1610();
+void writeFlash29LV640();
+void writeFlash29GL(unsigned long sectorSize, byte bufferSize);
+void writeFlash29F800();
+void idFlash28FXXX();
+void eraseFlash28FXXX();
+void writeFlash28FXXX();
+void writeFlashE28FXXXJ3A();
+void writeFlashLH28F0XX();
+void blankcheck_Flash();
+void verifyFlash();
+void readFlash();
+void printFlash(int numBytes);
+void resetFlash8();
+void resetFlash16();
+void writeFlash16();
+void writeFlash16_29F1601();
+void idFlash16();
+void eraseFlash16();
+void blankcheck16();
+void verifyFlash16();
+void readFlash16();
+void printFlash16(int numBytes);
+void busyCheck16();
+void writeFlash16_29LV640();
+void blankcheck_Eprom();
+void read_Eprom();
+void write_Eprom();
+void verify_Eprom();
+void print_Eprom(int numBytes);
+
+/******************************************
    Menu
  *****************************************/
 // Flash start menu

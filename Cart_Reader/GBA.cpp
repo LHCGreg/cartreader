@@ -16,6 +16,33 @@ char calcChecksumStr[5];
 boolean readType;
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void setROM_GBA();
+void getCartInfo_GBA();
+void readROM_GBA();
+boolean compare_checksum_GBA();
+void readSRAM_GBA(boolean browseFile, unsigned long sramSize, uint32_t pos);
+void writeSRAM_GBA(boolean browseFile, unsigned long sramSize, uint32_t pos);
+unsigned long verifySRAM_GBA(unsigned long sramSize, uint32_t pos);
+void idFlash_GBA();
+void resetFLASH_GBA();
+byte readByteFlash_GBA(unsigned long myAddress);
+void writeByteFlash_GBA(unsigned long myAddress, byte myData);
+void eraseFLASH_GBA();
+boolean blankcheckFLASH_GBA(unsigned long flashSize);
+void switchBank_GBA(byte bankNum);
+void readFLASH_GBA(boolean browseFile, unsigned long flashSize, uint32_t pos);
+void writeFLASH_GBA(boolean browseFile, unsigned long flashSize, uint32_t pos);
+void verifyFLASH_GBA(unsigned long flashSize, uint32_t pos);
+void writeEeprom_GBA(word eepSize);
+void readEeprom_GBA(word eepSize);
+void writeBlock_EEP(word startAddr, word eepSize);
+void readBlock_EEP(word startAddress, word eepSize);
+unsigned long verifyEEP_GBA(word eepSize);
+void flashRepro_GBA();
+
+/******************************************
    Menu
  *****************************************/
 // GBA menu items

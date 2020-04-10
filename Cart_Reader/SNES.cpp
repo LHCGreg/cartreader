@@ -36,6 +36,16 @@ byte cx4Type = 0;
 byte cx4Map = 0;
 
 /******************************************
+   Function prototypes
+ *****************************************/
+void stopSnesClocks_resetCic_resetCart();
+void setup_Snes();
+void getCartInfo_SNES();
+boolean checkcart_SNES();
+void readROM_SNES();
+boolean eraseSRAM(byte b);
+
+/******************************************
   Menu
 *****************************************/
 // SNES/Nintendo Power SF Memory start menu

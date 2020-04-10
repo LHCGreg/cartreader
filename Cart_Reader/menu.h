@@ -1,6 +1,9 @@
 #ifndef cartreader_menu_h
 #define cartreader_menu_h
 
+#include <Arduino.h>
+#include <stdint.h>
+
 // Temporary array that holds the menu option read out of progmem
 extern char menuOptions[7][20];
 
