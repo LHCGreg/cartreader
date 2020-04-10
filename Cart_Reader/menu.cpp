@@ -52,7 +52,7 @@ void aboutScreen() {
       display_Update();
       delay(2000);
       foldern = 0;
-      EEPROM_writeAnything(0, foldern);
+      saveFolderNumber(foldern);
       resetArduino();
     }
 #else

@@ -258,7 +258,7 @@ void readROM_SMS() {
   strcat(fileName, ".SMS");
 
   // create a new folder
-  EEPROM_readAnything(0, foldern);
+  foldern = loadFolderNumber();
   sprintf(folder, "SMS/ROM/%s/%d", romName, foldern);
   sd.mkdir(folder, true);
   sd.chdir(folder);
@@ -271,7 +271,7 @@ void readROM_SMS() {
 
   // write new folder number back to eeprom
   foldern = foldern + 1;
-  EEPROM_writeAnything(0, foldern);
+  saveFolderNumber(foldern);
 
   // Open file on sd card
   if (!myFile.open(fileName, O_RDWR | O_CREAT)) {

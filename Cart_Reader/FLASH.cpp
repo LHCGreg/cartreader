@@ -1626,14 +1626,14 @@ void readFlash() {
   sd.chdir("/");
 
   // Get name, add extension and convert to char array for sd lib
-  EEPROM_readAnything(0, foldern);
+  foldern = loadFolderNumber();
   sd.mkdir("FLASH", true);
   sd.chdir("FLASH");
   sprintf(fileName, "FL%d", foldern);
   strcat(fileName, ".bin");
   // write new folder number back to eeprom
   foldern = foldern + 1;
-  EEPROM_writeAnything(0, foldern);
+  saveFolderNumber(foldern);
 
   display_Clear();
   print_Msg(F("Saving as "));
@@ -1947,14 +1947,14 @@ void readFlash16() {
   sd.chdir("/");
 
   // Get name, add extension and convert to char array for sd lib
-  EEPROM_readAnything(0, foldern);
+  foldern = loadFolderNumber();
   sd.mkdir("FLASH", true);
   sd.chdir("FLASH");
   sprintf(fileName, "FL%d", foldern);
   strcat(fileName, ".bin");
   // write new folder number back to eeprom
   foldern = foldern + 1;
-  EEPROM_writeAnything(0, foldern);
+  saveFolderNumber(foldern);
 
   display_Clear();
   print_Msg(F("Saving as "));
@@ -2234,14 +2234,14 @@ void read_Eprom() {
   sd.chdir("/");
 
   // Get name, add extension and convert to char array for sd lib
-  EEPROM_readAnything(0, foldern);
+  foldern = loadFolderNumber();
   sd.mkdir("FLASH", true);
   sd.chdir("FLASH");
   sprintf(fileName, "FL%d", foldern);
   strcat(fileName, ".bin");
   // write new folder number back to eeprom
   foldern = foldern + 1;
-  EEPROM_writeAnything(0, foldern);
+  saveFolderNumber(foldern);
 
   display_Clear();
   print_Msg(F("Saving as "));

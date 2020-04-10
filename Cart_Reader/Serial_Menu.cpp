@@ -66,7 +66,7 @@ byte questionBox_Serial(const __FlashStringHelper *question, char answers[7][20]
       sd.mkdir("IMPORT", true);
 
       // Create and open file on sd card
-      EEPROM_readAnything(0, foldern);
+      foldern = loadFolderNumber();
       sprintf(fileName, "IMPORT/%d.bin", foldern);
       if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
         print_Error(F("Can't create file on SD"), true);
@@ -86,7 +86,7 @@ byte questionBox_Serial(const __FlashStringHelper *question, char answers[7][20]
 
       // Write new folder number back to eeprom
       foldern = foldern + 1;
-      EEPROM_writeAnything(0, foldern);
+      saveFolderNumber(foldern);
 
       print_Msg(F("Imported "));
       print_Msg(fileSize);

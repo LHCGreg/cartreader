@@ -178,7 +178,7 @@ void setup() {
   PORTG |= (1 << 2);
 
   // Read current folder number out of eeprom
-  EEPROM_readAnything(0, foldern);
+  foldern = loadFolderNumber();
 
 #ifdef enable_OLED
   // GLCD

@@ -423,7 +423,7 @@ void readROM_WS(char *outPathBuf, size_t bufferSize)
   snprintf(fileName, FILENAME_LENGTH, "%s.ws%c", romName, ((romType & 1) ? 'c' : '\0'));
 
   // create a new folder for storing rom file
-  EEPROM_readAnything(0, foldern);
+  foldern = loadFolderNumber();
   snprintf(folder, sizeof(folder), "WS/ROM/%s/%d", romName, foldern);
   sd.mkdir(folder, true);
   sd.chdir(folder);
@@ -444,7 +444,7 @@ void readROM_WS(char *outPathBuf, size_t bufferSize)
 
   // write new folder number back to EEPROM
   foldern++;
-  EEPROM_writeAnything(0, foldern);
+  saveFolderNumber(foldern);
 
   // get correct starting rom bank
   uint16_t bank = (256 - (cartSize >> 16));
@@ -490,7 +490,7 @@ void readSRAM_WS()
   snprintf(fileName, FILENAME_LENGTH, "%s.sav", romName);
 
   // create a new folder for storing rom file
-  EEPROM_readAnything(0, foldern);
+  foldern = loadFolderNumber();
   snprintf(folder, sizeof(folder), "WS/SAVE/%s/%d", romName, foldern);
   sd.mkdir(folder, true);
   sd.chdir(folder);
@@ -502,7 +502,7 @@ void readSRAM_WS()
   display_Update();
 
   foldern++;
-  EEPROM_writeAnything(0, foldern);
+  saveFolderNumber(foldern);
 
   if (!myFile.open(fileName, O_RDWR | O_CREAT))
     print_Error(F("Can't create file on SD"), true);
@@ -654,7 +654,7 @@ void readEEPROM_WS()
   snprintf(fileName, FILENAME_LENGTH, "%s.eep", romName);
 
   // create a new folder for storing eep file
-  EEPROM_readAnything(0, foldern);
+  foldern = loadFolderNumber();
   snprintf(folder, sizeof(folder), "WS/SAVE/%s/%d", romName, foldern);
   sd.mkdir(folder, true);
   sd.chdir(folder);
@@ -666,7 +666,7 @@ void readEEPROM_WS()
   display_Update();
 
   foldern++;
-  EEPROM_writeAnything(0, foldern);
+  saveFolderNumber(foldern);
 
   if (!myFile.open(fileName, O_RDWR | O_CREAT))
     print_Error(F("Can't create file on SD"), true);

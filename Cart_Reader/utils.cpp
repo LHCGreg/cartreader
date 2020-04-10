@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <EEPROM.h>
 
 // soft reset Arduino: jumps to 0
 // using the watchdog timer would be more elegant but some Mega2560 bootloaders are buggy with it
@@ -29,6 +30,81 @@ void pulseClock_N64(unsigned int times) {
     // without the delay the clock pulse would be 1.5us and 666kHz
     //__asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"));
   }
+}
+
+template <class T>
+int EEPROM_writeAnything(int ee, const T &value) {
+  const byte *p = (const byte *) (const void *) &value;
+  unsigned int i;
+  for (i = 0; i < sizeof(value); i++)
+    EEPROM.write(ee++, *p++);
+  return i;
+}
+
+template <class T>
+int EEPROM_readAnything(int ee, T &value) {
+  byte *p = (byte *) (void *) &value;
+  unsigned int i;
+  for (i = 0; i < sizeof(value); i++)
+    *p++ = EEPROM.read(ee++);
+  return i;
+}
+
+// Mega2560 has 4 KB EEPROM
+const int16_t eepromAddress_folderNumber = 0; // 0-1
+const int16_t eepromAddress_NESMapper = 7;    // 7
+const int16_t eepromAddress_NESPRG = 8;       // 8
+const int16_t eepromAddress_NESCHR = 9;       // 9
+const int16_t eepromAddress_NESRAM = 10;      // 10
+
+void saveFolderNumber(int16_t folderNumber) {
+  EEPROM_writeAnything(eepromAddress_folderNumber, folderNumber);
+}
+
+int16_t loadFolderNumber() {
+  int16_t folderNumber;
+  EEPROM_readAnything(eepromAddress_folderNumber, folderNumber);
+  return folderNumber;
+}
+
+void saveNESMapperNumber(uint8_t mapperNumber) {
+  EEPROM_writeAnything(eepromAddress_NESMapper, mapperNumber);
+}
+
+uint8_t loadNESMapperNumber() {
+  uint8_t mapper;
+  EEPROM_readAnything(eepromAddress_NESMapper, mapper);
+  return mapper;
+}
+
+void saveNESPRG(uint8_t prg) {
+  EEPROM_writeAnything(eepromAddress_NESPRG, prg);
+}
+
+uint8_t loadNESPRG() {
+  uint8_t prg;
+  EEPROM_readAnything(eepromAddress_NESPRG, prg);
+  return prg;
+}
+
+void saveNESCHR(uint8_t chr) {
+  EEPROM_writeAnything(eepromAddress_NESCHR, chr);
+}
+
+uint8_t loadNESCHR() {
+  uint8_t chr;
+  EEPROM_readAnything(eepromAddress_NESCHR, chr);
+  return chr;
+}
+
+void saveNESRAM(uint8_t ram) {
+  EEPROM_writeAnything(eepromAddress_NESRAM, ram);
+}
+
+uint8_t loadNESRAM() {
+  uint8_t ram;
+  EEPROM_readAnything(eepromAddress_NESRAM, ram);
+  return ram;
 }
 
 // CRC32 lookup table // 256 entries
