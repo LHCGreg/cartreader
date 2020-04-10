@@ -242,7 +242,7 @@ void setup() {
 #endif
 
   // Init SD card
-  if (!sd.begin(chipSelectPin, sdSpeed)) {
+  if (!sd.begin(sdChipSelectPin, sdSpeed)) {
     display_Clear();
     print_Error(F("SD Error"), true);
   }

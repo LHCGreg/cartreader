@@ -18,6 +18,6 @@
 #define sdSpeed SPI_FULL_SPEED
 
 // SD Card (Pin 50 = MISO, Pin 51 = MOSI, Pin 52 = SCK, Pin 53 = SS)
-#define chipSelectPin 53
+#define sdChipSelectPin 53
 
 #endif
