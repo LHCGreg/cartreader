@@ -12,6 +12,7 @@
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "SD.h"
 
 /******************************************
    SF Memory Cassette
@@ -166,7 +167,7 @@ void sfmGameMenu() {
           println_Msg(F(" Timeout"));
           println_Msg(readBank_SFM(0, 0x2400), HEX);
           println_Msg(F(""));
-          print_Error(F("Powercycle SFM cart"), true);
+          print_Error(F("Powercycle SFM cart"));
         }
       }
       // Copy gameCode to romName in case of japanese chars in romName
@@ -191,7 +192,7 @@ void sfmGameMenu() {
     }
   }
   else {
-    print_Error(F("Switch to HiRom failed"), false);
+    print_Warning(F("Switch to HiRom failed"));
   }
 }
 
@@ -209,7 +210,7 @@ void sfmGameOptions() {
     case 0:
       display_Clear();
       // Change working dir to root
-      sd.chdir("/");
+      chdir("/");
       readSRAM();
       break;
 
@@ -217,7 +218,7 @@ void sfmGameOptions() {
     case 1:
       display_Clear();
       // Change working dir to root
-      sd.chdir("/");
+      chdir("/");
       readROM_SFM();
       compare_checksum();
       break;
@@ -226,7 +227,7 @@ void sfmGameOptions() {
     case 2:
       display_Clear();
       // Change working dir to root
-      sd.chdir("/");
+      chdir("/");
       writeSRAM(1);
       unsigned long wrErrors;
       wrErrors = verifySRAM();
@@ -238,7 +239,7 @@ void sfmGameOptions() {
         print_Msg(F("Error: "));
         print_Msg(wrErrors);
         println_Msg(F(" bytes "));
-        print_Error(F("did not verify."), false);
+        print_Warning(F("did not verify."));
       }
       break;
 
@@ -276,7 +277,7 @@ void sfmFlashMenu() {
       display_Clear();
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Reset to HIROM ALL
       romType = 1;
@@ -297,8 +298,8 @@ void sfmFlashMenu() {
         foldern = loadFolderNumber();
         sprintf(fileName, "SFM%d", foldern);
         strcat(fileName, ".bin");
-        sd.mkdir("NP", true);
-        sd.chdir("NP");
+        mkdir("NP", true);
+        chdir("NP");
         // write new folder number back to eeprom
         foldern = foldern + 1;
         saveFolderNumber(foldern);
@@ -307,7 +308,7 @@ void sfmFlashMenu() {
         readFlash_SFM();
       }
       else {
-        print_Error(F("Switch to HiRom failed"), false);
+        print_Warning(F("Switch to HiRom failed"));
       }
       break;
 
@@ -330,7 +331,7 @@ void sfmFlashMenu() {
       display_Clear();
 
       filePath[0] = '\0';
-      sd.chdir("/");
+      chdir("/");
       // Launch file browser
       fileBrowser(F("Select 4MB file"));
       display_Clear();
@@ -354,7 +355,7 @@ void sfmFlashMenu() {
       display_Clear();
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Reset to HIROM ALL
       romType = 1;
@@ -378,15 +379,15 @@ void sfmFlashMenu() {
             resetFlash_SFM(0xE0);
           }
           else {
-            print_Error(F("Error: Wrong Flash ID"), true);
+            print_Error(F("Error: Wrong Flash ID"));
           }
         }
         else {
-          print_Error(F("Error: Wrong Flash ID"), true);
+          print_Error(F("Error: Wrong Flash ID"));
         }
       }
       else {
-        print_Error(F("failed"), false);
+        print_Warning(F("failed"));
       }
       break;
 
@@ -396,7 +397,7 @@ void sfmFlashMenu() {
       display_Clear();
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Reset to HIROM ALL
       romType = 1;
@@ -418,15 +419,15 @@ void sfmFlashMenu() {
             resetFlash_SFM(0xE0);
           }
           else {
-            print_Error(F("Error: Wrong Flash ID"), true);
+            print_Error(F("Error: Wrong Flash ID"));
           }
         }
         else {
-          print_Error(F("Error: Wrong Flash ID"), true);
+          print_Error(F("Error: Wrong Flash ID"));
         }
       }
       else {
-        print_Error(F("failed"), false);
+        print_Warning(F("failed"));
       }
       break;
 
@@ -449,7 +450,7 @@ void sfmFlashMenu() {
       display_Clear();
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Erase mapping
       eraseMapping(0xD0);
@@ -472,7 +473,7 @@ void sfmFlashMenu() {
       filePath[0] = '\0';
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Launch file browser
       fileBrowser(F("Select MAP file"));
@@ -677,7 +678,7 @@ void setup_SFM() {
       println_Msg(F("Hirom All Timeout"));
       println_Msg(F(""));
       println_Msg(F(""));
-      print_Error(F("Powercycle SFM cart"), true);
+      print_Error(F("Powercycle SFM cart"));
     }
   }
 }
@@ -905,8 +906,8 @@ void readROM_SFM() {
   // create a new folder for the save file
   foldern = loadFolderNumber();
   sprintf(folder, "NP/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   //clear the screen
   display_Clear();
@@ -919,9 +920,7 @@ void readROM_SFM() {
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // Check if LoROM or HiROM...
   if (romType == 0) {
@@ -935,7 +934,7 @@ void readROM_SFM() {
         for (int c = 0; c < 512; c++) {
           sdBuffer[c] = readBank_SFM(currBank, currByte + c);
         }
-        myFile.write(sdBuffer, 512);
+        outputFile.write(sdBuffer, 512);
       }
     }
   }
@@ -949,12 +948,12 @@ void readROM_SFM() {
         for (int c = 0; c < 512; c++) {
           sdBuffer[c] = readBank_SFM(currBank, currByte + c);
         }
-        myFile.write(sdBuffer, 512);
+        outputFile.write(sdBuffer, 512);
       }
     }
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
 
   // Signal end of process
   print_Msg(F("Saved as "));
@@ -1029,74 +1028,70 @@ void writeFlash_SFM(int startBank, uint32_t pos) {
   display_Update();
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    // Seek to a new position in the file
-    if (pos != 0)
-      myFile.seekCur(pos);
+  // Seek to a new position in the file
+  if (pos != 0)
+    inputFile.seekCur(pos);
 
-    // Configure control pins
-    controlOut_SFM();
-    // Set data pins to output
-    dataOut();
+  // Configure control pins
+  controlOut_SFM();
+  // Set data pins to output
+  dataOut();
 
-    if (romType) {
-      // Write hirom
-      for (int currBank = startBank; currBank < startBank + numBanks; currBank++) {
-        // Fill SDBuffer with 1 page at a time then write it repeat until all bytes are written
-        for (unsigned long currByte = 0; currByte < 0x10000; currByte += 128) {
-          myFile.read(sdBuffer, 128);
-          // Write command sequence
-          writeBank_SFM(startBank, 0x5555L * 2, 0xaa);
-          writeBank_SFM(startBank, 0x2AAAL * 2, 0x55);
-          writeBank_SFM(startBank, 0x5555L * 2, 0xa0);
+  if (romType) {
+    // Write hirom
+    for (int currBank = startBank; currBank < startBank + numBanks; currBank++) {
+      // Fill SDBuffer with 1 page at a time then write it repeat until all bytes are written
+      for (unsigned long currByte = 0; currByte < 0x10000; currByte += 128) {
+        inputFile.read(sdBuffer, 128);
+        // Write command sequence
+        writeBank_SFM(startBank, 0x5555L * 2, 0xaa);
+        writeBank_SFM(startBank, 0x2AAAL * 2, 0x55);
+        writeBank_SFM(startBank, 0x5555L * 2, 0xa0);
 
-          for (byte c = 0; c < 128; c++) {
+        for (byte c = 0; c < 128; c++) {
 
-            // Write one byte of data
+          // Write one byte of data
+          writeBank_SFM(currBank, currByte + c, sdBuffer[c]);
+
+          if (c == 127) {
+            // Write the last byte twice or else it won't write at all
             writeBank_SFM(currBank, currByte + c, sdBuffer[c]);
-
-            if (c == 127) {
-              // Write the last byte twice or else it won't write at all
-              writeBank_SFM(currBank, currByte + c, sdBuffer[c]);
-            }
           }
-          // Wait until write is finished
-          busyCheck_SFM(startBank);
         }
+        // Wait until write is finished
+        busyCheck_SFM(startBank);
       }
     }
-    else {
-      // Write lorom
-      for (int currBank = 0; currBank < numBanks; currBank++) {
-        for (unsigned long currByte = 0x8000; currByte < 0x10000; currByte += 128) {
-          myFile.read(sdBuffer, 128);
-          // Write command sequence
-          writeBank_SFM(1, 0x8000 + 0x1555L * 2, 0xaa);
-          writeBank_SFM(0, 0x8000 + 0x2AAAL * 2, 0x55);
-          writeBank_SFM(1, 0x8000 + 0x1555L * 2, 0xa0);
-
-          for (byte c = 0; c < 128; c++) {
-            // Write one byte of data
-            writeBank_SFM(currBank, currByte + c, sdBuffer[c]);
-
-            if (c == 127) {
-              // Write the last byte twice or else it won't write at all
-              writeBank_SFM(currBank, currByte + c, sdBuffer[c]);
-            }
-          }
-          // Wait until write is finished
-          busyCheck_SFM(startBank);
-        }
-      }
-    }
-    // Close the file:
-    myFile.close();
-    println_Msg("");
   }
   else {
-    print_Error(F("Can't open file on SD"), true);
+    // Write lorom
+    for (int currBank = 0; currBank < numBanks; currBank++) {
+      for (unsigned long currByte = 0x8000; currByte < 0x10000; currByte += 128) {
+        inputFile.read(sdBuffer, 128);
+        // Write command sequence
+        writeBank_SFM(1, 0x8000 + 0x1555L * 2, 0xaa);
+        writeBank_SFM(0, 0x8000 + 0x2AAAL * 2, 0x55);
+        writeBank_SFM(1, 0x8000 + 0x1555L * 2, 0xa0);
+
+        for (byte c = 0; c < 128; c++) {
+          // Write one byte of data
+          writeBank_SFM(currBank, currByte + c, sdBuffer[c]);
+
+          if (c == 127) {
+            // Write the last byte twice or else it won't write at all
+            writeBank_SFM(currBank, currByte + c, sdBuffer[c]);
+          }
+        }
+        // Wait until write is finished
+        busyCheck_SFM(startBank);
+      }
+    }
   }
+  // Close the file:
+  inputFile.close();
+  println_Msg("");
 }
 
 // Delay between write operations based on status register
@@ -1200,50 +1195,45 @@ unsigned long verifyFlash_SFM(int startBank, uint32_t pos) {
   unsigned long  verified = 0;
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    // Set file starting position
-    myFile.seekCur(pos);
+  // Set file starting position
+  inputFile.seekCur(pos);
 
-    // Set data pins to input
-    dataIn();
-    // Set control pins to input
-    controlIn_SFM();
+  // Set data pins to input
+  dataIn();
+  // Set control pins to input
+  controlIn_SFM();
 
-    if (romType) {
-      for (int currBank = startBank; currBank < startBank + numBanks; currBank++) {
-        for (unsigned long currByte = 0; currByte < 0x10000; currByte += 512) {
-          // Fill SDBuffer
-          myFile.read(sdBuffer, 512);
-          for (int c = 0; c < 512; c++) {
-            if (readBank_SFM(currBank, currByte + c) != sdBuffer[c]) {
-              verified++;
-            }
+  if (romType) {
+    for (int currBank = startBank; currBank < startBank + numBanks; currBank++) {
+      for (unsigned long currByte = 0; currByte < 0x10000; currByte += 512) {
+        // Fill SDBuffer
+        inputFile.read(sdBuffer, 512);
+        for (int c = 0; c < 512; c++) {
+          if (readBank_SFM(currBank, currByte + c) != sdBuffer[c]) {
+            verified++;
           }
         }
       }
     }
-    else {
-      for (int currBank = 0; currBank < numBanks; currBank++) {
-        for (unsigned long currByte = 0x8000; currByte < 0x10000; currByte += 512) {
-          // Fill SDBuffer
-          myFile.read(sdBuffer, 512);
-          for (int c = 0; c < 512; c++) {
-            if (readBank_SFM(currBank, currByte + c) != sdBuffer[c]) {
-              verified++;
-            }
-          }
-        }
-      }
-    }
-    // Close the file:
-    myFile.close();
   }
   else {
-    // SD Error
-    verified = 999999;
-    print_Error(F("Can't open file on SD"), false);
+    for (int currBank = 0; currBank < numBanks; currBank++) {
+      for (unsigned long currByte = 0x8000; currByte < 0x10000; currByte += 512) {
+        // Fill SDBuffer
+        inputFile.read(sdBuffer, 512);
+        for (int c = 0; c < 512; c++) {
+          if (readBank_SFM(currBank, currByte + c) != sdBuffer[c]) {
+            verified++;
+          }
+        }
+      }
+    }
   }
+  // Close the file:
+  inputFile.close();
+
   // Return 0 if verified ok, or number of errors
   return verified;
 }
@@ -1261,16 +1251,15 @@ void readFlash_SFM() {
   display_Update();
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+
   if (romType) {
     for (int currBank = 0xC0; currBank < 0xC0 + numBanks; currBank++) {
       for (unsigned long currByte = 0; currByte < 0x10000; currByte += 512) {
         for (int c = 0; c < 512; c++) {
           sdBuffer[c] = readBank_SFM(currBank, currByte + c);
         }
-        myFile.write(sdBuffer, 512);
+        outputFile.write(sdBuffer, 512);
       }
     }
   }
@@ -1280,12 +1269,12 @@ void readFlash_SFM() {
         for (int c = 0; c < 512; c++) {
           sdBuffer[c] = readBank_SFM(currBank, currByte + c);
         }
-        myFile.write(sdBuffer, 512);
+        outputFile.write(sdBuffer, 512);
       }
     }
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
   println_Msg("");
   println_Msg(F("Finished reading"));
   display_Update();
@@ -1398,21 +1387,19 @@ void readMapping() {
   foldern = loadFolderNumber();
   sprintf(fileName, "NP%d", foldern);
   strcat(fileName, ".MAP");
-  sd.mkdir("NP", true);
-  sd.chdir("NP");
+  mkdir("NP", true);
+  chdir("NP");
 
   // write new folder number back to eeprom
   foldern = foldern + 1;
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // Read the mapping info out of the 1st chip
   for (unsigned long currByte = 0xFF00; currByte <= 0xFFFF; currByte++) {
-    myFile.write(readBank_SFM(0xC0, currByte));
+    outputFile.writeByte(readBank_SFM(0xC0, currByte));
   }
 
   // Switch to write
@@ -1435,11 +1422,11 @@ void readMapping() {
 
   // Read the mapping info out of the 1st chip
   for (unsigned long currByte = 0xFF00; currByte <= 0xFFFF; currByte++) {
-    myFile.write(readBank_SFM(0xE0, currByte));
+    outputFile.writeByte(readBank_SFM(0xE0, currByte));
   }
 
   // Close the file:
-  myFile.close();
+  outputFile.close();
 
   // Switch to write
   dataOut();
@@ -1494,11 +1481,11 @@ void eraseMapping(byte startBank) {
       controlIn_SFM();
     }
     else {
-      print_Error(F("Error: Wrong Flash ID"), true);
+      print_Error(F("Error: Wrong Flash ID"));
     }
   }
   else {
-    print_Error(F("Unlock failed"), true);
+    print_Error(F("Unlock failed"));
   }
 }
 
@@ -1590,53 +1577,49 @@ void writeMapping_SFM(byte startBank, uint32_t pos) {
       controlOut_SFM();
 
       // Open file on sd card
-      if (myFile.open(filePath, O_READ)) {
+      SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-        // Seek to a new position in the file
-        if (pos != 0)
-          myFile.seekCur(pos);
+      // Seek to a new position in the file
+      if (pos != 0)
+        inputFile.seekCur(pos);
 
-        // Write to Page Buffer
-        for (unsigned long currByte = 0xFF00; currByte < 0xFFFF; currByte += 128) {
-          // Prepare to erase/write Page Buffer
-          writeBank_SFM(startBank, 0x5555L * 2, 0xaa);
-          writeBank_SFM(startBank, 0x2AAAL * 2, 0x55);
-          writeBank_SFM(startBank, 0x5555L * 2, 0x77);
-          // Write Page Buffer Command
-          writeBank_SFM(startBank, 0x5555L * 2, 0xaa);
-          writeBank_SFM(startBank, 0x2AAAL * 2, 0x55);
-          writeBank_SFM(startBank, 0x5555L * 2, 0x99);
+      // Write to Page Buffer
+      for (unsigned long currByte = 0xFF00; currByte < 0xFFFF; currByte += 128) {
+        // Prepare to erase/write Page Buffer
+        writeBank_SFM(startBank, 0x5555L * 2, 0xaa);
+        writeBank_SFM(startBank, 0x2AAAL * 2, 0x55);
+        writeBank_SFM(startBank, 0x5555L * 2, 0x77);
+        // Write Page Buffer Command
+        writeBank_SFM(startBank, 0x5555L * 2, 0xaa);
+        writeBank_SFM(startBank, 0x2AAAL * 2, 0x55);
+        writeBank_SFM(startBank, 0x5555L * 2, 0x99);
 
-          myFile.read(sdBuffer, 128);
+        inputFile.read(sdBuffer, 128);
 
-          for (byte c = 0; c < 128; c++) {
+        for (byte c = 0; c < 128; c++) {
+          writeBank_SFM(startBank, currByte + c, sdBuffer[c]);
+          // Write last byte twice
+          if (c == 127) {
             writeBank_SFM(startBank, currByte + c, sdBuffer[c]);
-            // Write last byte twice
-            if (c == 127) {
-              writeBank_SFM(startBank, currByte + c, sdBuffer[c]);
-            }
           }
-          busyCheck_SFM(startBank);
         }
+        busyCheck_SFM(startBank);
+      }
 
-        // Close the file:
-        myFile.close();
-        println_Msg("");
-      }
-      else {
-        print_Error(F("Can't open file on SD"), false);
-      }
+      // Close the file:
+      inputFile.close();
+      println_Msg("");
 
       // Switch to read
       dataIn();
       controlIn_SFM();
     }
     else {
-      print_Error(F("Error: Wrong Flash ID"), true);
+      print_Error(F("Error: Wrong Flash ID"));
     }
   }
   else {
-    print_Error(F("Unlock failed"), true);
+    print_Error(F("Unlock failed"));
   }
 }
 
@@ -1748,7 +1731,7 @@ void write_SFM(int startBank, uint32_t pos) {
           display_Update();
         }
         else {
-          print_Error(F("Could not erase flash"), true);
+          print_Error(F("Could not erase flash"));
         }
       }
       // Write flash
@@ -1769,15 +1752,15 @@ void write_SFM(int startBank, uint32_t pos) {
         print_Msg(F("Error: "));
         print_Msg(writeErrors);
         println_Msg(F(" bytes "));
-        print_Error(F("did not verify."), true);
+        print_Error(F("did not verify."));
       }
     }
     else {
-      print_Error(F("Error: Wrong Flash ID"), true);
+      print_Error(F("Error: Wrong Flash ID"));
     }
   }
   else {
-    print_Error(F("Unlock failed"), true);
+    print_Error(F("Unlock failed"));
   }
 }
 
@@ -1833,7 +1816,7 @@ void gbmMenu() {
       display_Clear();
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Enable access to ports 0120h
       send_GBM(0x09);
@@ -1884,7 +1867,7 @@ void gbmMenu() {
       display_Clear();
 
       filePath[0] = '\0';
-      sd.chdir("/");
+      chdir("/");
       // Launch file browser
       fileBrowser(F("Select 1MB file"));
       display_Clear();
@@ -1900,7 +1883,7 @@ void gbmMenu() {
       display_Clear();
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Read mapping
       readMapping_GBM();
@@ -1923,7 +1906,7 @@ void gbmMenu() {
       wait();
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Clear screen
       display_Clear();
@@ -1932,7 +1915,7 @@ void gbmMenu() {
       filePath[0] = '\0';
 
       // Reset to root directory
-      sd.chdir("/");
+      chdir("/");
 
       // Launch file browser
       fileBrowser(F("Select MAP file"));
@@ -1950,7 +1933,7 @@ void gbmMenu() {
         display_Update();
       }
       else {
-        print_Error(F("Erasing failed"), false);
+        print_Warning(F("Erasing failed"));
         break;
       }
 
@@ -2000,7 +1983,7 @@ void setup_GBM() {
     timeout++;
     if (timeout > 10) {
       println_Msg(F("Error: Time Out"));
-      print_Error(F("Please power cycle"), true);
+      print_Error(F("Please power cycle"));
     }
   }
 }
@@ -2082,45 +2065,42 @@ void readROM_GBM(word numBanks) {
   foldern = loadFolderNumber();
   sprintf(fileName, "GBM%d", foldern);
   strcat(fileName, ".bin");
-  sd.mkdir("NP", true);
-  sd.chdir("NP");
+  mkdir("NP", true);
+  chdir("NP");
   // write new folder number back to eeprom
   foldern = foldern + 1;
   saveFolderNumber(foldern);
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
-  }
-  else {
-    // Read rom
-    word currAddress = 0;
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
-    for (word currBank = 1; currBank < numBanks; currBank++) {
-      // Set rom bank
-      writeByte_GBM(0x2100, currBank);
+  // Read rom
+  word currAddress = 0;
 
-      // Switch bank start address
-      if (currBank > 1) {
-        currAddress = 0x4000;
-      }
+  for (word currBank = 1; currBank < numBanks; currBank++) {
+    // Set rom bank
+    writeByte_GBM(0x2100, currBank);
 
-      for (; currAddress < 0x7FFF; currAddress += 512) {
-        for (int currByte = 0; currByte < 512; currByte++) {
-          sdBuffer[currByte] = readByte_GBM(currAddress + currByte);
-        }
-        myFile.write(sdBuffer, 512);
-      }
+    // Switch bank start address
+    if (currBank > 1) {
+      currAddress = 0x4000;
     }
 
-    // Close the file:
-    myFile.close();
-
-    // Signal end of process
-    print_Msg(F("Saved to NP/"));
-    println_Msg(fileName);
-    display_Update();
+    for (; currAddress < 0x7FFF; currAddress += 512) {
+      for (int currByte = 0; currByte < 512; currByte++) {
+        sdBuffer[currByte] = readByte_GBM(currAddress + currByte);
+      }
+      outputFile.write(sdBuffer, 512);
+    }
   }
+
+  // Close the file:
+  outputFile.close();
+
+  // Signal end of process
+  print_Msg(F("Saved to NP/"));
+  println_Msg(fileName);
+  display_Update();
 }
 
 /**********************
@@ -2193,7 +2173,7 @@ void send_GBM(byte myCommand) {
       break;
 
     default:
-      print_Error(F("Unknown Command"), true);
+      print_Error(F("Unknown Command"));
       break;
   }
 }
@@ -2213,7 +2193,7 @@ void send_GBM(byte myCommand, word myAddress, byte myData) {
       break;
 
     default:
-      print_Error(F("Unknown Command"), true);
+      print_Error(F("Unknown Command"));
       break;
   }
 }
@@ -2261,7 +2241,7 @@ boolean readFlashID_GBM() {
   else {
     print_Msg(F("Flash ID: "));
     println_Msg(flashid);
-    print_Error(F("Unknown Flash ID"), true);
+    print_Error(F("Unknown Flash ID"));
     resetFlash_GBM();
     return 0;
   }
@@ -2341,106 +2321,103 @@ void writeFlash_GBM() {
   display_Update();
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    // Get rom size from file
-    fileSize = myFile.fileSize();
-    if ((fileSize / 0x4000) > 64) {
-      print_Error(F("File is too big."), true);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+
+  // Get rom size from file
+  fileSize = inputFile.fileSize();
+  if ((fileSize / 0x4000) > 64) {
+    print_Error(F("File is too big."));
+  }
+
+  // Enable access to ports 0120h
+  send_GBM(0x09);
+  // Enable write
+  send_GBM(0x0A);
+  send_GBM(0x2);
+
+  // Map entire flash rom
+  send_GBM(0x4);
+
+  // Set bank for unprotect command, writes to 0x5555 need odd bank number
+  writeByte_GBM(0x2100, 0x1);
+
+  // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
+  send_GBM(0x10);
+  send_GBM(0x08);
+
+  // Unprotect sector 0
+  writeByte_GBM(0x5555, 0xAA);
+  writeByte_GBM(0x2AAA, 0x55);
+  writeByte_GBM(0x5555, 0x60);
+  writeByte_GBM(0x5555, 0xAA);
+  writeByte_GBM(0x2AAA, 0x55);
+  writeByte_GBM(0x5555, 0x40);
+
+  // Check if flashrom is ready for writing or busy
+  while ((readByte_GBM(0) & 0x80) != 0x80) {}
+
+  // first bank: 0x0000-0x7FFF,
+  word currAddress = 0x0;
+
+  // Write 63 banks
+  for (byte currBank = 0x1; currBank < (fileSize / 0x4000); currBank++) {
+    // Blink led
+    PORTB ^= (1 << 4);
+
+    // all following banks: 0x4000-0x7FFF
+    if (currBank > 1) {
+      currAddress = 0x4000;
     }
 
-    // Enable access to ports 0120h
-    send_GBM(0x09);
-    // Enable write
-    send_GBM(0x0A);
-    send_GBM(0x2);
+    // Write single bank in 128 byte steps
+    for (; currAddress < 0x7FFF; currAddress += 128) {
+      // Fill SD buffer
+      inputFile.read(sdBuffer, 128);
 
-    // Map entire flash rom
-    send_GBM(0x4);
+      // Enable access to ports 0x120 and 0x2100
+      send_GBM(0x09);
+      send_GBM(0x11);
 
-    // Set bank for unprotect command, writes to 0x5555 need odd bank number
-    writeByte_GBM(0x2100, 0x1);
+      // Set bank
+      writeByte_GBM(0x2100, 0x1);
 
-    // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
-    send_GBM(0x10);
-    send_GBM(0x08);
+      // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
+      send_GBM(0x10);
+      send_GBM(0x08);
 
-    // Unprotect sector 0
-    writeByte_GBM(0x5555, 0xAA);
-    writeByte_GBM(0x2AAA, 0x55);
-    writeByte_GBM(0x5555, 0x60);
-    writeByte_GBM(0x5555, 0xAA);
-    writeByte_GBM(0x2AAA, 0x55);
-    writeByte_GBM(0x5555, 0x40);
+      // Write flash buffer command
+      writeByte_GBM(0x5555, 0xAA);
+      writeByte_GBM(0x2AAA, 0x55);
+      writeByte_GBM(0x5555, 0xA0);
 
-    // Check if flashrom is ready for writing or busy
-    while ((readByte_GBM(0) & 0x80) != 0x80) {}
+      // Wait until flashrom is ready again
+      while ((readByte_GBM(0) & 0x80) != 0x80) {}
 
-    // first bank: 0x0000-0x7FFF,
-    word currAddress = 0x0;
+      // Enable access to ports 0x120 and 0x2100
+      send_GBM(0x09);
+      send_GBM(0x11);
 
-    // Write 63 banks
-    for (byte currBank = 0x1; currBank < (fileSize / 0x4000); currBank++) {
-      // Blink led
-      PORTB ^= (1 << 4);
+      // Set bank
+      writeByte_GBM(0x2100, currBank);
 
-      // all following banks: 0x4000-0x7FFF
-      if (currBank > 1) {
-        currAddress = 0x4000;
+      // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
+      send_GBM(0x10);
+      send_GBM(0x08);
+
+      // Fill flash buffer
+      for (word currByte = 0; currByte < 128; currByte++) {
+        writeByte_GBM(currAddress + currByte, sdBuffer[currByte]);
       }
+      // Execute write
+      writeByte_GBM(currAddress + 127, 0xFF);
 
-      // Write single bank in 128 byte steps
-      for (; currAddress < 0x7FFF; currAddress += 128) {
-        // Fill SD buffer
-        myFile.read(sdBuffer, 128);
-
-        // Enable access to ports 0x120 and 0x2100
-        send_GBM(0x09);
-        send_GBM(0x11);
-
-        // Set bank
-        writeByte_GBM(0x2100, 0x1);
-
-        // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
-        send_GBM(0x10);
-        send_GBM(0x08);
-
-        // Write flash buffer command
-        writeByte_GBM(0x5555, 0xAA);
-        writeByte_GBM(0x2AAA, 0x55);
-        writeByte_GBM(0x5555, 0xA0);
-
-        // Wait until flashrom is ready again
-        while ((readByte_GBM(0) & 0x80) != 0x80) {}
-
-        // Enable access to ports 0x120 and 0x2100
-        send_GBM(0x09);
-        send_GBM(0x11);
-
-        // Set bank
-        writeByte_GBM(0x2100, currBank);
-
-        // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
-        send_GBM(0x10);
-        send_GBM(0x08);
-
-        // Fill flash buffer
-        for (word currByte = 0; currByte < 128; currByte++) {
-          writeByte_GBM(currAddress + currByte, sdBuffer[currByte]);
-        }
-        // Execute write
-        writeByte_GBM(currAddress + 127, 0xFF);
-
-        // Wait for write to complete
-        while ((readByte_GBM(currAddress) & 0x80) != 0x80) {}
-      }
+      // Wait for write to complete
+      while ((readByte_GBM(currAddress) & 0x80) != 0x80) {}
     }
-    // Close the file:
-    myFile.close();
-    println_Msg(F("Done"));
   }
-  else {
-    print_Error(F("Can't open file"), false);
-  }
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("Done"));
 }
 
 void readMapping_GBM() {
@@ -2468,33 +2445,29 @@ void readMapping_GBM() {
   foldern = loadFolderNumber();
   sprintf(fileName, "GBM%d", foldern);
   strcat(fileName, ".map");
-  sd.mkdir("NP", true);
-  sd.chdir("NP");
+  mkdir("NP", true);
+  chdir("NP");
   // write new folder number back to eeprom
   foldern = foldern + 1;
   saveFolderNumber(foldern);
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  for (byte currByte = 0; currByte < 128; currByte++) {
+    sdBuffer[currByte] = readByte_GBM(currByte);
   }
-  else {
-    for (byte currByte = 0; currByte < 128; currByte++) {
-      sdBuffer[currByte] = readByte_GBM(currByte);
-    }
-    myFile.write(sdBuffer, 128);
+  outputFile.write(sdBuffer, 128);
 
-    // Close the file:
-    myFile.close();
+  // Close the file:
+  outputFile.close();
 
-    // Signal end of process
-    printSdBuffer(0, 20);
-    printSdBuffer(102, 20);
-    println_Msg("");
-    print_Msg(F("Saved to NP/"));
-    println_Msg(fileName);
-    display_Update();
-  }
+  // Signal end of process
+  printSdBuffer(0, 20);
+  printSdBuffer(102, 20);
+  println_Msg("");
+  print_Msg(F("Saved to NP/"));
+  println_Msg(fileName);
+  display_Update();
 
   // Reset flash to leave hidden mapping area
   resetFlash_GBM();
@@ -2573,90 +2546,87 @@ void writeMapping_GBM() {
   display_Update();
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    // Get map file size and check if it exceeds 128KByte
-    if (myFile.fileSize() > 0x80) {
-      print_Error(F("File is too big."), true);
-    }
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    // Enable access to ports 0120h
-    send_GBM(0x09);
-
-    // Enable write
-    send_GBM(0x0A);
-    send_GBM(0x2);
-
-    // Map entire flash rom
-    send_GBM(0x4);
-
-    // Set bank, writes to 0x5555 need odd bank number
-    writeByte_GBM(0x2100, 0x1);
-
-    // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
-    send_GBM(0x10);
-    send_GBM(0x08);
-
-    // Unlock write to map area
-    writeByte_GBM(0x5555, 0xAA);
-    writeByte_GBM(0x2AAA, 0x55);
-    writeByte_GBM(0x5555, 0x60);
-    writeByte_GBM(0x5555, 0xAA);
-    writeByte_GBM(0x2AAA, 0x55);
-    writeByte_GBM(0x5555, 0xE0);
-
-    // Check if flashrom is ready for writing or busy
-    while ((readByte_GBM(0) & 0x80) != 0x80) {}
-
-    // Fill SD buffer
-    myFile.read(sdBuffer, 128);
-
-    // Enable access to ports 0x120 and 0x2100
-    send_GBM(0x09);
-    send_GBM(0x11);
-
-    // Set bank
-    writeByte_GBM(0x2100, 0x1);
-
-    // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
-    send_GBM(0x10);
-    send_GBM(0x08);
-
-    // Write flash buffer command
-    writeByte_GBM(0x5555, 0xAA);
-    writeByte_GBM(0x2AAA, 0x55);
-    writeByte_GBM(0x5555, 0xA0);
-
-    // Wait until flashrom is ready again
-    while ((readByte_GBM(0) & 0x80) != 0x80) {}
-
-    // Enable access to ports 0x120 and 0x2100
-    send_GBM(0x09);
-    send_GBM(0x11);
-
-    // Set bank
-    writeByte_GBM(0x2100, 0);
-
-    // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
-    send_GBM(0x10);
-    send_GBM(0x08);
-
-    // Fill flash buffer
-    for (word currByte = 0; currByte < 128; currByte++) {
-      // Blink led
-      PORTB ^= (1 << 4);
-
-      writeByte_GBM(currByte, sdBuffer[currByte]);
-    }
-    // Execute write
-    writeByte_GBM(127, 0xFF);
-
-    // Close the file:
-    myFile.close();
-    println_Msg(F("Done"));
+  // Get map file size and check if it exceeds 128KByte
+  if (inputFile.fileSize() > 0x80) {
+    print_Error(F("File is too big."));
   }
-  else {
-    print_Error(F("Can't open file"), false);
+
+  // Enable access to ports 0120h
+  send_GBM(0x09);
+
+  // Enable write
+  send_GBM(0x0A);
+  send_GBM(0x2);
+
+  // Map entire flash rom
+  send_GBM(0x4);
+
+  // Set bank, writes to 0x5555 need odd bank number
+  writeByte_GBM(0x2100, 0x1);
+
+  // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
+  send_GBM(0x10);
+  send_GBM(0x08);
+
+  // Unlock write to map area
+  writeByte_GBM(0x5555, 0xAA);
+  writeByte_GBM(0x2AAA, 0x55);
+  writeByte_GBM(0x5555, 0x60);
+  writeByte_GBM(0x5555, 0xAA);
+  writeByte_GBM(0x2AAA, 0x55);
+  writeByte_GBM(0x5555, 0xE0);
+
+  // Check if flashrom is ready for writing or busy
+  while ((readByte_GBM(0) & 0x80) != 0x80) {}
+
+  // Fill SD buffer
+  inputFile.read(sdBuffer, 128);
+
+  // Enable access to ports 0x120 and 0x2100
+  send_GBM(0x09);
+  send_GBM(0x11);
+
+  // Set bank
+  writeByte_GBM(0x2100, 0x1);
+
+  // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
+  send_GBM(0x10);
+  send_GBM(0x08);
+
+  // Write flash buffer command
+  writeByte_GBM(0x5555, 0xAA);
+  writeByte_GBM(0x2AAA, 0x55);
+  writeByte_GBM(0x5555, 0xA0);
+
+  // Wait until flashrom is ready again
+  while ((readByte_GBM(0) & 0x80) != 0x80) {}
+
+  // Enable access to ports 0x120 and 0x2100
+  send_GBM(0x09);
+  send_GBM(0x11);
+
+  // Set bank
+  writeByte_GBM(0x2100, 0);
+
+  // Disable ports 0x2100 and 0x120 or else those addresses will not be writable
+  send_GBM(0x10);
+  send_GBM(0x08);
+
+  // Fill flash buffer
+  for (word currByte = 0; currByte < 128; currByte++) {
+    // Blink led
+    PORTB ^= (1 << 4);
+
+    writeByte_GBM(currByte, sdBuffer[currByte]);
   }
+  // Execute write
+  writeByte_GBM(127, 0xFF);
+
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("Done"));
 }
 
 //******************************************

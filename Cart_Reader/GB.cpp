@@ -11,6 +11,7 @@
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "SD.h"
 
 /******************************************
    Variables
@@ -99,7 +100,7 @@ void gbMenu() {
     case 0:
       display_Clear();
       // Change working dir to root
-      sd.chdir("/");
+      chdir("/");
       readROM_GB();
       compare_checksum_GB();
       break;
@@ -109,11 +110,11 @@ void gbMenu() {
       // Does cartridge have SRAM
       if (sramEndAddress > 0) {
         // Change working dir to root
-        sd.chdir("/");
+        chdir("/");
         readSRAM_GB();
       }
       else {
-        print_Error(F("Cart has no Sram"), false);
+        print_Warning(F("Cart has no Sram"));
       }
       break;
 
@@ -122,7 +123,7 @@ void gbMenu() {
       // Does cartridge have SRAM
       if (sramEndAddress > 0) {
         // Change working dir to root
-        sd.chdir("/");
+        chdir("/");
         writeSRAM_GB();
         unsigned long wrErrors;
         wrErrors = verifySRAM_GB();
@@ -134,17 +135,17 @@ void gbMenu() {
           print_Msg(F("Error: "));
           print_Msg(wrErrors);
           println_Msg(F(" bytes "));
-          print_Error(F("did not verify."), false);
+          print_Warning(F("did not verify."));
         }
       }
       else {
-        print_Error(F("Cart has no Sram"), false);
+        print_Warning(F("Cart has no Sram"));
       }
       break;
 
     case 3:
       // Change working dir to root
-      sd.chdir("/");
+      chdir("/");
       //MBC3
       writeFlash_GB(3);
       // Reset
@@ -154,7 +155,7 @@ void gbMenu() {
 
     case 4:
       // Change working dir to root
-      sd.chdir("/");
+      chdir("/");
       //MBC5
       writeFlash_GB(5);
       // Reset
@@ -287,7 +288,7 @@ void showCartInfo_GB() {
     wait();
   }
   else {
-    print_Error(F("GAMEPAK ERROR"), true);
+    print_Error(F("GAMEPAK ERROR"));
   }
 }
 
@@ -419,8 +420,8 @@ void readROM_GB() {
   // create a new folder for the rom file
   foldern = loadFolderNumber();
   sprintf(folder, "GB/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   display_Clear();
   print_Msg(F("Saving to "));
@@ -433,9 +434,7 @@ void readROM_GB() {
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   uint16_t romAddress = 0;
 
@@ -466,13 +465,13 @@ void readROM_GB() {
       for (int i = 0; i < 512; i++) {
         readData[i] = readByte_GB(romAddress + i);
       }
-      myFile.write(readData, 512);
+      outputFile.write(readData, 512);
       romAddress += 512;
     }
   }
 
   // Close the file:
-  myFile.close();
+  outputFile.close();
 }
 
 unsigned int calc_checksum_GB (char* fileName, char* folder) {
@@ -482,31 +481,24 @@ unsigned int calc_checksum_GB (char* fileName, char* folder) {
   int c = 0;
 
   if (strcmp(folder, "root") != 0)
-    sd.chdir(folder);
+    chdir(folder);
 
-  // If file exists
-  if (myFile.open(fileName, O_READ)) {
-    //calcFilesize = myFile.fileSize() * 8 / 1024 / 1024; // unused
-    for (i = 0; i < (myFile.fileSize() / 512); i++) {
-      myFile.read(sdBuffer, 512);
-      for (c = 0; c < 512; c++) {
-        calcChecksum += sdBuffer[c];
-      }
+  SafeSDFile inputFile = SafeSDFile::openForReading(fileName);
+  //calcFilesize = myFile.fileSize() * 8 / 1024 / 1024; // unused
+  for (i = 0; i < (inputFile.fileSize() / 512); i++) {
+    inputFile.read(sdBuffer, 512);
+    for (c = 0; c < 512; c++) {
+      calcChecksum += sdBuffer[c];
     }
-    myFile.close();
-    sd.chdir();
-    // Subtract checksum bytes
-    calcChecksum -= readByte_GB(0x014E);
-    calcChecksum -= readByte_GB(0x014F);
+  }
+  inputFile.close();
+  chdirToRoot();
+  // Subtract checksum bytes
+  calcChecksum -= readByte_GB(0x014E);
+  calcChecksum -= readByte_GB(0x014F);
 
-    // Return result
-    return (calcChecksum);
-  }
-  // Else show error
-  else {
-    print_Error(F("DUMP ROM 1ST"), false);
-    return 0;
-  }
+  // Return result
+  return (calcChecksum);
 }
 
 boolean compare_checksum_GB() {
@@ -534,7 +526,7 @@ boolean compare_checksum_GB() {
   else {
     print_Msg(F("Result: "));
     println_Msg(calcsumStr);
-    print_Error(F("Checksum Error"), false);
+    print_Warning(F("Checksum Error"));
     return 0;
   }
 }
@@ -551,17 +543,15 @@ void readSRAM_GB() {
     // create a new folder for the save file
     foldern = loadFolderNumber();
     sprintf(folder, "GB/SAVE/%s/%d", romName, foldern);
-    sd.mkdir(folder, true);
-    sd.chdir(folder);
+    mkdir(folder, true);
+    chdir(folder);
 
     // write new folder number back to eeprom
     foldern = foldern + 1;
     saveFolderNumber(foldern);
 
     //open file on sd card
-    if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-      print_Error(F("SD Error"), true);
-    }
+    SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
     dataIn_GB();
 
@@ -588,7 +578,7 @@ void readSRAM_GB() {
         for (uint8_t i = 0; i < 64; i++) {
           readData[i] = readByte_GB(sramAddress + i);
         }
-        myFile.write(readData, 64);
+        outputFile.write(readData, 64);
       }
     }
 
@@ -598,7 +588,7 @@ void readSRAM_GB() {
     dataIn_GB();
 
     // Close the file:
-    myFile.close();
+    outputFile.close();
 
     // Signal end of process
     print_Msg(F("Saved to "));
@@ -607,7 +597,7 @@ void readSRAM_GB() {
     display_Update();
   }
   else {
-    print_Error(F("Cart has no SRAM"), false);
+    print_Warning(F("Cart has no SRAM"));
   }
 }
 
@@ -617,64 +607,61 @@ void writeSRAM_GB() {
   if (sramEndAddress > 0) {
 
     filePath[0] = '\0';
-    sd.chdir("/");
+    chdir("/");
     fileBrowser(F("Select sav file"));
     // Create filepath
     sprintf(filePath, "%s/%s", filePath, fileName);
 
     //open file on sd card
-    if (myFile.open(filePath, O_READ)) {
-      // Set pins to input
-      dataIn_GB();
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-      // MBC2 Fix (unknown why this fixes it, maybe has to read ROM before RAM?)
-      readByte_GB(0x0134);
+    // Set pins to input
+    dataIn_GB();
 
-      dataOut();
+    // MBC2 Fix (unknown why this fixes it, maybe has to read ROM before RAM?)
+    readByte_GB(0x0134);
 
-      if (romType <= 4) { // MBC1
-        writeByte_GB(0x6000, 1); // Set RAM Mode
-      }
+    dataOut();
 
-      // Initialise MBC
-      writeByte_GB(0x0000, 0x0A);
-
-      // Switch RAM banks
-      for (uint8_t bank = 0; bank < sramBanks; bank++) {
-        writeByte_GB(0x4000, bank);
-
-        // Write RAM
-        for (uint16_t sramAddress = 0xA000; sramAddress <= sramEndAddress; sramAddress++) {
-          // Pull CS(PH3) LOW
-          PORTH &= ~(1 << 3);
-          // Write to RAM
-          writeByte_GB(sramAddress, myFile.read());
-          asm volatile("nop");
-          asm volatile("nop");
-          asm volatile("nop");
-          // Pull CS(PH3) HIGH
-          PORTH |= (1 << 3) ;
-        }
-      }
-      // Disable RAM
-      writeByte_GB(0x0000, 0x00);
-
-      // Set pins to input
-      dataIn_GB();
-
-      // Close the file:
-      myFile.close();
-      display_Clear();
-      println_Msg(F("SRAM writing finished"));
-      display_Update();
-
+    if (romType <= 4) { // MBC1
+      writeByte_GB(0x6000, 1); // Set RAM Mode
     }
-    else {
-      print_Error(F("File doesnt exist"), false);
+
+    // Initialise MBC
+    writeByte_GB(0x0000, 0x0A);
+
+    // Switch RAM banks
+    for (uint8_t bank = 0; bank < sramBanks; bank++) {
+      writeByte_GB(0x4000, bank);
+
+      // Write RAM
+      for (uint16_t sramAddress = 0xA000; sramAddress <= sramEndAddress; sramAddress++) {
+        // Pull CS(PH3) LOW
+        PORTH &= ~(1 << 3);
+        // Write to RAM
+        uint8_t byteToWriteToSram = inputFile.readByteOrDie(F("File not large enough.\nSRAM partially written!"));
+        writeByte_GB(sramAddress, byteToWriteToSram);
+        asm volatile("nop");
+        asm volatile("nop");
+        asm volatile("nop");
+        // Pull CS(PH3) HIGH
+        PORTH |= (1 << 3) ;
+      }
     }
+    // Disable RAM
+    writeByte_GB(0x0000, 0x00);
+
+    // Set pins to input
+    dataIn_GB();
+
+    // Close the file:
+    inputFile.close();
+    display_Clear();
+    println_Msg(F("SRAM writing finished"));
+    display_Update();
   }
   else {
-    print_Error(F("Cart has no SRAM"), false);
+    print_Warning(F("Cart has no SRAM"));
   }
 }
 
@@ -682,56 +669,51 @@ void writeSRAM_GB() {
 unsigned long verifySRAM_GB() {
 
   //open file on sd card
-  if (myFile.open(filePath, O_READ)) {
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    // Variable for errors
-    writeErrors = 0;
+  // Variable for errors
+  writeErrors = 0;
 
-    dataIn_GB();
+  dataIn_GB();
 
-    // MBC2 Fix (unknown why this fixes it, maybe has to read ROM before RAM?)
-    readByte_GB(0x0134);
+  // MBC2 Fix (unknown why this fixes it, maybe has to read ROM before RAM?)
+  readByte_GB(0x0134);
 
-    // Does cartridge have RAM
-    if (sramEndAddress > 0) {
+  // Does cartridge have RAM
+  if (sramEndAddress > 0) {
+    dataOut();
+    if (romType <= 4) { // MBC1
+      writeByte_GB(0x6000, 1); // Set RAM Mode
+    }
+
+    // Initialise MBC
+    writeByte_GB(0x0000, 0x0A);
+
+    // Switch SRAM banks
+    for (uint8_t bank = 0; bank < sramBanks; bank++) {
       dataOut();
-      if (romType <= 4) { // MBC1
-        writeByte_GB(0x6000, 1); // Set RAM Mode
-      }
+      writeByte_GB(0x4000, bank);
 
-      // Initialise MBC
-      writeByte_GB(0x0000, 0x0A);
-
-      // Switch SRAM banks
-      for (uint8_t bank = 0; bank < sramBanks; bank++) {
-        dataOut();
-        writeByte_GB(0x4000, bank);
-
-        // Read SRAM
-        dataIn_GB();
-        for (uint16_t sramAddress = 0xA000; sramAddress <= sramEndAddress; sramAddress += 64) {
-          //fill sdBuffer
-          myFile.read(sdBuffer, 64);
-          for (int c = 0; c < 64; c++) {
-            if (readByte_GB(sramAddress + c) != sdBuffer[c]) {
-              writeErrors++;
-            }
+      // Read SRAM
+      dataIn_GB();
+      for (uint16_t sramAddress = 0xA000; sramAddress <= sramEndAddress; sramAddress += 64) {
+        //fill sdBuffer
+        inputFile.read(sdBuffer, 64);
+        for (int c = 0; c < 64; c++) {
+          if (readByte_GB(sramAddress + c) != sdBuffer[c]) {
+            writeErrors++;
           }
         }
       }
-      dataOut();
-      // Disable RAM
-      writeByte_GB(0x0000, 0x00);
-      dataIn_GB();
     }
-    // Close the file:
-    myFile.close();
-    return writeErrors;
+    dataOut();
+    // Disable RAM
+    writeByte_GB(0x0000, 0x00);
+    dataIn_GB();
   }
-  else {
-    print_Error(F("Can't open file"), true);
-    return 0;
-  }
+  // Close the file:
+  inputFile.close();
+  return writeErrors;
 }
 
 // Write 29F032 flashrom
@@ -740,7 +722,7 @@ unsigned long verifySRAM_GB() {
 void writeFlash_GB(byte MBC) {
   // Launch filebrowser
   filePath[0] = '\0';
-  sd.chdir("/");
+  chdir("/");
   fileBrowser(F("Select file"));
   display_Clear();
 
@@ -748,312 +730,307 @@ void writeFlash_GB(byte MBC) {
   sprintf(filePath, "%s/%s", filePath, fileName);
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    // Get rom size from file
-    myFile.seekCur(0x147);
-    romType = myFile.read();
-    romSize = myFile.read();
-    // Go back to file beginning
-    myFile.seekSet(0);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  // Get rom size from file
+  inputFile.seekCur(0x147);
+  romType = inputFile.readByteOrDie(F("Failed reading ROM type from file!"));
+  romSize = inputFile.readByteOrDie(F("Failed reading ROM size from file!"));
+  // Go back to file beginning
+  inputFile.seekSet(0);
 
-    // ROM banks
-    romBanks = 2; // Default 32K
-    if (romSize >= 1) { // Calculate rom size
-      romBanks = 2 << romSize;
-    }
+  // ROM banks
+  romBanks = 2; // Default 32K
+  if (romSize >= 1) { // Calculate rom size
+    romBanks = 2 << romSize;
+  }
 
-    // Set data pins to output
+  // Set data pins to output
+  dataOut();
+
+  // Set ROM bank hi 0
+  writeByte_GB(0x3000, 0);
+  // Set ROM bank low 0
+  writeByte_GB(0x2000, 0);
+  delay(100);
+
+  // Reset flash
+  writeByte_GB(0x555, 0xf0);
+  delay(100);
+
+  // ID command sequence
+  writeByte_GB(0x555, 0xaa);
+  writeByte_GB(0x2aa, 0x55);
+  writeByte_GB(0x555, 0x90);
+
+  dataIn_GB();
+
+  // Read the two id bytes into a string
+  sprintf(flashid, "%02X%02X", readByte_GB(0), readByte_GB(1));
+
+  if (strcmp(flashid, "04D4") == 0) {
+    println_Msg(F("MBM29F033C"));
+    print_Msg(F("Banks: "));
+    print_Msg(romBanks);
+    println_Msg(F("/256"));
+    display_Update();
+  }
+  else if (strcmp(flashid, "0141") == 0) {
+    println_Msg(F("AM29F032B"));
+    print_Msg(F("Banks: "));
+    print_Msg(romBanks);
+    println_Msg(F("/256"));
+    display_Update();
+  }
+  else if (strcmp(flashid, "01AD") == 0) {
+    println_Msg(F("AM29F016B"));
+    print_Msg(F("Banks: "));
+    print_Msg(romBanks);
+    println_Msg(F("/128"));
+    display_Update();
+  }
+  else if (strcmp(flashid, "04AD") == 0) {
+    println_Msg(F("AM29F016D"));
+    print_Msg(F("Banks: "));
+    print_Msg(romBanks);
+    println_Msg(F("/128"));
+    display_Update();
+  }
+  else if (strcmp(flashid, "01D5") == 0) {
+    println_Msg(F("AM29F080B"));
+    print_Msg(F("Banks: "));
+    print_Msg(romBanks);
+    println_Msg(F("/64"));
+    display_Update();
+  }
+  else {
+    print_Msg(F("Flash ID: "));
+    println_Msg(flashid);
+    display_Update();
+    print_Error(F("Unknown flashrom"));
+  }
+  dataOut();
+
+  // Reset flash
+  writeByte_GB(0x555, 0xf0);
+
+  delay(100);
+  println_Msg(F("Erasing flash"));
+  display_Update();
+
+  // Erase flash
+  writeByte_GB(0x555, 0xaa);
+  writeByte_GB(0x2aa, 0x55);
+  writeByte_GB(0x555, 0x80);
+  writeByte_GB(0x555, 0xaa);
+  writeByte_GB(0x2aa, 0x55);
+  writeByte_GB(0x555, 0x10);
+
+  dataIn_GB();
+
+  // Read the status register
+  byte statusReg = readByte_GB(0);
+
+  // After a completed erase D7 will output 1
+  while ((statusReg & 0x80) != 0x80) {
+    // Blink led
+    PORTB ^= (1 << 4);
+    delay(100);
+    // Update Status
+    statusReg = readByte_GB(0);
+  }
+
+  // Blankcheck
+  println_Msg(F("Blankcheck"));
+  display_Update();
+
+  // Read x number of banks
+  for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
+    // Blink led
+    PORTB ^= (1 << 4);
+
     dataOut();
 
-    // Set ROM bank hi 0
-    writeByte_GB(0x3000, 0);
-    // Set ROM bank low 0
-    writeByte_GB(0x2000, 0);
-    delay(100);
+    // Set ROM bank
+    writeByte_GB(0x2000, currBank);
+    dataIn();
 
-    // Reset flash
-    writeByte_GB(0x555, 0xf0);
-    delay(100);
+    for (unsigned int currAddr = 0x4000; currAddr < 0x7FFF; currAddr += 512) {
+      uint8_t readData[512];
+      for (int currByte = 0; currByte < 512; currByte++) {
+        readData[currByte] = readByte_GB(currAddr + currByte);
+      }
+      for (int j = 0; j < 512; j++) {
+        if (readData[j] != 0xFF) {
+          println_Msg(F("Not empty"));
+          print_Error(F("Erase failed"));
+        }
+      }
+    }
+  }
 
-    // ID command sequence
-    writeByte_GB(0x555, 0xaa);
-    writeByte_GB(0x2aa, 0x55);
-    writeByte_GB(0x555, 0x90);
+  if (MBC == 3) {
+    println_Msg(F("Writing flash MBC3"));
+    display_Update();
 
-    dataIn_GB();
-
-    // Read the two id bytes into a string
-    sprintf(flashid, "%02X%02X", readByte_GB(0), readByte_GB(1));
-
-    if (strcmp(flashid, "04D4") == 0) {
-      println_Msg(F("MBM29F033C"));
-      print_Msg(F("Banks: "));
-      print_Msg(romBanks);
-      println_Msg(F("/256"));
-      display_Update();
-    }
-    else if (strcmp(flashid, "0141") == 0) {
-      println_Msg(F("AM29F032B"));
-      print_Msg(F("Banks: "));
-      print_Msg(romBanks);
-      println_Msg(F("/256"));
-      display_Update();
-    }
-    else if (strcmp(flashid, "01AD") == 0) {
-      println_Msg(F("AM29F016B"));
-      print_Msg(F("Banks: "));
-      print_Msg(romBanks);
-      println_Msg(F("/128"));
-      display_Update();
-    }
-    else if (strcmp(flashid, "04AD") == 0) {
-      println_Msg(F("AM29F016D"));
-      print_Msg(F("Banks: "));
-      print_Msg(romBanks);
-      println_Msg(F("/128"));
-      display_Update();
-    }
-    else if (strcmp(flashid, "01D5") == 0) {
-      println_Msg(F("AM29F080B"));
-      print_Msg(F("Banks: "));
-      print_Msg(romBanks);
-      println_Msg(F("/64"));
-      display_Update();
-    }
-    else {
-      print_Msg(F("Flash ID: "));
-      println_Msg(flashid);
-      display_Update();
-      print_Error(F("Unknown flashrom"), true);
-    }
+    // Write flash
     dataOut();
 
-    // Reset flash
-    writeByte_GB(0x555, 0xf0);
+    uint16_t currAddr = 0;
+    uint16_t endAddr = 0x3FFF;
 
-    delay(100);
-    println_Msg(F("Erasing flash"));
-    display_Update();
-
-    // Erase flash
-    writeByte_GB(0x555, 0xaa);
-    writeByte_GB(0x2aa, 0x55);
-    writeByte_GB(0x555, 0x80);
-    writeByte_GB(0x555, 0xaa);
-    writeByte_GB(0x2aa, 0x55);
-    writeByte_GB(0x555, 0x10);
-
-    dataIn_GB();
-
-    // Read the status register
-    byte statusReg = readByte_GB(0);
-
-    // After a completed erase D7 will output 1
-    while ((statusReg & 0x80) != 0x80) {
-      // Blink led
-      PORTB ^= (1 << 4);
-      delay(100);
-      // Update Status
-      statusReg = readByte_GB(0);
-    }
-
-    // Blankcheck
-    println_Msg(F("Blankcheck"));
-    display_Update();
-
-    // Read x number of banks
     for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
       // Blink led
       PORTB ^= (1 << 4);
 
-      dataOut();
-
       // Set ROM bank
-      writeByte_GB(0x2000, currBank);
-      dataIn();
+      writeByte_GB(0x2100, currBank);
 
-      for (unsigned int currAddr = 0x4000; currAddr < 0x7FFF; currAddr += 512) {
-        uint8_t readData[512];
+      if (currBank > 0) {
+        currAddr = 0x4000;
+        endAddr = 0x7FFF;
+      }
+
+      while (currAddr <= endAddr) {
+        inputFile.read(sdBuffer, 512);
+
         for (int currByte = 0; currByte < 512; currByte++) {
-          readData[currByte] = readByte_GB(currAddr + currByte);
-        }
-        for (int j = 0; j < 512; j++) {
-          if (readData[j] != 0xFF) {
-            println_Msg(F("Not empty"));
-            print_Error(F("Erase failed"), true);
+          // Write command sequence
+          writeByte_GB(0x555, 0xaa);
+          writeByte_GB(0x2aa, 0x55);
+          writeByte_GB(0x555, 0xa0);
+          // Write current byte
+          writeByte_GB(currAddr + currByte, sdBuffer[currByte]);
+
+          // Set data pins to input
+          dataIn();
+
+          // Setting CS(PH3) and OE/RD(PH6) LOW
+          PORTH &= ~((1 << 3) | (1 << 6));
+
+          // Busy check
+          while ((PINC & 0x80) != (sdBuffer[currByte] & 0x80)) {
           }
+
+          // Switch CS(PH3) and OE/RD(PH6) to HIGH
+          PORTH |= (1 << 3) | (1 << 6);
+
+          // Set data pins to output
+          dataOut();
         }
+        currAddr += 512;
       }
     }
+  }
 
-    if (MBC == 3) {
-      println_Msg(F("Writing flash MBC3"));
-      display_Update();
-
-      // Write flash
-      dataOut();
-
-      uint16_t currAddr = 0;
-      uint16_t endAddr = 0x3FFF;
-
-      for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
-        // Blink led
-        PORTB ^= (1 << 4);
-
-        // Set ROM bank
-        writeByte_GB(0x2100, currBank);
-
-        if (currBank > 0) {
-          currAddr = 0x4000;
-          endAddr = 0x7FFF;
-        }
-
-        while (currAddr <= endAddr) {
-          myFile.read(sdBuffer, 512);
-
-          for (int currByte = 0; currByte < 512; currByte++) {
-            // Write command sequence
-            writeByte_GB(0x555, 0xaa);
-            writeByte_GB(0x2aa, 0x55);
-            writeByte_GB(0x555, 0xa0);
-            // Write current byte
-            writeByte_GB(currAddr + currByte, sdBuffer[currByte]);
-
-            // Set data pins to input
-            dataIn();
-
-            // Setting CS(PH3) and OE/RD(PH6) LOW
-            PORTH &= ~((1 << 3) | (1 << 6));
-
-            // Busy check
-            while ((PINC & 0x80) != (sdBuffer[currByte] & 0x80)) {
-            }
-
-            // Switch CS(PH3) and OE/RD(PH6) to HIGH
-            PORTH |= (1 << 3) | (1 << 6);
-
-            // Set data pins to output
-            dataOut();
-          }
-          currAddr += 512;
-        }
-      }
-    }
-
-    else if (MBC == 5) {
-      println_Msg(F("Writing flash MBC5"));
-      display_Update();
-
-      // Write flash
-      dataOut();
-
-      for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
-        // Blink led
-        PORTB ^= (1 << 4);
-
-        // Set ROM bank
-        writeByte_GB(0x2000, currBank);
-        // 0x2A8000 fix
-        writeByte_GB(0x4000, 0x0);
-
-        for (unsigned int currAddr = 0x4000; currAddr < 0x7FFF; currAddr += 512) {
-          myFile.read(sdBuffer, 512);
-
-          for (int currByte = 0; currByte < 512; currByte++) {
-            // Write command sequence
-            writeByte_GB(0x555, 0xaa);
-            writeByte_GB(0x2aa, 0x55);
-            writeByte_GB(0x555, 0xa0);
-            // Write current byte
-            writeByte_GB(currAddr + currByte, sdBuffer[currByte]);
-
-            // Set data pins to input
-            dataIn();
-
-            // Setting CS(PH3) and OE/RD(PH6) LOW
-            PORTH &= ~((1 << 3) | (1 << 6));
-
-            // Busy check
-            while ((PINC & 0x80) != (sdBuffer[currByte] & 0x80)) {
-            }
-
-            // Switch CS(PH3) and OE/RD(PH6) to HIGH
-            PORTH |= (1 << 3) | (1 << 6);
-
-            // Set data pins to output
-            dataOut();
-          }
-        }
-      }
-    }
-
-    // Set data pins to input again
-    dataIn_GB();
-
-    println_Msg(F("Verifying"));
+  else if (MBC == 5) {
+    println_Msg(F("Writing flash MBC5"));
     display_Update();
 
-    // Go back to file beginning
-    myFile.seekSet(0);
-    //unsigned int addr = 0;  // unused
-    writeErrors = 0;
+    // Write flash
+    dataOut();
 
-    // Verify flashrom
-    uint16_t romAddress = 0;
-
-    // Read number of banks and switch banks
-    for (uint16_t bank = 1; bank < romBanks; bank++) {
-      // Switch data pins to output
-      dataOut();
-
-      if (romType >= 5) { // MBC2 and above
-        writeByte_GB(0x2100, bank); // Set ROM bank
-      }
-      else { // MBC1
-        writeByte_GB(0x6000, 0); // Set ROM Mode
-        writeByte_GB(0x4000, bank >> 5); // Set bits 5 & 6 (01100000) of ROM bank
-        writeByte_GB(0x2000, bank & 0x1F); // Set bits 0 & 4 (00011111) of ROM bank
-      }
-
-      // Switch data pins to intput
-      dataIn_GB();
-
-      if (bank > 1) {
-        romAddress = 0x4000;
-      }
+    for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
       // Blink led
       PORTB ^= (1 << 4);
 
-      // Read up to 7FFF per bank
-      while (romAddress <= 0x7FFF) {
-        // Fill sdBuffer
-        myFile.read(sdBuffer, 512);
-        // Compare
-        for (int i = 0; i < 512; i++) {
-          if (readByte_GB(romAddress + i) != sdBuffer[i]) {
-            writeErrors++;
+      // Set ROM bank
+      writeByte_GB(0x2000, currBank);
+      // 0x2A8000 fix
+      writeByte_GB(0x4000, 0x0);
+
+      for (unsigned int currAddr = 0x4000; currAddr < 0x7FFF; currAddr += 512) {
+        inputFile.read(sdBuffer, 512);
+
+        for (int currByte = 0; currByte < 512; currByte++) {
+          // Write command sequence
+          writeByte_GB(0x555, 0xaa);
+          writeByte_GB(0x2aa, 0x55);
+          writeByte_GB(0x555, 0xa0);
+          // Write current byte
+          writeByte_GB(currAddr + currByte, sdBuffer[currByte]);
+
+          // Set data pins to input
+          dataIn();
+
+          // Setting CS(PH3) and OE/RD(PH6) LOW
+          PORTH &= ~((1 << 3) | (1 << 6));
+
+          // Busy check
+          while ((PINC & 0x80) != (sdBuffer[currByte] & 0x80)) {
           }
+
+          // Switch CS(PH3) and OE/RD(PH6) to HIGH
+          PORTH |= (1 << 3) | (1 << 6);
+
+          // Set data pins to output
+          dataOut();
         }
-        romAddress += 512;
       }
     }
-    // Close the file:
-    myFile.close();
+  }
 
-    if (writeErrors == 0) {
-      println_Msg(F("OK"));
-      display_Update();
+  // Set data pins to input again
+  dataIn_GB();
+
+  println_Msg(F("Verifying"));
+  display_Update();
+
+  // Go back to file beginning
+  inputFile.seekSet(0);
+  //unsigned int addr = 0;  // unused
+  writeErrors = 0;
+
+  // Verify flashrom
+  uint16_t romAddress = 0;
+
+  // Read number of banks and switch banks
+  for (uint16_t bank = 1; bank < romBanks; bank++) {
+    // Switch data pins to output
+    dataOut();
+
+    if (romType >= 5) { // MBC2 and above
+      writeByte_GB(0x2100, bank); // Set ROM bank
     }
-    else {
-      print_Msg(F("Error: "));
-      print_Msg(writeErrors);
-      println_Msg(F(" bytes "));
-      print_Error(F("did not verify."), false);
+    else { // MBC1
+      writeByte_GB(0x6000, 0); // Set ROM Mode
+      writeByte_GB(0x4000, bank >> 5); // Set bits 5 & 6 (01100000) of ROM bank
+      writeByte_GB(0x2000, bank & 0x1F); // Set bits 0 & 4 (00011111) of ROM bank
+    }
+
+    // Switch data pins to intput
+    dataIn_GB();
+
+    if (bank > 1) {
+      romAddress = 0x4000;
+    }
+    // Blink led
+    PORTB ^= (1 << 4);
+
+    // Read up to 7FFF per bank
+    while (romAddress <= 0x7FFF) {
+      // Fill sdBuffer
+      inputFile.read(sdBuffer, 512);
+      // Compare
+      for (int i = 0; i < 512; i++) {
+        if (readByte_GB(romAddress + i) != sdBuffer[i]) {
+          writeErrors++;
+        }
+      }
+      romAddress += 512;
     }
   }
-  else {
-    println_Msg(F("Can't open file"));
+  // Close the file:
+  inputFile.close();
+
+  if (writeErrors == 0) {
+    println_Msg(F("OK"));
     display_Update();
+  }
+  else {
+    print_Msg(F("Error: "));
+    print_Msg(writeErrors);
+    println_Msg(F(" bytes "));
+    print_Warning(F("did not verify."));
   }
 }
 

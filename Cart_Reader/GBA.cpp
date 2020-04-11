@@ -8,6 +8,7 @@
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "SD.h"
 
 /******************************************
    Variables
@@ -155,9 +156,9 @@ void gbaMenu() {
       }
       display_Clear();
       // Change working dir to root
-      sd.chdir("/");
+      chdir("/");
       readROM_GBA();
-      sd.chdir("/");
+      chdir("/");
       compare_checksum_GBA();
       println_Msg(F(""));
       println_Msg(F("Press Button..."));
@@ -212,7 +213,7 @@ void gbaMenu() {
       {
         case 1:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 4K EEPROM
           readEeprom_GBA(4);
           setROM_GBA();
@@ -220,7 +221,7 @@ void gbaMenu() {
 
         case 2:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 64K EEPROM
           readEeprom_GBA(64);
           setROM_GBA();
@@ -228,7 +229,7 @@ void gbaMenu() {
 
         case 3:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 256K SRAM/FRAM
           readSRAM_GBA(1, 32768, 0);
           setROM_GBA();
@@ -236,7 +237,7 @@ void gbaMenu() {
 
         case 4:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 512K FLASH
           readFLASH_GBA(1, 65536, 0);
           setROM_GBA();
@@ -244,7 +245,7 @@ void gbaMenu() {
 
         case 5:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 1024K FLASH (divided into two banks)
           switchBank_GBA(0x0);
           setROM_GBA();
@@ -257,7 +258,7 @@ void gbaMenu() {
 
         case 6:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 512K SRAM/FRAM
           readSRAM_GBA(1, 65536, 0);
           setROM_GBA();
@@ -316,7 +317,7 @@ void gbaMenu() {
       {
         case 1:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 4K EEPROM
           writeEeprom_GBA(4);
           writeErrors = verifyEEP_GBA(4);
@@ -328,14 +329,14 @@ void gbaMenu() {
             print_Msg(F("Error: "));
             print_Msg(writeErrors);
             println_Msg(F(" bytes "));
-            print_Error(F("did not verify."), false);
+            print_Warning(F("did not verify."));
           }
           setROM_GBA();
           break;
 
         case 2:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 64K EEPROM
           writeEeprom_GBA(64);
           writeErrors = verifyEEP_GBA(64);
@@ -347,7 +348,7 @@ void gbaMenu() {
             print_Msg(F("Error: "));
             print_Msg(writeErrors);
             println_Msg(F(" bytes "));
-            print_Error(F("did not verify."), false);
+            print_Warning(F("did not verify."));
           }
           setROM_GBA();
           break;
@@ -355,7 +356,7 @@ void gbaMenu() {
         case 3:
           display_Clear();
           // Change working dir to root
-          sd.chdir("/");
+          chdir("/");
           // 256K SRAM/FRAM
           writeSRAM_GBA(1, 32768, 0);
           writeErrors = verifySRAM_GBA(32768, 0);
@@ -367,14 +368,14 @@ void gbaMenu() {
             print_Msg(F("Error: "));
             print_Msg(writeErrors);
             println_Msg(F(" bytes "));
-            print_Error(F("did not verify."), false);
+            print_Warning(F("did not verify."));
           }
           setROM_GBA();
           break;
 
         case 4:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 512K FLASH
           idFlash_GBA();
           resetFLASH_GBA();
@@ -382,7 +383,7 @@ void gbaMenu() {
             println_Msg(F("Flashrom Type not supported"));
             print_Msg(F("ID: "));
             println_Msg(flashid);
-            print_Error(F(""), true);
+            print_Error(F(""));
           }
           eraseFLASH_GBA();
           if (blankcheckFLASH_GBA(65536)) {
@@ -390,14 +391,14 @@ void gbaMenu() {
             verifyFLASH_GBA(65536, 0);
           }
           else {
-            print_Error(F("Erase failed"), false);
+            print_Warning(F("Erase failed"));
           }
           setROM_GBA();
           break;
 
         case 5:
           display_Clear();
-          sd.chdir("/");
+          chdir("/");
           // 1M FLASH
           idFlash_GBA();
           resetFLASH_GBA();
@@ -405,7 +406,7 @@ void gbaMenu() {
             println_Msg(F("Flashrom Type not supported"));
             print_Msg(F("ID: "));
             println_Msg(flashid);
-            print_Error(F(""), true);
+            print_Error(F(""));
           }
           eraseFLASH_GBA();
           // 131072 bytes are divided into two 65536 byte banks
@@ -416,7 +417,7 @@ void gbaMenu() {
             verifyFLASH_GBA(65536, 0);
           }
           else {
-            print_Error(F("Erase failed"), false);
+            print_Warning(F("Erase failed"));
           }
           switchBank_GBA(0x1);
           setROM_GBA();
@@ -425,7 +426,7 @@ void gbaMenu() {
             verifyFLASH_GBA(65536, 65536);
           }
           else {
-            print_Error(F("Erase failed"), false);
+            print_Warning(F("Erase failed"));
           }
           setROM_GBA();
           break;
@@ -433,7 +434,7 @@ void gbaMenu() {
         case 6:
           display_Clear();
           // Change working dir to root
-          sd.chdir("/");
+          chdir("/");
           // 512K SRAM/FRAM
           writeSRAM_GBA(1, 65536, 0);
           writeErrors = verifySRAM_GBA(65536, 0);
@@ -445,7 +446,7 @@ void gbaMenu() {
             print_Msg(F("Error: "));
             print_Msg(writeErrors);
             println_Msg(F(" bytes "));
-            print_Error(F("did not verify."), false);
+            print_Warning(F("did not verify."));
           }
           setROM_GBA();
           break;
@@ -788,7 +789,7 @@ void getCartInfo_GBA() {
   }
 
   if (logoChecksum != 0x4B1B) {
-    print_Error(F("CARTRIDGE ERROR"), false);
+    print_Warning(F("CARTRIDGE ERROR"));
     strcpy(romName, "ERROR");
     println_Msg(F(""));
     println_Msg(F(""));
@@ -813,48 +814,44 @@ void getCartInfo_GBA() {
     cartID[2] = char(sdBuffer[0xAE]);
     cartID[3] = char(sdBuffer[0xAF]);
 
-    if (myFile.open("gba.txt", O_READ)) {
-      // Loop through file
-      while (myFile.available()) {
-        // Read 4 bytes into String, do it one at a time so byte order doesn't get mixed up
-        sprintf(tempStr, "%c", myFile.read());
-        for (byte i = 0; i < 3; i++) {
-          sprintf(tempStr2, "%c", myFile.read());
-          strcat(tempStr, tempStr2);
-        }
-
-        // Check if string is a match
-        if (strcmp(tempStr, cartID) == 0) {
-          // Skip the , in the file
-          myFile.seekSet(myFile.curPosition() + 1);
-
-          // Read the next ascii character and subtract 48 to convert to decimal
-          cartSize = myFile.read() - 48;
-          // Remove leading 0 for single digit cart sizes
-          if (cartSize != 0) {
-            cartSize = cartSize * 10 +  myFile.read() - 48;
-          }
-          else {
-            cartSize = myFile.read() - 48;
-          }
-
-          // Skip the , in the file
-          myFile.seekSet(myFile.curPosition() + 1);
-
-          // Read the next ascii character and subtract 48 to convert to decimal
-          saveType = myFile.read() - 48;
-        }
-        // If no match, empty string, advance by 7 and try again
-        else {
-          myFile.seekSet(myFile.curPosition() + 7);
-        }
+    SafeSDFile gbaFile = SafeSDFile::openForReading(F("/gba.txt"));
+    // Loop through file
+    while (gbaFile.bytesAvailable() > 0) {
+      // Read 4 bytes into String, do it one at a time so byte order doesn't get mixed up
+      sprintf(tempStr, "%c", gbaFile.readByteOrDie());
+      for (byte i = 0; i < 3; i++) {
+        sprintf(tempStr2, "%c", gbaFile.readByteOrDie());
+        strcat(tempStr, tempStr2);
       }
-      // Close the file:
-      myFile.close();
+
+      // Check if string is a match
+      if (strcmp(tempStr, cartID) == 0) {
+        // Skip the , in the file
+        gbaFile.seekCur(1);
+
+        // Read the next ascii character and subtract 48 to convert to decimal
+        cartSize = gbaFile.readByteOrDie() - 48;
+        // Remove leading 0 for single digit cart sizes
+        if (cartSize != 0) {
+          cartSize = cartSize * 10 +  gbaFile.readByteOrDie() - 48;
+        }
+        else {
+          cartSize = gbaFile.readByteOrDie() - 48;
+        }
+
+        // Skip the , in the file
+        gbaFile.seekCur(1);
+
+        // Read the next ascii character and subtract 48 to convert to decimal
+        saveType = gbaFile.readByteOrDie() - 48;
+      }
+      // If no match, empty string, advance by 7 and try again
+      else {
+        gbaFile.seekCur(7);
+      }
     }
-    else {
-      print_Error(F("GBA.txt missing"), true);
-    }
+    // Close the file:
+    gbaFile.close();
 
     // Get name
     byte myByte = 0;
@@ -886,7 +883,7 @@ void getCartInfo_GBA() {
     if (strcmp(calcChecksumStr, checksumStr) != 0) {
       print_Msg(F("Result: "));
       println_Msg(calcChecksumStr);
-      print_Error(F("Checksum Error"), false);
+      print_Warning(F("Checksum Error"));
       println_Msg(F(""));
       println_Msg(F("Press Button..."));
       display_Update();
@@ -904,8 +901,8 @@ void readROM_GBA() {
   // create a new folder for the rom file
   foldern = loadFolderNumber();
   sprintf(folder, "GBA/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   //clear the screen
   display_Clear();
@@ -919,9 +916,7 @@ void readROM_GBA() {
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // Read rom
   for (unsigned int myAddress = 0; myAddress < cartSize; myAddress += 512) {
@@ -936,11 +931,11 @@ void readROM_GBA() {
     }
 
     // Write to SD
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
   }
 
   // Close the file:
-  myFile.close();
+  outputFile.close();
 }
 
 // Calculate the checksum of the dumped rom
@@ -954,39 +949,32 @@ boolean compare_checksum_GBA () {
   // last used rom folder
   foldern = loadFolderNumber();
   sprintf(folder, "GBA/ROM/%s/%d", romName, foldern - 1);
-  sd.chdir(folder);
+  chdir(folder);
 
-  // If file exists
-  if (myFile.open(fileName, O_READ)) {
-    // Read rom header
-    myFile.read(sdBuffer, 512);
-    myFile.close();
+  SafeSDFile romFile = SafeSDFile::openForReading(fileName);
+  // Read rom header
+  romFile.readOrDie(sdBuffer, 512);
+  romFile.close();
 
-    // Calculate Checksum
-    int calcChecksum = 0x00;
-    for (int n = 0xA0; n < 0xBD; n++) {
-      calcChecksum -= sdBuffer[n];
-    }
-    calcChecksum = (calcChecksum - 0x19) & 0xFF;
-
-    // Turn into string
-    sprintf(calcChecksumStr, "%02X", calcChecksum);
-
-    if (strcmp(calcChecksumStr, checksumStr) == 0) {
-      println_Msg(F("Checksum matches"));
-      display_Update();
-      return 1;
-    }
-    else {
-      print_Msg(F("Result: "));
-      println_Msg(calcChecksumStr);
-      print_Error(F("Checksum Error"), false);
-      return 0;
-    }
+  // Calculate Checksum
+  int calcChecksum = 0x00;
+  for (int n = 0xA0; n < 0xBD; n++) {
+    calcChecksum -= sdBuffer[n];
   }
-  // Else show error
+  calcChecksum = (calcChecksum - 0x19) & 0xFF;
+
+  // Turn into string
+  sprintf(calcChecksumStr, "%02X", calcChecksum);
+
+  if (strcmp(calcChecksumStr, checksumStr) == 0) {
+    println_Msg(F("Checksum matches"));
+    display_Update();
+    return 1;
+  }
   else {
-    print_Error(F("Failed to open rom"), false);
+    print_Msg(F("Result: "));
+    println_Msg(calcChecksumStr);
+    print_Warning(F("Checksum Error"));
     return 0;
   }
 }
@@ -1004,8 +992,8 @@ void readSRAM_GBA(boolean browseFile, unsigned long sramSize, uint32_t pos) {
     // create a new folder for the save file
     foldern = loadFolderNumber();
     sprintf(folder, "GBA/SAVE/%s/%d", romName, foldern);
-    sd.mkdir(folder, true);
-    sd.chdir(folder);
+    mkdir(folder, true);
+    chdir(folder);
 
     // Save location
     print_Msg(F("Saving to "));
@@ -1018,13 +1006,11 @@ void readSRAM_GBA(boolean browseFile, unsigned long sramSize, uint32_t pos) {
   }
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // Seek to a new position in the file
   if (pos != 0)
-    myFile.seekCur(pos);
+    outputFile.seekCur(pos);
 
   for (unsigned long currAddress = 0; currAddress < sramSize; currAddress += 512) {
     for (int c = 0; c < 512; c++) {
@@ -1033,10 +1019,10 @@ void readSRAM_GBA(boolean browseFile, unsigned long sramSize, uint32_t pos) {
     }
 
     // Write sdBuffer to file
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
 
   // Signal end of process
   println_Msg(F("Done"));
@@ -1046,7 +1032,7 @@ void readSRAM_GBA(boolean browseFile, unsigned long sramSize, uint32_t pos) {
 void writeSRAM_GBA(boolean browseFile, unsigned long sramSize, uint32_t pos) {
   if (browseFile) {
     filePath[0] = '\0';
-    sd.chdir("/");
+    chdir("/");
     fileBrowser(F("Select srm file"));
     // Create filepath
     sprintf(filePath, "%s/%s", filePath, fileName);
@@ -1054,61 +1040,51 @@ void writeSRAM_GBA(boolean browseFile, unsigned long sramSize, uint32_t pos) {
   }
 
   //open file on sd card
-  if (myFile.open(filePath, O_READ)) {
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    // Seek to a new position in the file
-    if (pos != 0)
-      myFile.seekCur(pos);
+  // Seek to a new position in the file
+  if (pos != 0)
+    inputFile.seekCur(pos);
 
-    for (unsigned long currAddress = 0; currAddress < sramSize; currAddress += 512) {
-      //fill sdBuffer
-      myFile.read(sdBuffer, 512);
+  for (unsigned long currAddress = 0; currAddress < sramSize; currAddress += 512) {
+    //fill sdBuffer
+    inputFile.read(sdBuffer, 512);
 
-      for (int c = 0; c < 512; c++) {
-        // Write byte
-        writeByte_GBA(currAddress + c, sdBuffer[c]);
-      }
+    for (int c = 0; c < 512; c++) {
+      // Write byte
+      writeByte_GBA(currAddress + c, sdBuffer[c]);
     }
-    // Close the file:
-    myFile.close();
-    println_Msg(F("SRAM writing finished"));
-    display_Update();
-
   }
-  else {
-    print_Error(F("File doesnt exist"), false);
-  }
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("SRAM writing finished"));
+  display_Update();
 }
 
 unsigned long verifySRAM_GBA(unsigned long sramSize, uint32_t pos) {
   //open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    // Variable for errors
-    writeErrors = 0;
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  // Variable for errors
+  writeErrors = 0;
 
-    // Seek to a new position in the file
-    if (pos != 0)
-      myFile.seekCur(pos);
+  // Seek to a new position in the file
+  if (pos != 0)
+    inputFile.seekCur(pos);
 
-    for (unsigned long currAddress = 0; currAddress < sramSize; currAddress += 512) {
-      //fill sdBuffer
-      myFile.read(sdBuffer, 512);
+  for (unsigned long currAddress = 0; currAddress < sramSize; currAddress += 512) {
+    //fill sdBuffer
+    inputFile.read(sdBuffer, 512);
 
-      for (int c = 0; c < 512; c++) {
-        // Read byte
-        if (readByte_GBA(currAddress + c) != sdBuffer[c]) {
-          writeErrors++;
-        }
+    for (int c = 0; c < 512; c++) {
+      // Read byte
+      if (readByte_GBA(currAddress + c) != sdBuffer[c]) {
+        writeErrors++;
       }
     }
-    // Close the file:
-    myFile.close();
-    return writeErrors;
   }
-  else {
-    print_Error(F("Can't open file"), false);
-    return 0;
-  }
+  // Close the file:
+  inputFile.close();
+  return writeErrors;
 }
 
 /******************************************
@@ -1136,8 +1112,8 @@ void readFRAM_GBA (unsigned long framSize) {
   // create a new folder for the save file
   foldern = loadFolderNumber();
   sprintf(folder, "GBA/SAVE/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   // Save location
   print_Msg(F("Saving to "));
@@ -1149,9 +1125,7 @@ void readFRAM_GBA (unsigned long framSize) {
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
   for (unsigned long currAddress = 0; currAddress < framSize; currAddress += 512) {
     for (int c = 0; c < 512; c++) {
       // Pull OE_SRAM(PH6) HIGH
@@ -1175,10 +1149,10 @@ void readFRAM_GBA (unsigned long framSize) {
       sdBuffer[c] = PINC;
     }
     // Write sdBuffer to file
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
 
   // Signal end of process
   println_Msg(F("Done"));
@@ -1202,7 +1176,7 @@ void writeFRAM_GBA (boolean browseFile, unsigned long framSize) {
 
   if (browseFile) {
     filePath[0] = '\0';
-    sd.chdir("/");
+    chdir("/");
     fileBrowser(F("Select srm file"));
     // Create filepath
     sprintf(filePath, "%s/%s", filePath, fileName);
@@ -1212,45 +1186,40 @@ void writeFRAM_GBA (boolean browseFile, unsigned long framSize) {
     sprintf(filePath, "%s", fileName);
 
   //open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    for (unsigned long currAddress = 0; currAddress < framSize; currAddress += 512) {
-      //fill sdBuffer
-      myFile.read(sdBuffer, 512);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  for (unsigned long currAddress = 0; currAddress < framSize; currAddress += 512) {
+    //fill sdBuffer
+    inputFile.read(sdBuffer, 512);
 
-      for (int c = 0; c < 512; c++) {
-        // Output Data on PORTC
-        PORTC = sdBuffer[c];
+    for (int c = 0; c < 512; c++) {
+      // Output Data on PORTC
+      PORTC = sdBuffer[c];
 
-        // Arduino running at 16Mhz -> one nop = 62.5ns
-        // Data setup time 50ns
-        __asm__("nop\n\t");
+      // Arduino running at 16Mhz -> one nop = 62.5ns
+      // Data setup time 50ns
+      __asm__("nop\n\t");
 
-        // Pull WE_SRAM (PH5) HIGH
-        PORTH |= (1 << 5);
+      // Pull WE_SRAM (PH5) HIGH
+      PORTH |= (1 << 5);
 
-        // Set address
-        PORTF = (currAddress + c) & 0xFF;
-        PORTK = ((currAddress + c) >> 8) & 0xFF;
+      // Set address
+      PORTF = (currAddress + c) & 0xFF;
+      PORTK = ((currAddress + c) >> 8) & 0xFF;
 
-        // Leave WE_SRAM (PH5) HIGH for at least 85ns
-        __asm__("nop\n\t""nop\n\t");
+      // Leave WE_SRAM (PH5) HIGH for at least 85ns
+      __asm__("nop\n\t""nop\n\t");
 
-        // Pull WE_SRAM (PH5) LOW
-        PORTH &= ~ (1 << 5);
+      // Pull WE_SRAM (PH5) LOW
+      PORTH &= ~ (1 << 5);
 
-        // Hold address for at least 25ns and wait 150ns before next write
-        __asm__("nop\n\t""nop\n\t""nop\n\t");
-      }
+      // Hold address for at least 25ns and wait 150ns before next write
+      __asm__("nop\n\t""nop\n\t""nop\n\t");
     }
-    // Close the file:
-    myFile.close();
-    println_Msg(F("SRAM writing finished"));
-    display_Update();
-
   }
-  else {
-    print_Error(F("File doesnt exist"), false);
-  }
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("SRAM writing finished"));
+  display_Update();
 }
 
 // Check if the SRAM was written without any error
@@ -1269,48 +1238,43 @@ unsigned long verifyFRAM_GBA(unsigned long framSize) {
   PORTH &= ~((1 << 0) | (1 << 6));
 
   //open file on sd card
-  if (myFile.open(filePath, O_READ)) {
+  SafeSDFile romFile = SafeSDFile::openForReading(filePath);
 
-    // Variable for errors
-    writeErrors = 0;
+  // Variable for errors
+  writeErrors = 0;
 
-    for (unsigned long currAddress = 0; currAddress < framSize; currAddress += 512) {
-      //fill sdBuffer
-      myFile.read(sdBuffer, 512);
+  for (unsigned long currAddress = 0; currAddress < framSize; currAddress += 512) {
+    //fill sdBuffer
+    romFile.read(sdBuffer, 512);
 
-      for (int c = 0; c < 512; c++) {
-        // Pull OE_SRAM(PH6) HIGH
-        PORTH |= (1 << 6);
+    for (int c = 0; c < 512; c++) {
+      // Pull OE_SRAM(PH6) HIGH
+      PORTH |= (1 << 6);
 
-        // Set address
-        PORTF = (currAddress + c) & 0xFF;
-        PORTK = ((currAddress + c) >> 8) & 0xFF;
+      // Set address
+      PORTF = (currAddress + c) & 0xFF;
+      PORTK = ((currAddress + c) >> 8) & 0xFF;
 
-        // Arduino running at 16Mhz -> one nop = 62.5ns
-        // Leave CS_SRAM HIGH for at least 85ns
-        __asm__("nop\n\t""nop\n\t");
+      // Arduino running at 16Mhz -> one nop = 62.5ns
+      // Leave CS_SRAM HIGH for at least 85ns
+      __asm__("nop\n\t""nop\n\t");
 
-        // Pull OE_SRAM(PH6) LOW
-        PORTH &= ~ (1 << 6);
+      // Pull OE_SRAM(PH6) LOW
+      PORTH &= ~ (1 << 6);
 
-        // Hold address for at least 25ns and wait 150ns before access
-        __asm__("nop\n\t""nop\n\t""nop\n\t");
+      // Hold address for at least 25ns and wait 150ns before access
+      __asm__("nop\n\t""nop\n\t""nop\n\t");
 
-        // Read byte
-        if (PINC != sdBuffer[c]) {
-          writeErrors++;
-        }
+      // Read byte
+      if (PINC != sdBuffer[c]) {
+        writeErrors++;
       }
     }
+  }
 
-    // Close the file:
-    myFile.close();
-    return writeErrors;
-  }
-  else {
-    print_Error(F("Can't open file"), false);
-    return 0;
-  }
+  // Close the file:
+  romFile.close();
+  return writeErrors;
 }
 
 /******************************************
@@ -1541,8 +1505,8 @@ void readFLASH_GBA (boolean browseFile, unsigned long flashSize, uint32_t pos) {
     foldern = loadFolderNumber();
 
     sprintf(folder, "GBA/SAVE/%s/%d", romName, foldern);
-    sd.mkdir(folder, true);
-    sd.chdir(folder);
+    mkdir(folder, true);
+    chdir(folder);
 
     // Save location
     print_Msg(F("Saving to "));
@@ -1556,13 +1520,11 @@ void readFLASH_GBA (boolean browseFile, unsigned long flashSize, uint32_t pos) {
   }
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // Seek to a new position in the file
   if (pos != 0)
-    myFile.seekCur(pos);
+    outputFile.seekCur(pos);
 
   // Output a LOW signal on CE_FLASH(PH0)
   PORTH &= ~(1 << 0);
@@ -1576,9 +1538,9 @@ void readFLASH_GBA (boolean browseFile, unsigned long flashSize, uint32_t pos) {
       sdBuffer[c] = readByteFlash_GBA(currAddress + c);
     }
     // Write sdBuffer to file
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
   }
-  myFile.close();
+  outputFile.close();
 
   // Set CS_FLASH(PH0) high
   PORTH |= (1 << 0);
@@ -1613,7 +1575,7 @@ void writeFLASH_GBA (boolean browseFile, unsigned long flashSize, uint32_t pos) 
 
   if (browseFile) {
     filePath[0] = '\0';
-    sd.chdir("/");
+    chdir("/");
     fileBrowser(F("Select fla file"));
     // Create filepath
     sprintf(filePath, "%s/%s", filePath, fileName);
@@ -1624,44 +1586,38 @@ void writeFLASH_GBA (boolean browseFile, unsigned long flashSize, uint32_t pos) 
   display_Update();
 
   //open file on sd card
-  if (myFile.open(filePath, O_READ)) {
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    // Seek to a new position in the file
-    if (pos != 0)
-      myFile.seekCur(pos);
+  // Seek to a new position in the file
+  if (pos != 0)
+    inputFile.seekCur(pos);
 
-    // Output a LOW signal on CE_FLASH(PH0)
-    PORTH &= ~(1 << 0);
+  // Output a LOW signal on CE_FLASH(PH0)
+  PORTH &= ~(1 << 0);
 
-    for (unsigned long currAddress = 0; currAddress < flashSize; currAddress += 512) {
-      //fill sdBuffer
-      myFile.read(sdBuffer, 512);
+  for (unsigned long currAddress = 0; currAddress < flashSize; currAddress += 512) {
+    //fill sdBuffer
+    inputFile.read(sdBuffer, 512);
 
-      for (int c = 0; c < 512; c++) {
-        // Write command sequence
-        writeByteFlash_GBA(0x5555, 0xaa);
-        writeByteFlash_GBA(0x2aaa, 0x55);
-        writeByteFlash_GBA(0x5555, 0xa0);
-        // Write current byte
-        writeByteFlash_GBA(currAddress + c, sdBuffer[c]);
+    for (int c = 0; c < 512; c++) {
+      // Write command sequence
+      writeByteFlash_GBA(0x5555, 0xaa);
+      writeByteFlash_GBA(0x2aaa, 0x55);
+      writeByteFlash_GBA(0x5555, 0xa0);
+      // Write current byte
+      writeByteFlash_GBA(currAddress + c, sdBuffer[c]);
 
-        // Wait
-        busyCheck_GBA(c);
-      }
+      // Wait
+      busyCheck_GBA(c);
     }
-    // Set CS_FLASH(PH0) high
-    PORTH |= (1 << 0);
-
-    // Close the file:
-    myFile.close();
-    println_Msg(F("done"));
-    display_Update();
-
   }
-  else {
-    println_Msg(F("Error"));
-    print_Error(F("File doesnt exist"), false);
-  }
+  // Set CS_FLASH(PH0) high
+  PORTH |= (1 << 0);
+
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("done"));
+  display_Update();
 }
 
 // Check if the Flashrom was written without any error
@@ -1686,16 +1642,14 @@ void verifyFLASH_GBA(unsigned long flashSize, uint32_t pos) {
   unsigned long wrError = 0;
 
   //open file on sd card
-  if (!myFile.open(filePath, O_READ)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
   // Seek to a new position in the file
   if (pos != 0)
-    myFile.seekCur(pos);
+    inputFile.seekCur(pos);
 
   for (unsigned long currAddress = 0; currAddress < flashSize; currAddress += 512) {
-    myFile.read(sdBuffer, 512);
+    inputFile.read(sdBuffer, 512);
 
     for (int c = 0; c < 512; c++) {
       // Read byte
@@ -1704,7 +1658,7 @@ void verifyFLASH_GBA(unsigned long flashSize, uint32_t pos) {
       }
     }
   }
-  myFile.close();
+  inputFile.close();
 
   // Set CS_FLASH(PH0) high
   PORTH |= (1 << 0);
@@ -1714,7 +1668,7 @@ void verifyFLASH_GBA(unsigned long flashSize, uint32_t pos) {
   }
   else {
     print_Msg(wrError);
-    print_Error(F(" Errors"), false);
+    print_Warning(F(" Errors"));
   }
 }
 
@@ -1725,7 +1679,7 @@ void verifyFLASH_GBA(unsigned long flashSize, uint32_t pos) {
 void writeEeprom_GBA(word eepSize) {
   // Launch Filebrowser
   filePath[0] = '\0';
-  sd.chdir("/");
+  chdir("/");
   fileBrowser(F("Select eep file"));
   // Create filepath
   sprintf(filePath, "%s/%s", filePath, fileName);
@@ -1735,29 +1689,24 @@ void writeEeprom_GBA(word eepSize) {
   display_Update();
 
   //open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    for (word i = 0; i < eepSize * 16; i += 64) {
-      // Fill romBuffer
-      myFile.read(sdBuffer, 512);
-      // Disable interrupts for more uniform clock pulses
-      noInterrupts();
-      // Write 512 bytes
-      writeBlock_EEP(i, eepSize);
-      interrupts();
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  for (word i = 0; i < eepSize * 16; i += 64) {
+    // Fill romBuffer
+    inputFile.read(sdBuffer, 512);
+    // Disable interrupts for more uniform clock pulses
+    noInterrupts();
+    // Write 512 bytes
+    writeBlock_EEP(i, eepSize);
+    interrupts();
 
-      // Wait
-      delayMicroseconds(200);
-    }
+    // Wait
+    delayMicroseconds(200);
+  }
 
-    // Close the file:
-    myFile.close();
-    println_Msg(F("done"));
-    display_Update();
-  }
-  else {
-    println_Msg(F("Error"));
-    print_Error(F("File doesnt exist"), false);
-  }
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("done"));
+  display_Update();
 }
 
 // Read eeprom to file
@@ -1770,8 +1719,8 @@ void readEeprom_GBA(word eepSize) {
   foldern = loadFolderNumber();
 
   sprintf(folder, "GBA/SAVE/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   // Save location
   print_Msg(F("Saving to "));
@@ -1784,9 +1733,7 @@ void readEeprom_GBA(word eepSize) {
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // Each block contains 8 Bytes, so for a 8KB eeprom 1024 blocks need to be read
   for (word currAddress = 0; currAddress < eepSize * 16; currAddress += 64) {
@@ -1797,12 +1744,12 @@ void readEeprom_GBA(word eepSize) {
     interrupts();
 
     // Write sdBuffer to file
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
 
     // Wait
     delayMicroseconds(200);
   }
-  myFile.close();
+  outputFile.close();
 }
 
 // Send address as bits to eeprom
@@ -2014,9 +1961,7 @@ unsigned long verifyEEP_GBA(word eepSize) {
   unsigned long wrError = 0;
 
   //open file on sd card
-  if (!myFile.open(filePath, O_READ)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
   // Fill sd Buffer
   for (word currAddress = 0; currAddress < eepSize * 16; currAddress += 64) {
@@ -2027,12 +1972,12 @@ unsigned long verifyEEP_GBA(word eepSize) {
 
     // Compare
     for (int currByte = 0; currByte < 512; currByte++) {
-      if (sdBuffer[currByte] != myFile.read()) {
+      if (sdBuffer[currByte] != inputFile.readByteOrDie()) {
         wrError++;
       }
     }
   }
-  myFile.close();
+  inputFile.close();
   return wrError;
 }
 
@@ -2094,7 +2039,7 @@ void idFlashrom_GBA() {
     }
     else {
       println_Msg(flashid);
-      print_Error(F("Unknown Flashid"), true);
+      print_Error(F("Unknown Flashid"));
     }
   }
 }
@@ -2327,7 +2272,7 @@ void sectorEraseMX29GL128E_GBA() {
   }
 }
 
-void writeIntel4000_GBA() {
+void writeIntel4000_GBA(SafeSDFile &inputFile) {
   for (unsigned long currBlock = 0; currBlock < fileSize; currBlock += 0x20000) {
     // Blink led
     PORTB ^= (1 << 4);
@@ -2335,7 +2280,7 @@ void writeIntel4000_GBA() {
     // Write to flashrom
     for (unsigned long currSdBuffer = 0; currSdBuffer < 0x20000; currSdBuffer += 512) {
       // Fill SD buffer
-      myFile.read(sdBuffer, 512);
+      inputFile.read(sdBuffer, 512);
 
       // Write 32 words at a time
       for (int currWriteBuffer = 0; currWriteBuffer < 512; currWriteBuffer += 64) {
@@ -2375,7 +2320,7 @@ void writeIntel4000_GBA() {
   }
 }
 
-void writeMSP55LV128_GBA() {
+void writeMSP55LV128_GBA(SafeSDFile &inputFile) {
   for (unsigned long currSector = 0; currSector < fileSize; currSector += 0x10000) {
     // Blink led
     PORTB ^= (1 << 4);
@@ -2383,7 +2328,7 @@ void writeMSP55LV128_GBA() {
     // Write to flashrom
     for (unsigned long currSdBuffer = 0; currSdBuffer < 0x10000; currSdBuffer += 512) {
       // Fill SD buffer
-      myFile.read(sdBuffer, 512);
+      inputFile.read(sdBuffer, 512);
 
       // Write 16 words at a time
       for (int currWriteBuffer = 0; currWriteBuffer < 512; currWriteBuffer += 32) {
@@ -2417,7 +2362,7 @@ void writeMSP55LV128_GBA() {
   }
 }
 
-void writeMX29GL128E_GBA() {
+void writeMX29GL128E_GBA(SafeSDFile &inputFile) {
   for (unsigned long currSector = 0; currSector < fileSize; currSector += 0x20000) {
     // Blink led
     PORTB ^= (1 << 4);
@@ -2425,7 +2370,7 @@ void writeMX29GL128E_GBA() {
     // Write to flashrom
     for (unsigned long currSdBuffer = 0; currSdBuffer < 0x20000; currSdBuffer += 512) {
       // Fill SD buffer
-      myFile.read(sdBuffer, 512);
+      inputFile.read(sdBuffer, 512);
 
       // Write 32 words at a time
       for (int currWriteBuffer = 0; currWriteBuffer < 512; currWriteBuffer += 64) {
@@ -2461,41 +2406,36 @@ void writeMX29GL128E_GBA() {
 
 boolean verifyFlashrom_GBA() {
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    writeErrors = 0;
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  writeErrors = 0;
 
-    for (unsigned long currSector = 0; currSector < fileSize; currSector += 131072) {
-      // Blink led
-      PORTB ^= (1 << 4);
-      for (unsigned long currSdBuffer = 0; currSdBuffer < 131072; currSdBuffer += 512) {
-        // Fill SD buffer
-        myFile.read(sdBuffer, 512);
+  for (unsigned long currSector = 0; currSector < fileSize; currSector += 131072) {
+    // Blink led
+    PORTB ^= (1 << 4);
+    for (unsigned long currSdBuffer = 0; currSdBuffer < 131072; currSdBuffer += 512) {
+      // Fill SD buffer
+      inputFile.read(sdBuffer, 512);
 
-        for (int currByte = 0; currByte < 512; currByte += 2) {
-          // Join two bytes into one word
-          word currWord = ( ( sdBuffer[currByte + 1] & 0xFF ) << 8 ) | ( sdBuffer[currByte] & 0xFF );
+      for (int currByte = 0; currByte < 512; currByte += 2) {
+        // Join two bytes into one word
+        word currWord = ( ( sdBuffer[currByte + 1] & 0xFF ) << 8 ) | ( sdBuffer[currByte] & 0xFF );
 
-          // Compare both
-          if (readWord_GBA(currSector + currSdBuffer + currByte) != currWord) {
-            writeErrors++;
-            myFile.close();
-            return 0;
-          }
+        // Compare both
+        if (readWord_GBA(currSector + currSdBuffer + currByte) != currWord) {
+          writeErrors++;
+          inputFile.close();
+          return 0;
         }
       }
     }
-    // Close the file:
-    myFile.close();
-    if (writeErrors == 0) {
-      return 1;
-    }
-    else {
-      return 0;
-    }
+  }
+  // Close the file:
+  inputFile.close();
+  if (writeErrors == 0) {
+    return 1;
   }
   else {
-    print_Error(F("Can't open file"), true);
-    return 9999;
+    return 0;
   }
 }
 
@@ -2527,7 +2467,7 @@ void flashRepro_GBA() {
       else {
         print_Msg(F("romType: 0x"));
         println_Msg(romType, HEX);
-        print_Error(F("Unknown manufacturer"), true);
+        print_Error(F("Unknown manufacturer"));
       }
     }
     // Intel 4000L0YBQ0
@@ -2549,7 +2489,7 @@ void flashRepro_GBA() {
 
     // Launch file browser
     filePath[0] = '\0';
-    sd.chdir("/");
+    chdir("/");
     fileBrowser(F("Select gba file"));
     display_Clear();
     display_Update();
@@ -2558,117 +2498,113 @@ void flashRepro_GBA() {
     sprintf(filePath, "%s/%s", filePath, fileName);
 
     // Open file on sd card
-    if (myFile.open(filePath, O_READ)) {
-      // Get rom size from file
-      fileSize = myFile.fileSize();
-      print_Msg(F("File size: "));
-      print_Msg(fileSize / 0x100000);
-      println_Msg(F("MB"));
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    // Get rom size from file
+    fileSize = inputFile.fileSize();
+    print_Msg(F("File size: "));
+    print_Msg(fileSize / 0x100000);
+    println_Msg(F("MB"));
+    display_Update();
+
+    // Erase needed sectors
+    if (strcmp(flashid, "8802") == 0) {
+      println_Msg(F("Erasing..."));
       display_Update();
-
-      // Erase needed sectors
-      if (strcmp(flashid, "8802") == 0) {
-        println_Msg(F("Erasing..."));
-        display_Update();
-        eraseIntel4000_GBA();
-        resetIntel_GBA(0x200000);
-      }
-      else if (strcmp(flashid, "8816") == 0) {
-        println_Msg(F("Erasing..."));
-        display_Update();
-        eraseIntel4400_GBA();
-        resetIntel_GBA(0x200000);
-      }
-      else if (strcmp(flashid, "227E") == 0) {
-        //if (sectorCheckMX29GL128E_GBA()) {
-        //print_Error(F("Sector Protected"), true);
-        //}
-        //else {
-        println_Msg(F("Erasing..."));
-        display_Update();
-        if ((romType == 0xC2) || (romType == 0x89) || (romType == 0x20)) {
-          //MX29GL128E
-          //PC28F256M29 (0x89)
-          sectorEraseMX29GL128E_GBA();
-        }
-        else if ((romType == 0x1) || (romType == 0x4)) {
-          //MSP55LV128(N)
-          sectorEraseMSP55LV128_GBA();
-        }
-        //}
-      }
-      /* Skip blankcheck to save time
-        print_Msg(F("Blankcheck..."));
-        display_Update();
-        if (blankcheckFlashrom_GBA()) {
-        println_Msg(F("OK"));
-      */
-
-      //Write flashrom
-      print_Msg(F("Writing "));
-      println_Msg(filePath);
+      eraseIntel4000_GBA();
+      resetIntel_GBA(0x200000);
+    }
+    else if (strcmp(flashid, "8816") == 0) {
+      println_Msg(F("Erasing..."));
       display_Update();
-      if ((strcmp(flashid, "8802") == 0) || (strcmp(flashid, "8816") == 0)) {
-        writeIntel4000_GBA();
-      }
-      else if (strcmp(flashid, "227E") == 0) {
-        if ((romType == 0xC2) || (romType == 0x89) || (romType == 0x20)) {
-          //MX29GL128E (0xC2)
-          //PC28F256M29 (0x89)
-          writeMX29GL128E_GBA();
-        }
-        else if ((romType == 0x1) || (romType == 0x4)) {
-          //MSP55LV128(N)
-          writeMSP55LV128_GBA();
-        }
-      }
-
-      // Close the file:
-      myFile.close();
-
-      // Verify
-      print_Msg(F("Verifying..."));
+      eraseIntel4400_GBA();
+      resetIntel_GBA(0x200000);
+    }
+    else if (strcmp(flashid, "227E") == 0) {
+      //if (sectorCheckMX29GL128E_GBA()) {
+      //print_Error(F("Sector Protected"));
+      //}
+      //else {
+      println_Msg(F("Erasing..."));
       display_Update();
-      if (strcmp(flashid, "8802") == 0) {
-        // Don't know the correct size so just take some guesses
-        resetIntel_GBA(0x8000);
-        delay(1000);
-        resetIntel_GBA(0x100000);
-        delay(1000);
-        resetIntel_GBA(0x200000);
-        delay(1000);
+      if ((romType == 0xC2) || (romType == 0x89) || (romType == 0x20)) {
+        //MX29GL128E
+        //PC28F256M29 (0x89)
+        sectorEraseMX29GL128E_GBA();
       }
-      else if (strcmp(flashid, "8816") == 0) {
-        resetIntel_GBA(0x200000);
-        delay(1000);
+      else if ((romType == 0x1) || (romType == 0x4)) {
+        //MSP55LV128(N)
+        sectorEraseMSP55LV128_GBA();
       }
+      //}
+    }
+    /* Skip blankcheck to save time
+      print_Msg(F("Blankcheck..."));
+      display_Update();
+      if (blankcheckFlashrom_GBA()) {
+      println_Msg(F("OK"));
+    */
 
-      else if (strcmp(flashid, "227E") == 0) {
-        resetMX29GL128E_GBA();
-        delay(1000);
+    //Write flashrom
+    print_Msg(F("Writing "));
+    println_Msg(filePath);
+    display_Update();
+    if ((strcmp(flashid, "8802") == 0) || (strcmp(flashid, "8816") == 0)) {
+      writeIntel4000_GBA(inputFile);
+    }
+    else if (strcmp(flashid, "227E") == 0) {
+      if ((romType == 0xC2) || (romType == 0x89) || (romType == 0x20)) {
+        //MX29GL128E (0xC2)
+        //PC28F256M29 (0x89)
+        writeMX29GL128E_GBA(inputFile);
       }
-      if (verifyFlashrom_GBA() == 1) {
-        println_Msg(F("OK"));
-        display_Update();
+      else if ((romType == 0x1) || (romType == 0x4)) {
+        //MSP55LV128(N)
+        writeMSP55LV128_GBA(inputFile);
       }
-      else {
-        print_Error(F("ERROR"), true);
-      }
-      /* Skipped blankcheck
-        }
-        else {
-        print_Error(F("failed"), true);
-        }
-      */
+    }
+
+    // Close the file:
+    inputFile.close();
+
+    // Verify
+    print_Msg(F("Verifying..."));
+    display_Update();
+    if (strcmp(flashid, "8802") == 0) {
+      // Don't know the correct size so just take some guesses
+      resetIntel_GBA(0x8000);
+      delay(1000);
+      resetIntel_GBA(0x100000);
+      delay(1000);
+      resetIntel_GBA(0x200000);
+      delay(1000);
+    }
+    else if (strcmp(flashid, "8816") == 0) {
+      resetIntel_GBA(0x200000);
+      delay(1000);
+    }
+
+    else if (strcmp(flashid, "227E") == 0) {
+      resetMX29GL128E_GBA();
+      delay(1000);
+    }
+    if (verifyFlashrom_GBA() == 1) {
+      println_Msg(F("OK"));
+      display_Update();
     }
     else {
-      print_Error(F("Can't open file"), true);
+      print_Error(F("ERROR"));
     }
+    /* Skipped blankcheck
+      }
+      else {
+      print_Error(F("failed"));
+      }
+    */
   }
   else {
     print_Msg(F("ID: "));
     println_Msg(flashid);
-    print_Error(F("Unknown Flash ID"), true);
+    print_Error(F("Unknown Flash ID"));
   }
 }
 

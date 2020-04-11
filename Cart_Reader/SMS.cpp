@@ -10,6 +10,7 @@
 #include "globals.h"
 #include "utils.h"
 #include "filebrowser.h"
+#include "SD.h"
 
 /******************************************
    Variables
@@ -46,7 +47,7 @@ void smsMenu() {
       mode = mode_SMS;
       setup_SMS();
       // Change working dir to root
-      sd.chdir("/");
+      chdir("/");
       readROM_SMS();
       break;
 
@@ -236,7 +237,7 @@ void getCartInfo_SMS() {
   println_Msg(F(" "));
 
   if (strcmp(romName, "TMR SEGA") != 0) {
-    print_Error(F("Not working yet"), false);
+    print_Warning(F("Not working yet"));
     sprintf(romName, "ERROR");
     cartSize =  48 * 1024UL;
   }
@@ -260,8 +261,8 @@ void readROM_SMS() {
   // create a new folder
   foldern = loadFolderNumber();
   sprintf(folder, "SMS/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   display_Clear();
   print_Msg(F("Saving to "));
@@ -274,9 +275,7 @@ void readROM_SMS() {
   saveFolderNumber(foldern);
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
   word bankSize = 16 * 1024UL;
   for (byte currBank = 0x0; currBank < (cartSize / bankSize); currBank++) {
     // Write current 16KB bank to slot 2 register 0xFFFF
@@ -290,11 +289,11 @@ void readROM_SMS() {
       for (int currByte = 0; currByte < 512; currByte++) {
         sdBuffer[currByte] = readByte_SMS(0x8000 + currBuffer + currByte);
       }
-      myFile.write(sdBuffer, 512);
+      outputFile.write(sdBuffer, 512);
     }
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
 }
 
 //******************************************

@@ -50,6 +50,7 @@
 #include "options.h"
 #include "menu.h"
 #include "OLED_menu.h"
+#include "SD.h"
 #include "utils.h"
 #include "RGB_LED.h"
 #include "SNES.h"
@@ -241,19 +242,7 @@ void setup() {
   rgb.setColor(0, 0, 255);
 #endif
 
-  // Init SD card
-  if (!sd.begin(sdChipSelectPin, sdSpeed)) {
-    display_Clear();
-    print_Error(F("SD Error"), true);
-  }
-
-#ifndef enable_OLED
-  // Print SD Info
-  Serial.print(F("SD Card: "));
-  Serial.print(sd.card()->cardSize() * 512E-9);
-  Serial.print(F("GB FAT"));
-  Serial.println(int(sd.vol()->fatType()));
-#endif
+  initializeSD(sdChipSelectPin, sdSpeed);
 
   startMenu();
 }

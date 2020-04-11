@@ -9,6 +9,7 @@
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "SD.h"
 
 /******************************************
   Defines
@@ -86,17 +87,17 @@ void eraseIntel4400_N64();
 void eraseMSP55LV100_N64();
 void eraseFlashrom_N64(unsigned long sectorSize);
 boolean blankcheckFlashrom_N64();
-void writeIntel4400_N64();
-void writeMSP55LV100_N64(unsigned long sectorSize);
-void writeFlashBuffer_N64(unsigned long sectorSize, byte bufferSize);
-void writeFlashrom_N64();
+void writeIntel4400_N64(SafeSDFile &inputFile);
+void writeMSP55LV100_N64(SafeSDFile &inputFile, unsigned long sectorSize);
+void writeFlashBuffer_N64(SafeSDFile &inputFile, unsigned long sectorSize, byte bufferSize);
+void writeFlashrom_N64(SafeSDFile &inputFile);
 unsigned long verifyFlashrom_N64();
 void flashGameshark_N64();
 void idGameshark_N64();
 void resetGameshark_N64();
 void backupGameshark_N64();
 void eraseGameshark_N64();
-void writeGameshark_N64();
+void writeGameshark_N64(SafeSDFile &inputFile);
 unsigned long verifyGameshark_N64();
 
 /******************************************
@@ -231,7 +232,7 @@ void n64ControllerMenu() {
       display_Update();
       // Change to root
       filePath[0] = '\0';
-      sd.chdir("/");
+      chdir("/");
       // Launch file browser
       fileBrowser(F("Select mpk file"));
       display_Clear();
@@ -262,12 +263,12 @@ void n64CartMenu() {
   switch (mainMenu)
   {
     case 0:
-      sd.chdir("/");
+      chdir("/");
       readRom_N64();
       break;
 
     case 1:
-      sd.chdir("/");
+      chdir("/");
       display_Clear();
 
       if (saveType == 1) {
@@ -287,7 +288,7 @@ void n64CartMenu() {
         readEeprom();
       }
       else {
-        print_Error(F("Savetype Error"), false);
+        print_Warning(F("Savetype Error"));
       }
       println_Msg(F(""));
       println_Msg(F("Press Button..."));
@@ -297,7 +298,7 @@ void n64CartMenu() {
 
     case 2:
       filePath[0] = '\0';
-      sd.chdir("/");
+      chdir("/");
       if (saveType == 1) {
         // Launch file browser
         fileBrowser(F("Select sra file"));
@@ -313,7 +314,7 @@ void n64CartMenu() {
           print_Msg(F("Error: "));
           print_Msg(writeErrors);
           println_Msg(F(" bytes "));
-          print_Error(F("did not verify."), false);
+          print_Warning(F("did not verify."));
         }
       }
       else if (saveType == 4) {
@@ -334,7 +335,7 @@ void n64CartMenu() {
           print_Msg(F("Error: "));
           print_Msg(writeErrors);
           println_Msg(F(" bytes "));
-          print_Error(F("did not verify."), false);
+          print_Warning(F("did not verify."));
         }
       }
       else if ((saveType == 5) || (saveType == 6)) {
@@ -352,12 +353,12 @@ void n64CartMenu() {
           print_Msg(F("Error: "));
           print_Msg(writeErrors);
           println_Msg(F(" bytes "));
-          print_Error(F("did not verify."), false);
+          print_Warning(F("did not verify."));
         }
       }
       else {
         display_Clear();
-        print_Error(F("Savetype Error"), false);
+        print_Warning(F("Savetype Error"));
       }
       println_Msg(F("Press Button..."));
       display_Update();
@@ -1468,11 +1469,11 @@ void readBlock(word myAddress) {
 // reads the MPK file to the sd card
 void readMPK() {
   // Change to root
-  sd.chdir("/");
+  chdir("/");
   // Make MPK directory
-  sd.mkdir("N64/MPK", true);
+  mkdir("N64/MPK", true);
   // Change to MPK directory
-  sd.chdir("N64/MPK");
+  chdir("N64/MPK");
 
   // Get name, add extension and convert to char array for sd lib
   foldern = loadFolderNumber();
@@ -1484,9 +1485,7 @@ void readMPK() {
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't open file on SD"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   println_Msg(F("Please wait..."));
   display_Update();
@@ -1496,12 +1495,10 @@ void readMPK() {
     // Read one block of the Controller Pak into array myBlock
     readBlock(i);
     // Write block to SD card
-    for (byte j = 0; j < 32; j++) {
-      myFile.write(myBlock[j]);
-    }
+    outputFile.write(myBlock, 32);
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
   print_Msg(F("Saved as N64/MPK/"));
   println_Msg(fileName);
   display_Update();
@@ -1515,42 +1512,39 @@ void writeMPK() {
   display_Update();
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    for (word myAddress = 0x0000; myAddress < 0x8000; myAddress += 32) {
-      // Read 32 bytes into SD buffer
-      myFile.read(sdBuffer, 32);
+  //if (myFile.open(filePath, O_READ)) {
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  for (word myAddress = 0x0000; myAddress < 0x8000; myAddress += 32) {
+    // Read 32 bytes into SD buffer
+    inputFile.read(sdBuffer, 32);
 
-      // Calculate the address CRC
-      word myAddressCRC = addrCRC(myAddress);
+    // Calculate the address CRC
+    word myAddressCRC = addrCRC(myAddress);
 
-      // Write Controller Pak command
-      unsigned char command[] = {0x03};
-      // Address Command
-      unsigned char addressHigh[] = {(unsigned char)(myAddressCRC >> 8)};
-      unsigned char addressLow[] = {(unsigned char)(myAddressCRC & 0xff)};
+    // Write Controller Pak command
+    unsigned char command[] = {0x03};
+    // Address Command
+    unsigned char addressHigh[] = {(unsigned char)(myAddressCRC >> 8)};
+    unsigned char addressLow[] = {(unsigned char)(myAddressCRC & 0xff)};
 
-      // don't want interrupts getting in the way
-      noInterrupts();
-      // Send write command
-      N64_send(command, 1);
-      // Send block number
-      N64_send(addressHigh, 1);
-      N64_send(addressLow, 1);
-      // Send data to write
-      N64_send(sdBuffer, 32);
-      // Send stop
-      N64_stop();
-      // Enable interrupts
-      interrupts();
-    }
-    // Close the file:
-    myFile.close();
-    println_Msg(F("Done"));
-    display_Update();
+    // don't want interrupts getting in the way
+    noInterrupts();
+    // Send write command
+    N64_send(command, 1);
+    // Send block number
+    N64_send(addressHigh, 1);
+    N64_send(addressLow, 1);
+    // Send data to write
+    N64_send(sdBuffer, 32);
+    // Send stop
+    N64_stop();
+    // Enable interrupts
+    interrupts();
   }
-  else {
-    print_Error(F("Can't create file on SD"), true);
-  }
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("Done"));
+  display_Update();
 }
 
 // verifies if write was successful
@@ -1561,23 +1555,22 @@ void verifyMPK() {
   display_Update();
 
   //open file on sd card
-  if (!myFile.open(filePath, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
-  }
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
   // Controller paks, which all have 32kB of space, are mapped between 0x0000 – 0x7FFF
   for (word i = 0x0000; i < 0x8000; i += 32) {
     // Read one block of the Controller Pak into array myBlock
     readBlock(i);
     // Check against file on SD card
+    inputFile.readOrDie(sdBuffer, 32);
     for (byte j = 0; j < 32; j++) {
-      if (myFile.read() != myBlock[j]) {
+      if (sdBuffer[j] != myBlock[j]) {
         writeErrors++;
       }
     }
   }
   // Close the file:
-  myFile.close();
+  inputFile.close();
   if (writeErrors == 0) {
     println_Msg(F("OK"));
     display_Update();
@@ -1586,7 +1579,7 @@ void verifyMPK() {
     print_Msg(F("Error: "));
     print_Msg(writeErrors);
     println_Msg(F(" bytes "));
-    print_Error(F("did not verify."), false);
+    print_Warning(F("did not verify."));
   }
 }
 
@@ -1649,7 +1642,7 @@ void printCartInfo_N64() {
     display_Update();
 
     strcpy(romName, "GPERROR");
-    print_Error(F("Cartridge unknown"), false);
+    print_Warning(F("Cartridge unknown"));
     wait();
 
     // Set cartsize manually
@@ -1712,52 +1705,47 @@ boolean searchCRC(char crcStr[9]) {
   char tempStr[5];
 
   // Change to root dir
-  sd.chdir("/");
+  chdir("/");
 
-  if (myFile.open("n64.txt", O_READ)) {
-    // Loop through file
-    while (myFile.available()) {
-      // Read 8 bytes into String, do it one at a time so byte order doesn't get mixed up
-      sprintf(tempStr1, "%c", myFile.read());
-      for (byte i = 0; i < 7; i++) {
-        sprintf(tempStr2, "%c", myFile.read());
-        strcat(tempStr1, tempStr2);
+  SafeSDFile n64File = SafeSDFile::openForReading(F("/n64.txt"));
+  // Loop through file
+  while (n64File.bytesAvailable() > 0) {
+    // Read 8 bytes into String, do it one at a time so byte order doesn't get mixed up
+    sprintf(tempStr1, "%c", n64File.readByteOrDie());
+    for (byte i = 0; i < 7; i++) {
+      sprintf(tempStr2, "%c", n64File.readByteOrDie());
+      strcat(tempStr1, tempStr2);
+    }
+
+    // Check if string is a match
+    if (strcicmp(tempStr1, crcStr) == 0) {
+      // Skip the , in the file
+      n64File.seekCur(1);
+
+      // Read 4 bytes into String, do it one at a time so byte order doesn't get mixed up
+      sprintf(tempStr, "%c", n64File.readByteOrDie());
+      for (byte i = 0; i < 3; i++) {
+        sprintf(tempStr2, "%c", n64File.readByteOrDie());
+        strcat(tempStr, tempStr2);
       }
 
-      // Check if string is a match
-      if (strcicmp(tempStr1, crcStr) == 0) {
-        // Skip the , in the file
-        myFile.seekSet(myFile.curPosition() + 1);
-
-        // Read 4 bytes into String, do it one at a time so byte order doesn't get mixed up
-        sprintf(tempStr, "%c", myFile.read());
-        for (byte i = 0; i < 3; i++) {
-          sprintf(tempStr2, "%c", myFile.read());
-          strcat(tempStr, tempStr2);
-        }
-
-        if (strcmp(tempStr, cartID) == 0) {
-          result = 1;
-          break;
-        }
-        else {
-          result = 0;
-          break;
-        }
+      if (strcmp(tempStr, cartID) == 0) {
+        result = 1;
+        break;
       }
-      // If no match, empty string, advance by 12 and try again
       else {
-        myFile.seekSet(myFile.curPosition() + 12);
+        result = 0;
+        break;
       }
     }
-    // Close the file:
-    myFile.close();
-    return result;
+    // If no match, empty string, advance by 12 and try again
+    else {
+      n64File.seekCur(12);
+    }
   }
-  else {
-    print_Error(F("N64.txt missing"), true);
-    return 0;
-  }
+  // Close the file:
+  n64File.close();
+  return result;
 }
 
 // look-up cart id in file n64.txt on sd card
@@ -1772,50 +1760,46 @@ void getCartInfo_N64() {
   // Read cart id
   idCart();
 
-  if (myFile.open("n64.txt", O_READ)) {
-    // Skip over the first crc
-    myFile.seekSet(myFile.curPosition() + 9);
-    // Loop through file
-    while (myFile.available()) {
-      // Read 4 bytes into String, do it one at a time so byte order doesn't get mixed up
-      sprintf(tempStr, "%c", myFile.read());
-      for (byte i = 0; i < 3; i++) {
-        sprintf(tempStr2, "%c", myFile.read());
-        strcat(tempStr, tempStr2);
-      }
-
-      // Check if string is a match
-      if (strcmp(tempStr, cartID) == 0) {
-        // Skip the , in the file
-        myFile.seekSet(myFile.curPosition() + 1);
-
-        // Read the next ascii character and subtract 48 to convert to decimal
-        cartSize = myFile.read() - 48;
-        // Remove leading 0 for single digit cart sizes
-        if (cartSize != 0) {
-          cartSize = cartSize * 10 +  myFile.read() - 48;
-        }
-        else {
-          cartSize = myFile.read() - 48;
-        }
-
-        // Skip the , in the file
-        myFile.seekSet(myFile.curPosition() + 1);
-
-        // Read the next ascii character and subtract 48 to convert to decimal
-        saveType = myFile.read() - 48;
-      }
-      // If no match, empty string, advance by 16 and try again
-      else {
-        myFile.seekSet(myFile.curPosition() + 16);
-      }
+  SafeSDFile n64File = SafeSDFile::openForReading(F("/n64.txt"));
+  // Skip over the first crc
+  n64File.seekCur(9);
+  // Loop through file
+  while (n64File.bytesAvailable() > 0) {
+    // Read 4 bytes into String, do it one at a time so byte order doesn't get mixed up
+    sprintf(tempStr, "%c", n64File.readByteOrDie());
+    for (byte i = 0; i < 3; i++) {
+      sprintf(tempStr2, "%c", n64File.readByteOrDie());
+      strcat(tempStr, tempStr2);
     }
-    // Close the file:
-    myFile.close();
+
+    // Check if string is a match
+    if (strcmp(tempStr, cartID) == 0) {
+      // Skip the , in the file
+      n64File.seekCur(1);
+
+      // Read the next ascii character and subtract 48 to convert to decimal
+      cartSize = n64File.readByteOrDie() - 48;
+      // Remove leading 0 for single digit cart sizes
+      if (cartSize != 0) {
+        cartSize = cartSize * 10 +  n64File.readByteOrDie() - 48;
+      }
+      else {
+        cartSize = n64File.readByteOrDie() - 48;
+      }
+
+      // Skip the , in the file
+      n64File.seekCur(1);
+
+      // Read the next ascii character and subtract 48 to convert to decimal
+      saveType = n64File.readByteOrDie() - 48;
+    }
+    // If no match, empty string, advance by 16 and try again
+    else {
+      n64File.seekCur(16);
+    }
   }
-  else {
-    print_Error(F("N64.txt missing"), true);
-  }
+  // Close the file:
+  n64File.close();
 }
 
 // Read rom ID
@@ -1921,45 +1905,41 @@ void writeEeprom() {
     display_Update();
 
     // Open file on sd card
-    if (myFile.open(filePath, O_READ)) {
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-      for (byte i = 0; i < (eepPages / 64); i++) {
-        myFile.read(sdBuffer, 512);
-        // Disable interrupts for more uniform clock pulses
-        noInterrupts();
+    for (byte i = 0; i < (eepPages / 64); i++) {
+      inputFile.read(sdBuffer, 512);
+      // Disable interrupts for more uniform clock pulses
+      noInterrupts();
 
-        for (byte pageNumber = 0; pageNumber < 64; pageNumber++) {
-          // Blink led
-          PORTB ^= (1 << 4);
+      for (byte pageNumber = 0; pageNumber < 64; pageNumber++) {
+        // Blink led
+        PORTB ^= (1 << 4);
 
-          // Wait ~50ms between page writes or eeprom will have write errors
-          pulseClock_N64(26000);
+        // Wait ~50ms between page writes or eeprom will have write errors
+        pulseClock_N64(26000);
 
-          // Send write command
-          sendData(0x05);
-          // Send page number
-          sendData(pageNumber + (i * 64));
-          // Send data to write
-          for (byte j = 0; j < 8; j++) {
-            sendData(sdBuffer[(pageNumber * 8) + j]);
-          }
-          sendStop();
+        // Send write command
+        sendData(0x05);
+        // Send page number
+        sendData(pageNumber + (i * 64));
+        // Send data to write
+        for (byte j = 0; j < 8; j++) {
+          sendData(sdBuffer[(pageNumber * 8) + j]);
         }
-        interrupts();
+        sendStop();
       }
+      interrupts();
+    }
 
-      // Close the file:
-      myFile.close();
-      println_Msg(F("Done"));
-      display_Update();
-      delay(600);
-    }
-    else {
-      print_Error(F("SD Error"), true);
-    }
+    // Close the file:
+    inputFile.close();
+    println_Msg(F("Done"));
+    display_Update();
+    delay(600);
   }
   else {
-    print_Error(F("Savetype Error"), true);
+    print_Error(F("Savetype Error"));
   }
 }
 
@@ -1977,17 +1957,15 @@ void readEeprom() {
     // create a new folder for the save file
     foldern = loadFolderNumber();
     sprintf(folder, "N64/SAVE/%s/%d", romName, foldern);
-    sd.mkdir(folder, true);
-    sd.chdir(folder);
+    mkdir(folder, true);
+    chdir(folder);
 
     // write new folder number back to eeprom
     foldern = foldern + 1;
     saveFolderNumber(foldern);
 
     // Open file on sd card
-    if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-      print_Error(F("Can't create file on SD"), true);
-    }
+    SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
     for (byte i = 0; i < (eepPages / 64); i++) {
       // Disable interrupts for more uniform clock pulses
@@ -2018,10 +1996,10 @@ void readEeprom() {
       interrupts();
 
       // Write 64 pages at once to the SD card
-      myFile.write(sdBuffer, 512);
+      outputFile.write(sdBuffer, 512);
     }
     // Close the file:
-    myFile.close();
+    outputFile.close();
     //clear the screen
     display_Clear();
     print_Msg(F("Saved to "));
@@ -2030,7 +2008,7 @@ void readEeprom() {
     display_Update();
   }
   else {
-    print_Error(F("Savetype Error"), true);
+    print_Error(F("Savetype Error"));
   }
 }
 
@@ -2048,56 +2026,51 @@ unsigned long verifyEeprom() {
     display_Update();
 
     // Open file on sd card
-    if (myFile.open(filePath, O_READ)) {
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-      for (byte i = 0; i < (eepPages / 64); i++) {
-        // Disable interrupts for more uniform clock pulses
-        noInterrupts();
+    for (byte i = 0; i < (eepPages / 64); i++) {
+      // Disable interrupts for more uniform clock pulses
+      noInterrupts();
 
-        for (byte pageNumber = 0; pageNumber < 64; pageNumber++) {
-          // Blink led
-          PORTB ^= (1 << 4);
+      for (byte pageNumber = 0; pageNumber < 64; pageNumber++) {
+        // Blink led
+        PORTB ^= (1 << 4);
 
-          // Send read command
-          sendData(0x04);
-          // Send Page number
-          sendData(pageNumber + (i * 64));
-          // Send stop bit
-          sendStop();
+        // Send read command
+        sendData(0x04);
+        // Send Page number
+        sendData(pageNumber + (i * 64));
+        // Send stop bit
+        sendStop();
 
-          // read data
-          readData();
-          sendStop();
+        // read data
+        readData();
+        sendStop();
 
-          // OR 8 bits into one byte for a total of 8 bytes
-          for (byte j = 0; j < 64; j += 8) {
-            sdBuffer[(pageNumber * 8) + (j / 8)] = tempBits[0 + j] << 7 | tempBits[1 + j] << 6 | tempBits[2 + j] << 5 | tempBits[3 + j] << 4 | tempBits[4 + j] << 3 | tempBits[5 + j] << 2 | tempBits[6 + j] << 1 | tempBits[7 + j];
-          }
-          // Wait 50ms between pages or eeprom might lock up
-          pulseClock_N64(26000);
+        // OR 8 bits into one byte for a total of 8 bytes
+        for (byte j = 0; j < 64; j += 8) {
+          sdBuffer[(pageNumber * 8) + (j / 8)] = tempBits[0 + j] << 7 | tempBits[1 + j] << 6 | tempBits[2 + j] << 5 | tempBits[3 + j] << 4 | tempBits[4 + j] << 3 | tempBits[5 + j] << 2 | tempBits[6 + j] << 1 | tempBits[7 + j];
         }
-        interrupts();
+        // Wait 50ms between pages or eeprom might lock up
+        pulseClock_N64(26000);
+      }
+      interrupts();
 
-        // Check sdBuffer content against file on sd card
-        for (int c = 0; c < 512; c++) {
-          if (myFile.read() != sdBuffer[c]) {
-            writeErrors++;
-          }
+      // Check sdBuffer content against file on sd card
+      for (int c = 0; c < 512; c++) {
+        if (inputFile.readByteOrDie() != sdBuffer[c]) {
+          writeErrors++;
         }
       }
-      // Close the file:
-      myFile.close();
     }
-    else {
-      // SD Error
-      writeErrors = 999999;
-      print_Error(F("SD Error"), true);
-    }
+    // Close the file:
+    inputFile.close();
+    
     // Return 0 if verified ok, or number of errors
     return writeErrors;
   }
   else {
-    print_Error(F("Savetype Error"), true);
+    print_Error(F("Savetype Error"));
     return 0;
   }
 }
@@ -2115,35 +2088,31 @@ void writeSram(unsigned long sramSize) {
     display_Update();
 
     // Open file on sd card
-    if (myFile.open(filePath, O_READ)) {
-      for (unsigned long currByte = sramBase; currByte < (sramBase + sramSize); currByte += 512) {
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    for (unsigned long currByte = sramBase; currByte < (sramBase + sramSize); currByte += 512) {
 
-        // Read save from SD into buffer
-        myFile.read(sdBuffer, 512);
+      // Read save from SD into buffer
+      inputFile.read(sdBuffer, 512);
 
-        // Set the address for the next 512 bytes
-        setAddress_N64(currByte);
+      // Set the address for the next 512 bytes
+      setAddress_N64(currByte);
 
-        for (int c = 0; c < 512; c += 2) {
-          // Join bytes to word
-          word myWord = ( ( sdBuffer[c] & 0xFF ) << 8 ) | ( sdBuffer[c + 1] & 0xFF );
+      for (int c = 0; c < 512; c += 2) {
+        // Join bytes to word
+        word myWord = ( ( sdBuffer[c] & 0xFF ) << 8 ) | ( sdBuffer[c + 1] & 0xFF );
 
-          // Write word
-          writeWord_N64(myWord);
-        }
+        // Write word
+        writeWord_N64(myWord);
       }
-      // Close the file:
-      myFile.close();
-      println_Msg(F("Done"));
-      display_Update();
     }
-    else {
-      print_Error(F("SD Error"), true);
-    }
+    // Close the file:
+    inputFile.close();
+    println_Msg(F("Done"));
+    display_Update();
 
   }
   else {
-    print_Error(F("Savetype Error"), true);
+    print_Error(F("Savetype Error"));
   }
 }
 
@@ -2166,23 +2135,21 @@ void readSram(unsigned long sramSize, byte flashramType) {
     strcat(fileName, ".sra");
   }
   else {
-    print_Error(F("Savetype Error"), true);
+    print_Error(F("Savetype Error"));
   }
 
   // create a new folder for the save file
   foldern = loadFolderNumber();
   sprintf(folder, "N64/SAVE/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   // write new folder number back to eeprom
   foldern = foldern + 1;
   saveFolderNumber(foldern);
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   for (unsigned long currByte = sramBase; currByte < (sramBase + (sramSize / flashramType)); currByte += offset) {
     // Set the address
@@ -2198,10 +2165,10 @@ void readSram(unsigned long sramSize, byte flashramType) {
       sdBuffer[c] = hiByte;
       sdBuffer[c + 1] = loByte;
     }
-    myFile.write(sdBuffer, bufferSize);
+    outputFile.write(sdBuffer, bufferSize);
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
   print_Msg(F("Saved to "));
   print_Msg(folder);
   println_Msg(F("/"));
@@ -2219,34 +2186,31 @@ unsigned long verifySram(unsigned long sramSize, byte flashramType) {
   }
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    for (unsigned long currByte = sramBase; currByte < (sramBase + (sramSize / flashramType)); currByte += offset) {
-      // Set the address
-      setAddress_N64(currByte);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  for (unsigned long currByte = sramBase; currByte < (sramBase + (sramSize / flashramType)); currByte += offset) {
+    // Set the address
+    setAddress_N64(currByte);
 
-      for (int c = 0; c < bufferSize; c += 2) {
-        // split word
-        word myWord = readWord_N64();
-        byte loByte = myWord & 0xFF;
-        byte hiByte = myWord >> 8;
+    for (int c = 0; c < bufferSize; c += 2) {
+      // split word
+      word myWord = readWord_N64();
+      byte loByte = myWord & 0xFF;
+      byte hiByte = myWord >> 8;
 
-        // write to buffer
-        sdBuffer[c] = hiByte;
-        sdBuffer[c + 1] = loByte;
-      }
-      // Check sdBuffer content against file on sd card
-      for (int i = 0; i < bufferSize; i++) {
-        if (myFile.read() != sdBuffer[i]) {
-          writeErrors++;
-        }
+      // write to buffer
+      sdBuffer[c] = hiByte;
+      sdBuffer[c + 1] = loByte;
+    }
+    // Check sdBuffer content against file on sd card
+    for (int i = 0; i < bufferSize; i++) {
+      if (inputFile.readByteOrDie() != sdBuffer[i]) {
+        writeErrors++;
       }
     }
-    // Close the file:
-    myFile.close();
   }
-  else {
-    print_Error(F("SD Error"), true);
-  }
+  // Close the file:
+  inputFile.close();
+  
   // Return 0 if verified ok, or number of errors
   return writeErrors;
 }
@@ -2302,62 +2266,59 @@ void writeFram(byte flashramType) {
     display_Update();
 
     // Open file on sd card
-    if (myFile.open(filePath, O_READ)) {
-      // Init fram
-      initFram();
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    
+    // Init fram
+    initFram();
 
-      // Write all 8 fram banks
-      print_Msg(F("Bank "));
-      for (byte bank = 0; bank < 8; bank++) {
-        print_Msg(bank);
-        print_Msg(F(" "));
-        display_Update();
+    // Write all 8 fram banks
+    print_Msg(F("Bank "));
+    for (byte bank = 0; bank < 8; bank++) {
+      print_Msg(bank);
+      print_Msg(F(" "));
+      display_Update();
 
-        // Write one bank of 128*128 bytes
-        for (byte offset = 0; offset < 128; offset++) {
-          // Read save from SD into buffer
-          myFile.read(sdBuffer, 128);
+      // Write one bank of 128*128 bytes
+      for (byte offset = 0; offset < 128; offset++) {
+        // Read save from SD into buffer
+        inputFile.read(sdBuffer, 128);
 
-          // FRAM_WRITE_MODE_CMD
-          sendFramCmd(0xB4000000);
-          delay(1);
+        // FRAM_WRITE_MODE_CMD
+        sendFramCmd(0xB4000000);
+        delay(1);
 
-          // Set the address for the next 128 bytes
-          setAddress_N64(0x08000000);
+        // Set the address for the next 128 bytes
+        setAddress_N64(0x08000000);
 
-          // Send 128 bytes, 64 words
-          for (byte c = 0; c < 128; c += 2) {
-            // Join two bytes into one word
-            word myWord = ( ( sdBuffer[c] & 0xFF ) << 8 ) | ( sdBuffer[c + 1] & 0xFF );
-            // Write word
-            writeWord_N64(myWord);
-          }
-          // Delay between each "DMA"
-          delay(1);
-
-          //FRAM_WRITE_OFFSET_CMD + offset
-          sendFramCmd((0xA5000000 | (((bank * 128) + offset) & 0xFFFF)));
-          delay(1);
-
-          // FRAM_EXECUTE_CMD
-          sendFramCmd(0xD2000000);
-          while (waitForFram(flashramType)) {
-            delay(1);
-          }
+        // Send 128 bytes, 64 words
+        for (byte c = 0; c < 128; c += 2) {
+          // Join two bytes into one word
+          word myWord = ( ( sdBuffer[c] & 0xFF ) << 8 ) | ( sdBuffer[c + 1] & 0xFF );
+          // Write word
+          writeWord_N64(myWord);
         }
-        // Delay between banks
-        delay(20);
+        // Delay between each "DMA"
+        delay(1);
+
+        //FRAM_WRITE_OFFSET_CMD + offset
+        sendFramCmd((0xA5000000 | (((bank * 128) + offset) & 0xFFFF)));
+        delay(1);
+
+        // FRAM_EXECUTE_CMD
+        sendFramCmd(0xD2000000);
+        while (waitForFram(flashramType)) {
+          delay(1);
+        }
       }
-      println_Msg("");
-      // Close the file:
-      myFile.close();
+      // Delay between banks
+      delay(20);
     }
-    else {
-      print_Error(F("SD Error"), true);
-    }
+    println_Msg("");
+    // Close the file:
+    inputFile.close();
   }
   else {
-    print_Error(F("Savetype Error"), true);
+    print_Error(F("Savetype Error"));
   }
 }
 
@@ -2386,7 +2347,7 @@ void eraseFram() {
     }
   }
   else {
-    print_Error(F("Savetype Error"), true);
+    print_Error(F("Savetype Error"));
   }
 }
 
@@ -2400,7 +2361,7 @@ void readFram(byte flashramType) {
     readSram(131072, flashramType);
   }
   else {
-    print_Error(F("Savetype Error"), true);
+    print_Error(F("Savetype Error"));
   }
 }
 
@@ -2563,7 +2524,7 @@ void getFramType() {
       print_Msg(sdBuffer[c], HEX);
       print_Msg(F(", "));
     }
-    print_Error(F("Flashram unknown"), true);
+    print_Error(F("Flashram unknown"));
   }
 }
 
@@ -2579,8 +2540,8 @@ void readRom_N64() {
   // create a new folder
   foldern = loadFolderNumber();
   sprintf(folder, "N64/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   display_Clear();
   print_Msg(F("Saving to "));
@@ -2594,9 +2555,7 @@ void readRom_N64() {
 
 readn64rom:
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   byte buffer[1024] = { 0 };
 
@@ -2677,11 +2636,11 @@ readn64rom:
     processedProgressBar += 1024;
     draw_progressbar(processedProgressBar, totalProgressBar);
     // write out 1024 bytes to file
-    myFile.write(buffer, 1024);
+    outputFile.write(buffer, 1024);
   }
 
   // Close the file:
-  myFile.close();
+  outputFile.close();
 
   unsigned long timeElapsed = (millis() - startTime) / 1000; // seconds
 
@@ -2716,16 +2675,12 @@ readn64rom:
     // wait for user choice to come back from the question box menu
     switch (CRCMenu)
     {
-      case 0:
+      case 0: {
         // Change to last directory
-        sd.chdir(folder);
+        chdir(folder);
         // Delete old file
-        if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-          print_Error(F("SD Error"), true);
-        }
-        if (!myFile.remove()) {
-          print_Error(F("Delete Error"), true);
-        }
+        SafeSDFile oldFile = SafeSDFile::openForWriting(fileName);
+        oldFile.remove();
         // Dump again
         display_Clear();
         println_Msg(F("Reading Rom..."));
@@ -2733,6 +2688,7 @@ readn64rom:
         rgb.setColor(0, 0, 0);
         goto readn64rom;
         break;
+      }
 
       case 1:
         // Return to N64 menu
@@ -2808,7 +2764,7 @@ void flashRepro_N64() {
 
     // Launch file browser
     filePath[0] = '\0';
-    sd.chdir("/");
+    chdir("/");
     fileBrowser(F("Select z64 file"));
     display_Clear();
     display_Update();
@@ -2817,94 +2773,90 @@ void flashRepro_N64() {
     sprintf(filePath, "%s/%s", filePath, fileName);
 
     // Open file on sd card
-    if (myFile.open(filePath, O_READ)) {
-      // Get rom size from file
-      fileSize = myFile.fileSize();
-      print_Msg(F("File size: "));
-      print_Msg(fileSize / 1048576);
-      println_Msg(F("MB"));
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    // Get rom size from file
+    fileSize = inputFile.fileSize();
+    print_Msg(F("File size: "));
+    print_Msg(fileSize / 1048576);
+    println_Msg(F("MB"));
+    display_Update();
+
+    // Compare file size to flashrom size
+    if ((fileSize / 1048576) > cartSize) {
+      print_Error(F("File too big"));
+    }
+
+    // Erase needed sectors
+    if (strcmp(flashid, "227E") == 0) {
+      // Spansion S29GL256N or Fujitsu MSP55LV512 with 0x20000 sector size and 32 byte buffer
+      eraseFlashrom_N64(0x20000);
+    }
+    else if (strcmp(flashid, "7E7E") == 0) {
+      // Fujitsu MSP55LV100S
+      eraseMSP55LV100_N64();
+    }
+    else if ((strcmp(flashid, "8813") == 0) || (strcmp(flashid, "8816") == 0)) {
+      // Intel 4400L0ZDQ0
+      eraseIntel4400_N64();
+      resetIntel4400_N64();
+    }
+    else if ((strcmp(flashid, "22C9") == 0) || (strcmp(flashid, "22CB") == 0)) {
+      // Macronix MX29LV640, C9 is top boot and CB is bottom boot block
+      eraseFlashrom_N64(0x8000);
+    }
+
+    // Check if erase was successful
+    if (blankcheckFlashrom_N64()) {
+      // Write flashrom
+      println_Msg(F("OK"));
+      print_Msg(F("Writing "));
+      println_Msg(filePath);
       display_Update();
 
-      // Compare file size to flashrom size
-      if ((fileSize / 1048576) > cartSize) {
-        print_Error(F("File too big"), true);
-      }
 
-      // Erase needed sectors
-      if (strcmp(flashid, "227E") == 0) {
-        // Spansion S29GL256N or Fujitsu MSP55LV512 with 0x20000 sector size and 32 byte buffer
-        eraseFlashrom_N64(0x20000);
+      if ((strcmp(cartID, "3901") == 0) && (strcmp(flashid, "227E") == 0)) {
+        // Intel 512M29EW(64MB) with 0x20000 sector size and 128 byte buffer
+        writeFlashBuffer_N64(inputFile, 0x20000, 128);
+      }
+      else if (strcmp(flashid, "227E") == 0) {
+        // Spansion S29GL128N/S29GL256N or Fujitsu MSP55LV512 with 0x20000 sector size and 32 byte buffer
+        writeFlashBuffer_N64(inputFile, 0x20000, 32);
       }
       else if (strcmp(flashid, "7E7E") == 0) {
-        // Fujitsu MSP55LV100S
-        eraseMSP55LV100_N64();
+        //Fujitsu MSP55LV100S
+        writeMSP55LV100_N64(inputFile, 0x20000);
+      }
+      else if ((strcmp(flashid, "22C9") == 0) || (strcmp(flashid, "22CB") == 0)) {
+        // Macronix MX29LV640 without buffer
+        writeFlashrom_N64(inputFile);
       }
       else if ((strcmp(flashid, "8813") == 0) || (strcmp(flashid, "8816") == 0)) {
         // Intel 4400L0ZDQ0
-        eraseIntel4400_N64();
+        writeIntel4400_N64(inputFile);
         resetIntel4400_N64();
       }
-      else if ((strcmp(flashid, "22C9") == 0) || (strcmp(flashid, "22CB") == 0)) {
-        // Macronix MX29LV640, C9 is top boot and CB is bottom boot block
-        eraseFlashrom_N64(0x8000);
-      }
 
-      // Check if erase was successful
-      if (blankcheckFlashrom_N64()) {
-        // Write flashrom
+      // Close the file:
+      inputFile.close();
+
+      // Verify
+      print_Msg(F("Verifying..."));
+      display_Update();
+      writeErrors = verifyFlashrom_N64();
+      if (writeErrors == 0) {
         println_Msg(F("OK"));
-        print_Msg(F("Writing "));
-        println_Msg(filePath);
         display_Update();
-
-
-        if ((strcmp(cartID, "3901") == 0) && (strcmp(flashid, "227E") == 0)) {
-          // Intel 512M29EW(64MB) with 0x20000 sector size and 128 byte buffer
-          writeFlashBuffer_N64(0x20000, 128);
-        }
-        else if (strcmp(flashid, "227E") == 0) {
-          // Spansion S29GL128N/S29GL256N or Fujitsu MSP55LV512 with 0x20000 sector size and 32 byte buffer
-          writeFlashBuffer_N64(0x20000, 32);
-        }
-        else if (strcmp(flashid, "7E7E") == 0) {
-          //Fujitsu MSP55LV100S
-          writeMSP55LV100_N64(0x20000);
-        }
-        else if ((strcmp(flashid, "22C9") == 0) || (strcmp(flashid, "22CB") == 0)) {
-          // Macronix MX29LV640 without buffer
-          writeFlashrom_N64();
-        }
-        else if ((strcmp(flashid, "8813") == 0) || (strcmp(flashid, "8816") == 0)) {
-          // Intel 4400L0ZDQ0
-          writeIntel4400_N64();
-          resetIntel4400_N64();
-        }
-
-        // Close the file:
-        myFile.close();
-
-        // Verify
-        print_Msg(F("Verifying..."));
-        display_Update();
-        writeErrors = verifyFlashrom_N64();
-        if (writeErrors == 0) {
-          println_Msg(F("OK"));
-          display_Update();
-        }
-        else {
-          print_Msg(writeErrors);
-          print_Msg(F(" bytes "));
-          print_Error(F("did not verify."), false);
-        }
       }
       else {
-        // Close the file
-        myFile.close();
-        print_Error(F("failed"), false);
+        print_Msg(writeErrors);
+        print_Msg(F(" bytes "));
+        print_Warning(F("did not verify."));
       }
     }
     else {
-      print_Error(F("Can't open file"), false);
+      // Close the file
+      inputFile.close();
+      print_Warning(F("failed"));
     }
   }
   // If the ID is unknown show error message
@@ -2915,7 +2867,7 @@ void flashRepro_N64() {
     print_Msg(flashid);
     print_Msg(F(" "));
     println_Msg(cartID);
-    print_Error(F("Unknown flashrom"), false);
+    print_Warning(F("Unknown flashrom"));
   }
 
   println_Msg(F("Press Button..."));
@@ -3328,7 +3280,7 @@ boolean blankcheckFlashrom_N64() {
 }
 
 // Write Intel flashrom
-void writeIntel4400_N64() {
+void writeIntel4400_N64(SafeSDFile &inputFile) {
   for (unsigned long currSector = 0; currSector < fileSize; currSector += 131072) {
     // Blink led
     PORTB ^= (1 << 4);
@@ -3336,7 +3288,7 @@ void writeIntel4400_N64() {
     // Write to flashrom
     for (unsigned long currSdBuffer = 0; currSdBuffer < 131072; currSdBuffer += 512) {
       // Fill SD buffer
-      myFile.read(sdBuffer, 512);
+      inputFile.read(sdBuffer, 512);
 
       // Write 32 words at a time
       for (int currWriteBuffer = 0; currWriteBuffer < 512; currWriteBuffer += 64) {
@@ -3380,7 +3332,7 @@ void writeIntel4400_N64() {
   }
 }
 // Write Fujitsu MSP55LV100S flashrom consisting out of two MSP55LV512 flashroms one used for the high byte the other for the low byte
-void writeMSP55LV100_N64(unsigned long sectorSize) {
+void writeMSP55LV100_N64(SafeSDFile &inputFile, unsigned long sectorSize) {
   unsigned long flashBase = romBase;
 
   for (unsigned long currSector = 0; currSector < fileSize; currSector += sectorSize) {
@@ -3390,7 +3342,7 @@ void writeMSP55LV100_N64(unsigned long sectorSize) {
     // Write to flashrom
     for (unsigned long currSdBuffer = 0; currSdBuffer < sectorSize; currSdBuffer += 512) {
       // Fill SD buffer
-      myFile.read(sdBuffer, 512);
+      inputFile.read(sdBuffer, 512);
 
       // Write 32 bytes at a time
       for (int currWriteBuffer = 0; currWriteBuffer < 512; currWriteBuffer += 32) {
@@ -3437,7 +3389,7 @@ void writeMSP55LV100_N64(unsigned long sectorSize) {
 }
 
 // Write Spansion S29GL256N flashrom using the 32 byte write buffer
-void writeFlashBuffer_N64(unsigned long sectorSize, byte bufferSize) {
+void writeFlashBuffer_N64(SafeSDFile &inputFile, unsigned long sectorSize, byte bufferSize) {
   unsigned long flashBase = romBase;
 
   for (unsigned long currSector = 0; currSector < fileSize; currSector += sectorSize) {
@@ -3452,7 +3404,7 @@ void writeFlashBuffer_N64(unsigned long sectorSize, byte bufferSize) {
     // Write to flashrom
     for (unsigned long currSdBuffer = 0; currSdBuffer < sectorSize; currSdBuffer += 512) {
       // Fill SD buffer
-      myFile.read(sdBuffer, 512);
+      inputFile.read(sdBuffer, 512);
 
       // Write 32 bytes at a time
       for (int currWriteBuffer = 0; currWriteBuffer < 512; currWriteBuffer += bufferSize) {
@@ -3499,7 +3451,7 @@ void writeFlashBuffer_N64(unsigned long sectorSize, byte bufferSize) {
 }
 
 // Write MX29LV640 flashrom without write buffer
-void writeFlashrom_N64() {
+void writeFlashrom_N64(SafeSDFile &inputFile) {
   unsigned long flashBase = romBase;
 
   for (unsigned long currSector = 0; currSector < fileSize; currSector += 0x8000) {
@@ -3514,7 +3466,7 @@ void writeFlashrom_N64() {
     // Write to flashrom
     for (unsigned long currSdBuffer = 0; currSdBuffer < 0x8000; currSdBuffer += 512) {
       // Fill SD buffer
-      myFile.read(sdBuffer, 512);
+      inputFile.read(sdBuffer, 512);
       for (int currByte = 0; currByte < 512; currByte += 2) {
         // Join two bytes into one word
         word currWord = ( ( sdBuffer[currByte] & 0xFF ) << 8 ) | ( sdBuffer[currByte + 1] & 0xFF );
@@ -3544,43 +3496,37 @@ void writeFlashrom_N64() {
 
 unsigned long verifyFlashrom_N64() {
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    writeErrors = 0;
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  writeErrors = 0;
 
-    for (unsigned long currSector = 0; currSector < fileSize; currSector += 131072) {
-      // Blink led
-      PORTB ^= (1 << 4);
-      for (unsigned long currSdBuffer = 0; currSdBuffer < 131072; currSdBuffer += 512) {
-        // Fill SD buffer
-        myFile.read(sdBuffer, 512);
-        for (int currByte = 0; currByte < 512; currByte += 2) {
-          // Join two bytes into one word
-          word currWord = ( ( sdBuffer[currByte] & 0xFF ) << 8 ) | ( sdBuffer[currByte + 1] & 0xFF );
-          // Read flash
-          setAddress_N64(romBase + currSector + currSdBuffer + currByte);
-          // Compare both
-          if (readWord_N64() != currWord) {
-            writeErrors++;
-            // Abord if too many errors
-            if (writeErrors > 20) {
-              print_Msg(F("More than "));
-              // Close the file:
-              myFile.close();
-              return writeErrors;
-            }
+  for (unsigned long currSector = 0; currSector < fileSize; currSector += 131072) {
+    // Blink led
+    PORTB ^= (1 << 4);
+    for (unsigned long currSdBuffer = 0; currSdBuffer < 131072; currSdBuffer += 512) {
+      // Fill SD buffer
+      inputFile.read(sdBuffer, 512);
+      for (int currByte = 0; currByte < 512; currByte += 2) {
+        // Join two bytes into one word
+        word currWord = ( ( sdBuffer[currByte] & 0xFF ) << 8 ) | ( sdBuffer[currByte + 1] & 0xFF );
+        // Read flash
+        setAddress_N64(romBase + currSector + currSdBuffer + currByte);
+        // Compare both
+        if (readWord_N64() != currWord) {
+          writeErrors++;
+          // Abord if too many errors
+          if (writeErrors > 20) {
+            print_Msg(F("More than "));
+            // Close the file:
+            inputFile.close();
+            return writeErrors;
           }
         }
       }
     }
-    // Close the file:
-    myFile.close();
-    return writeErrors;
   }
-  else {
-    println_Msg(F("Can't open file"));
-    display_Update();
-    return 9999;
-  }
+  // Close the file:
+  inputFile.close();
+  return writeErrors;
 }
 
 /******************************************
@@ -3604,7 +3550,7 @@ void flashGameshark_N64() {
 
     // Launch file browser
     filePath[0] = '\0';
-    sd.chdir("/");
+    chdir("/");
     fileBrowser(F("Select z64 file"));
     display_Clear();
     display_Update();
@@ -3613,55 +3559,52 @@ void flashGameshark_N64() {
     sprintf(filePath, "%s/%s", filePath, fileName);
 
     // Open file on sd card
-    if (myFile.open(filePath, O_READ)) {
-      // Get rom size from file
-      fileSize = myFile.fileSize();
-      print_Msg(F("File size: "));
-      print_Msg(fileSize / 1024);
-      println_Msg(F("KB"));
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+
+    // Get rom size from file
+    fileSize = inputFile.fileSize();
+    print_Msg(F("File size: "));
+    print_Msg(fileSize / 1024);
+    println_Msg(F("KB"));
+    display_Update();
+
+    // Compare file size to flashrom size
+    if (fileSize > 262144) {
+      print_Error(F("File too big"));
+    }
+
+    // SST 29LE010, chip erase not needed as this eeprom automaticly erases during the write cycle
+    eraseGameshark_N64();
+
+    // Write flashrom
+    print_Msg(F("Writing "));
+    println_Msg(filePath);
+    display_Update();
+    writeGameshark_N64(inputFile);
+
+    // Close the file:
+    inputFile.close();
+
+    // Verify
+    print_Msg(F("Verifying..."));
+    display_Update();
+    writeErrors = verifyGameshark_N64();
+
+    if (writeErrors == 0) {
+      println_Msg(F("OK"));
       display_Update();
-
-      // Compare file size to flashrom size
-      if (fileSize > 262144) {
-        print_Error(F("File too big"), true);
-      }
-
-      // SST 29LE010, chip erase not needed as this eeprom automaticly erases during the write cycle
-      eraseGameshark_N64();
-
-      // Write flashrom
-      print_Msg(F("Writing "));
-      println_Msg(filePath);
-      display_Update();
-      writeGameshark_N64();
-
-      // Close the file:
-      myFile.close();
-
-      // Verify
-      print_Msg(F("Verifying..."));
-      display_Update();
-      writeErrors = verifyGameshark_N64();
-
-      if (writeErrors == 0) {
-        println_Msg(F("OK"));
-        display_Update();
-      }
-      else {
-        print_Msg(writeErrors);
-        print_Msg(F(" bytes "));
-        print_Error(F("did not verify."), false);
-      }
     }
     else {
-      print_Error(F("Can't open file"), false);
+      print_Msg(writeErrors);
+      print_Msg(F(" bytes "));
+      print_Warning(F("did not verify."));
     }
   }
   // If the ID is unknown show error message
   else {
     print_Msg(F("ID: "));
     println_Msg(flashid);
-    print_Error(F("Unknown flashrom"), false);
+    print_Warning(F("Unknown flashrom"));
   }
 
   println_Msg(F("Press Button..."));
@@ -3709,8 +3652,8 @@ void backupGameshark_N64() {
   foldern = loadFolderNumber();
   sprintf(fileName, "GS%d", foldern);
   strcat(fileName, ".z64");
-  sd.mkdir("N64/ROM/Gameshark", true);
-  sd.chdir("N64/ROM/Gameshark");
+  mkdir("N64/ROM/Gameshark", true);
+  chdir("N64/ROM/Gameshark");
 
   display_Clear();
   print_Msg(F("Saving "));
@@ -3723,9 +3666,7 @@ void backupGameshark_N64() {
   saveFolderNumber(foldern);
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   for (unsigned long currByte = romBase + 0xC00000; currByte < (romBase + 0xC00000 + 262144); currByte += 512) {
     // Blink led
@@ -3745,10 +3686,10 @@ void backupGameshark_N64() {
       sdBuffer[c] = hiByte;
       sdBuffer[c + 1] = loByte;
     }
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
 }
 
 // Send chip erase to the two SST29LE010 inside the Gameshark
@@ -3774,11 +3715,11 @@ void eraseGameshark_N64() {
 }
 
 // Write Gameshark with 2x SST29LE010 Eeproms
-void writeGameshark_N64() {
+void writeGameshark_N64(SafeSDFile &inputFile) {
   // Each 29LE010 has 1024 pages, each 128 bytes in size
   for (unsigned long currPage = 0; currPage < fileSize / 2; currPage += 128) {
     // Fill SD buffer with twice the amount since we flash 2 chips
-    myFile.read(sdBuffer, 256);
+    inputFile.read(sdBuffer, 256);
     // Blink led
     PORTB ^= (1 << 4);
 
@@ -3805,41 +3746,36 @@ void writeGameshark_N64() {
 
 unsigned long verifyGameshark_N64() {
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    writeErrors = 0;
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    for (unsigned long currSector = 0; currSector < fileSize; currSector += 131072) {
-      // Blink led
-      PORTB ^= (1 << 4);
-      for (unsigned long currSdBuffer = 0; currSdBuffer < 131072; currSdBuffer += 512) {
-        // Fill SD buffer
-        myFile.read(sdBuffer, 512);
-        for (int currByte = 0; currByte < 512; currByte += 2) {
-          // Join two bytes into one word
-          word currWord = ( ( sdBuffer[currByte] & 0xFF ) << 8 ) | ( sdBuffer[currByte + 1] & 0xFF );
-          // Read flash
-          setAddress_N64(romBase + 0xC00000 + currSector + currSdBuffer + currByte);
-          // Compare both
-          if (readWord_N64() != currWord) {
-            if ( (strcmp(flashid, "0808") == 0) && (currSector + currSdBuffer + currByte > 0x3F) && (currSector + currSdBuffer + currByte < 0x1080)) {
-              // Gameshark maps this area to the bootcode of the plugged in cartridge
-            }
-            else {
-              writeErrors++;
-            }
+  writeErrors = 0;
+
+  for (unsigned long currSector = 0; currSector < fileSize; currSector += 131072) {
+    // Blink led
+    PORTB ^= (1 << 4);
+    for (unsigned long currSdBuffer = 0; currSdBuffer < 131072; currSdBuffer += 512) {
+      // Fill SD buffer
+      inputFile.read(sdBuffer, 512);
+      for (int currByte = 0; currByte < 512; currByte += 2) {
+        // Join two bytes into one word
+        word currWord = ( ( sdBuffer[currByte] & 0xFF ) << 8 ) | ( sdBuffer[currByte + 1] & 0xFF );
+        // Read flash
+        setAddress_N64(romBase + 0xC00000 + currSector + currSdBuffer + currByte);
+        // Compare both
+        if (readWord_N64() != currWord) {
+          if ( (strcmp(flashid, "0808") == 0) && (currSector + currSdBuffer + currByte > 0x3F) && (currSector + currSdBuffer + currByte < 0x1080)) {
+            // Gameshark maps this area to the bootcode of the plugged in cartridge
+          }
+          else {
+            writeErrors++;
           }
         }
       }
     }
-    // Close the file:
-    myFile.close();
-    return writeErrors;
   }
-  else {
-    println_Msg(F("Can't open file"));
-    display_Update();
-    return 9999;
-  }
+  // Close the file:
+  inputFile.close();
+  return writeErrors;
 }
 
 //******************************************

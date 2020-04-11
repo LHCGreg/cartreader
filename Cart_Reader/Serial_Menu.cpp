@@ -36,7 +36,7 @@ void wait_serial() {
         myFile.close();
       }
       else {
-        print_Error(F("Can't open file"), true);
+        print_Error(F("Can't open file"));
       }
     }*/
 }
@@ -69,7 +69,7 @@ byte questionBox_Serial(const __FlashStringHelper *question, char answers[7][20]
       foldern = loadFolderNumber();
       sprintf(fileName, "IMPORT/%d.bin", foldern);
       if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-        print_Error(F("Can't create file on SD"), true);
+        print_Error(F("Can't create file on SD"));
       }
 
       // Read file from serial

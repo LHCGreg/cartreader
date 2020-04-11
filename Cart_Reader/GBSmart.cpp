@@ -10,6 +10,7 @@
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "SD.h"
 
 #define GB_SMART_GAMES_PER_PAGE  6
 
@@ -21,7 +22,7 @@ void gbSmartGetGames();
 void gbSmartReadFlash();
 void gbSmartWriteFlash();
 void gbSmartWriteFlash(uint32_t start_bank);
-void gbSmartWriteFlashFromMyFile(uint32_t addr);
+void gbSmartWriteFlashFromMyFile(SafeSDFile &inputFile, uint32_t addr);
 uint32_t gbSmartVerifyFlash();
 byte gbSmartBlankCheckingFlash(uint8_t flash_start_bank);
 void gbSmartResetFlash(uint8_t flash_start_bank);
@@ -159,7 +160,7 @@ void gbSmartGameOptions()
     case 0: // Read Game
       {
         display_Clear();
-        sd.chdir("/");
+        chdir("/");
         readROM_GB();
         compare_checksum_GB();
         break;
@@ -167,14 +168,14 @@ void gbSmartGameOptions()
     case 1: // Read SRAM
       {
         display_Clear();
-        sd.chdir("/");
+        chdir("/");
         readSRAM_GB();
         break;
       }
     case 2: // Write SRAM
       {
         display_Clear();
-        sd.chdir("/");
+        chdir("/");
         writeSRAM_GB();
         uint32_t wrErrors = verifySRAM_GB();
         if (wrErrors == 0)
@@ -187,7 +188,7 @@ void gbSmartGameOptions()
           print_Msg(F("Error: "));
           print_Msg(wrErrors);
           println_Msg(F(" bytes"));
-          print_Error(F("did not verify."), false);
+          print_Warning(F("did not verify."));
         }
         break;
       }
@@ -264,12 +265,12 @@ void gbSmartFlashMenu()
       {
         // read flash
         display_Clear();
-        sd.chdir("/");
+        chdir("/");
 
         foldern = loadFolderNumber();
         sprintf(fileName, "GBS%d.bin", foldern);
-        sd.mkdir("GB/GBS", true);
-        sd.chdir("GB/GBS");
+        mkdir("GB/GBS", true);
+        chdir("GB/GBS");
         foldern = foldern + 1;
         saveFolderNumber(foldern);
 
@@ -292,7 +293,7 @@ void gbSmartFlashMenu()
 
         display_Clear();
         filePath[0] = '\0';
-        sd.chdir("/");
+        chdir("/");
         fileBrowser(F("Select 4MB file"));
 
         sprintf(filePath, "%s/%s", filePath, fileName);
@@ -408,8 +409,7 @@ void gbSmartReadFlash()
   println_Msg(F("..."));
   display_Update();
 
-  if (!myFile.open(fileName, O_RDWR | O_CREAT))
-    print_Error(F("Can't create file on SD"), true);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // reset flash to read array state
   for (unsigned int i = 0x00; i < gbSmartBanks; i += gbSmartBanksPerFlashChip)
@@ -425,7 +425,7 @@ void gbSmartReadFlash()
     for (uint16_t c = 0; c < 512; c++)
       sdBuffer[c] = readByte_GB(addr + c);
 
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
   }
 
   // read rest banks
@@ -440,14 +440,14 @@ void gbSmartReadFlash()
       for (uint16_t c = 0; c < 512; c++)
         sdBuffer[c] = readByte_GB(addr + c);
 
-      myFile.write(sdBuffer, 512);
+      outputFile.write(sdBuffer, 512);
     }
   }
 
   // back to initial state
   writeByte_GB(0x2100, 0x01);
 
-  myFile.close();
+  outputFile.close();
   println_Msg("");
   println_Msg(F("Finished reading"));
   display_Update();
@@ -470,7 +470,7 @@ void gbSmartWriteFlash()
     display_Update();
 
     if (!gbSmartBlankCheckingFlash(bank))
-      print_Error(F("Could not erase flash"), true);
+      print_Error(F("Could not erase flash"));
 
     println_Msg(F("Passed"));
     display_Update();
@@ -496,19 +496,18 @@ void gbSmartWriteFlash()
     print_Msg(F("Error: "));
     print_Msg(writeErrors);
     println_Msg(F(" bytes "));
-    print_Error(F("did not verify."), true);
+    print_Error(F("did not verify."));
   }
 }
 
 void gbSmartWriteFlash(uint32_t start_bank)
 {
-  if (!myFile.open(filePath, O_READ))
-    print_Error(F("Can't open file on SD"), true);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
   // switch to flash base bank
   gbSmartRemapStartBank(start_bank, gbSmartFlashSizeGB, gbSmartSramSizeGB);
 
-  myFile.seekCur((start_bank << 14));
+  inputFile.seekCur((start_bank << 14));
 
   print_Msg(F("Writing Bank 0x"));
   print_Msg(start_bank, HEX);
@@ -516,7 +515,7 @@ void gbSmartWriteFlash(uint32_t start_bank)
   display_Update();
 
   // handle bank 0x00 on 0x0000
-  gbSmartWriteFlashFromMyFile(0x0000);
+  gbSmartWriteFlashFromMyFile(inputFile, 0x0000);
 
   // handle rest banks on 0x4000
   for (uint8_t bank = 0x01; bank < gbSmartBanksPerFlashChip; bank++)
@@ -524,18 +523,18 @@ void gbSmartWriteFlash(uint32_t start_bank)
     dataOut();
     writeByte_GB(0x2100, bank);
 
-    gbSmartWriteFlashFromMyFile(0x4000);
+    gbSmartWriteFlashFromMyFile(inputFile, 0x4000);
   }
 
-  myFile.close();
+  inputFile.close();
   println_Msg("");
 }
 
-void gbSmartWriteFlashFromMyFile(uint32_t addr)
+void gbSmartWriteFlashFromMyFile(SafeSDFile &inputFile, uint32_t addr)
 {
   for (uint16_t i = 0; i < 16384; i += 256)
   {
-    myFile.read(sdBuffer, 256);
+    inputFile.read(sdBuffer, 256);
 
     // sequence load to page
     dataOut();
@@ -565,21 +564,34 @@ uint32_t gbSmartVerifyFlash()
 {
   uint32_t verified = 0;
 
-  if (!myFile.open(filePath, O_READ))
-  {
-    verified = 0xffffffff;
-    print_Error(F("Can't open file on SD"), false);
-  }
-  else
-  {
-    // remaps mmc to full access
-    gbSmartRemapStartBank(0x00, gbSmartRomSizeGB, gbSmartSramSizeGB);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    // verify bank 0x00
-    dataIn_GB();
-    for (uint16_t addr = 0x0000; addr <= 0x3fff; addr += 512)
+  // remaps mmc to full access
+  gbSmartRemapStartBank(0x00, gbSmartRomSizeGB, gbSmartSramSizeGB);
+
+  // verify bank 0x00
+  dataIn_GB();
+  for (uint16_t addr = 0x0000; addr <= 0x3fff; addr += 512)
+  {
+    inputFile.read(sdBuffer, 512);
+
+    for (uint16_t c = 0; c < 512; c++)
     {
-      myFile.read(sdBuffer, 512);
+      if (readByte_GB(addr + c) != sdBuffer[c])
+        verified++;
+    }
+  }
+
+  // verify rest banks
+  for (uint16_t bank = 0x01; bank < gbSmartBanks; bank++)
+  {
+    dataOut();
+    writeByte_GB(0x2100, bank);
+
+    dataIn_GB();
+    for (uint16_t addr = 0x4000; addr <= 0x7fff; addr += 512)
+    {
+      inputFile.read(sdBuffer, 512);
 
       for (uint16_t c = 0; c < 512; c++)
       {
@@ -587,31 +599,12 @@ uint32_t gbSmartVerifyFlash()
           verified++;
       }
     }
-
-    // verify rest banks
-    for (uint16_t bank = 0x01; bank < gbSmartBanks; bank++)
-    {
-      dataOut();
-      writeByte_GB(0x2100, bank);
-
-      dataIn_GB();
-      for (uint16_t addr = 0x4000; addr <= 0x7fff; addr += 512)
-      {
-        myFile.read(sdBuffer, 512);
-
-        for (uint16_t c = 0; c < 512; c++)
-        {
-          if (readByte_GB(addr + c) != sdBuffer[c])
-            verified++;
-        }
-      }
-    }
-
-    // back to initial state
-    writeByte_GB(0x2100, 0x01);
-
-    myFile.close();
   }
+
+  // back to initial state
+  writeByte_GB(0x2100, 0x01);
+
+  inputFile.close();
 
   return verified;
 }

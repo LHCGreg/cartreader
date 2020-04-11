@@ -1,7 +1,7 @@
 #include "globals.h"
 #include <Arduino.h>
-#include <SdFat.h>
 #include <si5351.h>
+// #include "SD.h"
 
 char ver[5] = "4.6a";
 
@@ -18,10 +18,6 @@ Si5351 clockgen;
 // Graphic I2C LCD
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// SD Card
-SdFat sd;
-SdFile myFile;
-
 // Array that holds the data
 byte sdBuffer[512];
 
@@ -31,7 +27,6 @@ char folder[36];
 
 byte saveType;
 
-boolean ignoreError = 0;
 char flashid[5];
 byte numBanks = 128;
 unsigned long sramSize = 0;

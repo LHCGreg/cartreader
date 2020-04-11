@@ -17,6 +17,7 @@
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "SD.h"
 
 /******************************************
   Defines
@@ -40,7 +41,7 @@ void reset_cart_PCE(void);
 uint8_t read_byte_PCE(uint32_t address);
 void write_byte_PCE(uint32_t address, uint8_t data);
 uint32_t detect_rom_size_PCE(void);
-void read_bank_PCE(uint32_t address_start, uint32_t address_end, uint32_t *processed_size, uint32_t total_size);
+void read_bank_PCE(uint32_t address_start, uint32_t address_end, uint32_t *processed_size, uint32_t total_size, SafeSDFile &outputFile);
 void read_rom_PCE(void);
 
 /******************************************
@@ -375,7 +376,7 @@ uint32_t detect_rom_size_PCE(void)
 }
 
 /* Must be address_start and address_end should be 512 byte aligned */
-void read_bank_PCE(uint32_t address_start, uint32_t address_end, uint32_t *processed_size, uint32_t total_size)
+void read_bank_PCE(uint32_t address_start, uint32_t address_end, uint32_t *processed_size, uint32_t total_size, SafeSDFile &outputFile)
 {
   uint32_t currByte;
   uint16_t c;
@@ -384,27 +385,27 @@ void read_bank_PCE(uint32_t address_start, uint32_t address_end, uint32_t *proce
     for (c = 0; c < 512; c++) {
       sdBuffer[c] = read_byte_PCE(currByte + c);
     }
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
     *processed_size += 512;
     draw_progressbar(*processed_size, total_size);
   }
 }
 
 //Get line from file and convert upper case to lower case
-void skip_line(SdFile* readfile)
+void skip_line(SafeSDFile &readfile)
 {
   int i = 0;
   char str_buf;
 
-  while (readfile->available())
+  while (readfile.bytesAvailable() > 0)
   {
     //Read 1 byte from file
-    str_buf = readfile->read();
+    str_buf = readfile.readByteOrDie();
 
     //if end of file or newline found, execute command
     if (str_buf == '\r')
     {
-      readfile->read(); //dispose \n because \r\n
+      readfile.readByteOrDie(); //dispose \n because \r\n
       break;
     }
     i++;
@@ -412,11 +413,11 @@ void skip_line(SdFile* readfile)
 }
 
 //Get line from file and convert upper case to lower case
-void get_line(char* str_buf, SdFile* readfile, uint8_t maxi)
+void get_line(char* str_buf, SafeSDFile &readfile, uint8_t maxi)
 {
   int i = 0;
 
-  while (readfile->available())
+  while (readfile.bytesAvailable() > 0)
   {
     //If line size is more than maximum array, limit it.
     if (i >= maxi)
@@ -425,13 +426,13 @@ void get_line(char* str_buf, SdFile* readfile, uint8_t maxi)
     }
 
     //Read 1 byte from file
-    str_buf[i] = readfile->read();
+    str_buf[i] = readfile.readByteOrDie();
 
     //if end of file or newline found, execute command
     if (str_buf[i] == '\r')
     {
       str_buf[i] = '\0';
-      readfile->read(); //dispose \n because \r\n
+      readfile.readByteOrDie(); //dispose \n because \r\n
       break;
     }
     i++;
@@ -453,7 +454,6 @@ uint32_t calculate_crc32(int n, unsigned char c[], uint32_t r)
 
 void crc_search(char *file_p, char *folder_p, uint32_t rom_size)
 {
-  SdFile rom, script;
   uint32_t r, crc, processedsize;
   char gamename[100];
   char crc_file[9], crc_search[9];
@@ -461,60 +461,62 @@ void crc_search(char *file_p, char *folder_p, uint32_t rom_size)
   flag = CHKSUM_SKIP;
 
   //Open list file. If no list file found, just skip
-  sd.chdir("/"); //Set read directry to root
-  if (script.open("PCE_CRC_LIST.txt", O_READ))
+  chdir("/"); //Set read directry to root
+  
+  if (fileExists(F("/PCE_CRC_LIST.txt")))
   {
+    SafeSDFile script = SafeSDFile::openForReading(F("/PCE_CRC_LIST.txt"));
     //Calculate CRC of ROM file
-    sd.chdir(folder_p);
-    if (rom.open(file_p, O_READ))
+    chdir(folder_p);
+    SafeSDFile rom = SafeSDFile::openForReading(file_p);
+
+    //Initialize flag as error
+    flag = CHKSUM_ERROR;
+    crc = 0xFFFFFFFFUL; //Initialize CRC
+    display_Clear();
+    println_Msg(F("Calculating chksum..."));
+    processedsize = 0;
+    draw_progressbar(0, rom_size * 1024UL); //Initialize progress bar
+
+    while (rom.bytesAvailable() > 0)
     {
-      //Initialize flag as error
-      flag = CHKSUM_ERROR;
-      crc = 0xFFFFFFFFUL; //Initialize CRC
-      display_Clear();
-      println_Msg(F("Calculating chksum..."));
-      processedsize = 0;
-      draw_progressbar(0, rom_size * 1024UL); //Initialize progress bar
-
-      while (rom.available())
-      {
-        r = rom.read(sdBuffer, 512);
-        crc = calculate_crc32(r, sdBuffer, crc);
-        processedsize += r;
-        draw_progressbar(processedsize, rom_size * 1024UL);
-      }
-
-      crc = crc ^ 0xFFFFFFFFUL; //Finish CRC calculation and progress bar
-      draw_progressbar(rom_size * 1024UL, rom_size * 1024UL);
-
-      //Display calculated CRC
-      sprintf(crc_file, "%08lX", crc);
-
-      //Search for same CRC in list
-      while (script.available()) {
-        //Read 2 lines (game name and CRC)
-        get_line(gamename, &script, 96);
-        get_line(crc_search, &script, 9);
-        skip_line(&script); //Skip every 3rd line
-
-        //if checksum search successful, rename the file and end search
-        if (strcmp(crc_search, crc_file) == 0)
-        {
-          print_Msg(F("Chksum OK "));
-          println_Msg(crc_file);
-          print_Msg(F("Saved to "));
-          print_Msg(folder_p);
-          print_Msg(F("/"));
-          print_Msg(gamename);
-          print_Msg(F(".pce"));
-          flag = CHKSUM_OK;
-          strcat(gamename, ".pce");
-          rom.rename(sd.vwd(), gamename);
-          break;
-        }
-      }
-      rom.close();
+      r = rom.read(sdBuffer, 512);
+      crc = calculate_crc32(r, sdBuffer, crc);
+      processedsize += r;
+      draw_progressbar(processedsize, rom_size * 1024UL);
     }
+
+    crc = crc ^ 0xFFFFFFFFUL; //Finish CRC calculation and progress bar
+    draw_progressbar(rom_size * 1024UL, rom_size * 1024UL);
+
+    //Display calculated CRC
+    sprintf(crc_file, "%08lX", crc);
+
+    //Search for same CRC in list
+    while (script.bytesAvailable() > 0) {
+      //Read 2 lines (game name and CRC)
+      get_line(gamename, script, 96);
+      get_line(crc_search, script, 9);
+      skip_line(script); //Skip every 3rd line
+
+      //if checksum search successful, rename the file and end search
+      if (strcmp(crc_search, crc_file) == 0)
+      {
+        print_Msg(F("Chksum OK "));
+        println_Msg(crc_file);
+        print_Msg(F("Saved to "));
+        print_Msg(folder_p);
+        print_Msg(F("/"));
+        print_Msg(gamename);
+        print_Msg(F(".pce"));
+        flag = CHKSUM_OK;
+        strcat(gamename, ".pce");
+        rom.renameInCurrentDir(gamename);
+        break;
+      }
+    }
+    rom.close();
+    script.close();
   }
 
 
@@ -534,9 +536,6 @@ void crc_search(char *file_p, char *folder_p, uint32_t rom_size)
     print_Msg(F("/"));
     print_Msg(file_p);
   }
-
-  script.close();
-
 }
 
 
@@ -558,8 +557,8 @@ void read_tennokoe_bank_PCE(void)
   // create a new folder for the save file
   foldern = loadFolderNumber();
   sprintf(folder, "PCE/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   println_Msg(F("Saving RAM..."));
   display_Update();
@@ -569,9 +568,7 @@ void read_tennokoe_bank_PCE(void)
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   pin_read_write_PCE();
 
@@ -586,15 +583,15 @@ void read_tennokoe_bank_PCE(void)
   write_byte_PCE(0x0F0000, 0x73); //Unlock RAM sequence 5 Bank 78
 
   //Read Tennokoe bank RAM
-  read_bank_PCE(0x080000, 0x080000 + 8 * 1024UL, &processed_size, 8 * 1024UL);
+  read_bank_PCE(0x080000, 0x080000 + 8 * 1024UL, &processed_size, 8 * 1024UL, outputFile);
 
-  myFile.seekSet(0);    // Go back to file beginning
+  outputFile.seekSet(0);    // Go back to file beginning
   processed_size = 0;
 
   //Verify Tennokoe bank RAM
   for (verify_loop = 0; verify_loop < 8 * 1024UL; verify_loop++)
   {
-    if (myFile.read() != read_byte_PCE(verify_loop + 0x080000))
+    if (outputFile.readByteOrDie() != read_byte_PCE(verify_loop + 0x080000))
     {
       verify_flag = 0;
       draw_progressbar(8 * 1024UL, 8 * 1024UL);
@@ -621,7 +618,7 @@ void read_tennokoe_bank_PCE(void)
   pin_init_PCE();
 
   //Close the file:
-  myFile.close();
+  outputFile.close();
 
 }
 
@@ -632,79 +629,75 @@ void write_tennokoe_bank_PCE(void)
 
   //Display file Browser and wait user to select a file. Size must be 8KB.
   filePath[0] = '\0';
-  sd.chdir("/");
+  chdir("/");
   fileBrowser(F("Select RAM file"));
   // Create filepath
   sprintf(filePath, "%s/%s", filePath, fileName);
   display_Clear();
 
   //open file on sd card
-  if (myFile.open(filePath, O_READ)) {
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    fileSize = myFile.fileSize();
-    if (fileSize != 8 * 1024UL) {
-      println_Msg(F("File must be 1MB"));
-      display_Update();
-      myFile.close();
-      wait();
-      return;
-    }
-
-    pin_read_write_PCE();
-
-    //Unlock Tennokoe Bank RAM
-    write_byte_PCE(0x0D0000, 0x68); //Unlock RAM sequence 1 Bank 68
-    write_byte_PCE(0x0F0000, 0x0); //Unlock RAM sequence 2 Bank 78
-    write_byte_PCE(0x0F0000, 0x73); //Unlock RAM sequence 3 Bank 78
-    write_byte_PCE(0x0F0000, 0x73); //Unlock RAM sequence 4 Bank 78
-    write_byte_PCE(0x0F0000, 0x73); //Unlock RAM sequence 5 Bank 78
-
-    //Write file to Tennokoe BANK RAM
-    for (readwrite_loop = 0; readwrite_loop < 8 * 1024UL; readwrite_loop++)
-    {
-      write_byte_PCE(0x080000 + readwrite_loop, myFile.read());
-      draw_progressbar(readwrite_loop, 8 * 1024UL);
-    }
-
-    myFile.seekSet(0);    // Go back to file beginning
-
-    for (verify_loop = 0; verify_loop < 8 * 1024UL; verify_loop++)
-    {
-      if (myFile.read() != read_byte_PCE(verify_loop + 0x080000))
-      {
-        draw_progressbar(2 * 1024UL, 8 * 1024UL);
-        verify_flag = 0;
-        break;
-      }
-      draw_progressbar(verify_loop, 8 * 1024UL);
-    }
-
-    //If verify flag is 0, verify failed
-    if (verify_flag == 1)
-    {
-      println_Msg(F("Verify OK..."));
-    }
-    else
-    {
-      println_Msg(F("Verify failed..."));
-    }
-
-    //Lock Tennokoe Bank RAM
-    write_byte_PCE(0x0D0000, 0x68); //Lock RAM sequence 1 Bank 68
-    write_byte_PCE(0x0F0001, 0x0); //Lock RAM sequence 2 Bank 78
-    write_byte_PCE(0x0C0001, 0x60); //Lock RAM sequence 3 Bank 60
-
-    pin_init_PCE();
-
-    // Close the file:
-    myFile.close();
-    println_Msg(F("Finished"));
+  fileSize = inputFile.fileSize();
+  if (fileSize != 8 * 1024UL) {
+    println_Msg(F("File must be 1MB"));
     display_Update();
+    inputFile.close();
     wait();
+    return;
   }
-  else {
-    print_Error(F("File doesn't exist"), false);
+
+  pin_read_write_PCE();
+
+  //Unlock Tennokoe Bank RAM
+  write_byte_PCE(0x0D0000, 0x68); //Unlock RAM sequence 1 Bank 68
+  write_byte_PCE(0x0F0000, 0x0); //Unlock RAM sequence 2 Bank 78
+  write_byte_PCE(0x0F0000, 0x73); //Unlock RAM sequence 3 Bank 78
+  write_byte_PCE(0x0F0000, 0x73); //Unlock RAM sequence 4 Bank 78
+  write_byte_PCE(0x0F0000, 0x73); //Unlock RAM sequence 5 Bank 78
+
+  //Write file to Tennokoe BANK RAM
+  for (readwrite_loop = 0; readwrite_loop < 8 * 1024UL; readwrite_loop++)
+  {
+    write_byte_PCE(0x080000 + readwrite_loop, inputFile.readByteOrDie());
+    draw_progressbar(readwrite_loop, 8 * 1024UL);
   }
+
+  inputFile.seekSet(0);    // Go back to file beginning
+
+  for (verify_loop = 0; verify_loop < 8 * 1024UL; verify_loop++)
+  {
+    if (inputFile.readByteOrDie() != read_byte_PCE(verify_loop + 0x080000))
+    {
+      draw_progressbar(2 * 1024UL, 8 * 1024UL);
+      verify_flag = 0;
+      break;
+    }
+    draw_progressbar(verify_loop, 8 * 1024UL);
+  }
+
+  //If verify flag is 0, verify failed
+  if (verify_flag == 1)
+  {
+    println_Msg(F("Verify OK..."));
+  }
+  else
+  {
+    println_Msg(F("Verify failed..."));
+  }
+
+  //Lock Tennokoe Bank RAM
+  write_byte_PCE(0x0D0000, 0x68); //Lock RAM sequence 1 Bank 68
+  write_byte_PCE(0x0F0001, 0x0); //Lock RAM sequence 2 Bank 78
+  write_byte_PCE(0x0C0001, 0x60); //Lock RAM sequence 3 Bank 60
+
+  pin_init_PCE();
+
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("Finished"));
+  display_Update();
+  wait();
 }
 
 void read_rom_PCE(void)
@@ -727,8 +720,8 @@ void read_rom_PCE(void)
   // create a new folder for the save file
   foldern = loadFolderNumber();
   sprintf(folder, "PCE/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   println_Msg(F("Saving ROM..."));
   display_Update();
@@ -738,9 +731,7 @@ void read_rom_PCE(void)
   saveFolderNumber(foldern);
 
   //open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("Can't create file on SD"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   pin_read_write_PCE();
 
@@ -750,32 +741,32 @@ void read_rom_PCE(void)
   if (rom_size == 384)
   {
     //Read two sections. 0x000000--0x040000 and 0x080000--0x0A0000 for 384KB
-    read_bank_PCE(0, 0x40000, &processed_size, rom_size * 1024UL);
-    read_bank_PCE(0x80000, 0xA0000, &processed_size, rom_size * 1024UL);
+    read_bank_PCE(0, 0x40000, &processed_size, rom_size * 1024UL, outputFile);
+    read_bank_PCE(0x80000, 0xA0000, &processed_size, rom_size * 1024UL, outputFile);
   }
   else if (rom_size == 2560)
   {
     //Dump Street fighter II' Champion Edition
-    read_bank_PCE(0, 0x80000, &processed_size, rom_size * 1024UL);  //Read first bank
+    read_bank_PCE(0, 0x80000, &processed_size, rom_size * 1024UL, outputFile);  //Read first bank
     write_byte_PCE(0x1FF0, 0xFF); //Display second bank
-    read_bank_PCE(0x80000, 0x100000, &processed_size, rom_size * 1024UL); //Read second bank
+    read_bank_PCE(0x80000, 0x100000, &processed_size, rom_size * 1024UL, outputFile); //Read second bank
     write_byte_PCE(0x1FF1, 0xFF); //Display third bank
-    read_bank_PCE(0x80000, 0x100000, &processed_size, rom_size * 1024UL); //Read third bank
+    read_bank_PCE(0x80000, 0x100000, &processed_size, rom_size * 1024UL, outputFile); //Read third bank
     write_byte_PCE(0x1FF2, 0xFF); //Display forth bank
-    read_bank_PCE(0x80000, 0x100000, &processed_size, rom_size * 1024UL); //Read forth bank
+    read_bank_PCE(0x80000, 0x100000, &processed_size, rom_size * 1024UL, outputFile); //Read forth bank
     write_byte_PCE(0x1FF3, 0xFF); //Display fifth bank
-    read_bank_PCE(0x80000, 0x100000, &processed_size, rom_size * 1024UL); //Read fifth bank
+    read_bank_PCE(0x80000, 0x100000, &processed_size, rom_size * 1024UL, outputFile); //Read fifth bank
   }
   else
   {
     //Read start form 0x000000 and keep reading until end of ROM
-    read_bank_PCE(0, rom_size * 1024UL, &processed_size, rom_size * 1024UL);
+    read_bank_PCE(0, rom_size * 1024UL, &processed_size, rom_size * 1024UL, outputFile);
   }
 
   pin_init_PCE();
 
   //Close the file:
-  myFile.close();
+  outputFile.close();
 
   //CRC search and rename ROM
   crc_search(fileName, folder, rom_size);
@@ -802,7 +793,7 @@ void pceMenu() {
       case 0:
         display_Clear();
         // Change working dir to root
-        sd.chdir("/");
+        chdir("/");
         read_rom_PCE();
         break;
       case 1:
@@ -830,7 +821,7 @@ void pceMenu() {
       case 0:
         display_Clear();
         // Change working dir to root
-        sd.chdir("/");
+        chdir("/");
         read_rom_PCE();
         break;
 

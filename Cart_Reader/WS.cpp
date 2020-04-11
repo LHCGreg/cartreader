@@ -28,6 +28,7 @@
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "SD.h"
 
 /******************************************
    Function prototypes
@@ -110,10 +111,10 @@ void setup_WS()
 
   // unlock MMC
   if (!unlockMMC2003_WS())
-    print_Error(F("Can't initial MMC"), true);
+    print_Error(F("Can't initial MMC"));
 
   if (getCartInfo_WS() != 0xea)
-    print_Error(F("Rom header read error"), true);
+    print_Error(F("Rom header read error"));
 
   showCartInfo_WS();
   mode = mode_WS;
@@ -131,16 +132,16 @@ void wsMenu()
     case 0:
       {
         // Read Rom
-        sd.chdir("/");
+        chdir("/");
         readROM_WS(filePath, FILEPATH_LENGTH);
-        sd.chdir("/");
+        chdir("/");
         compareChecksum_WS(filePath);
         break;
       }
     case 1:
       {
         // Read Save
-        sd.chdir("/");
+        chdir("/");
         switch (saveType)
         {
           case 0: println_Msg(F("No save for this game")); break;
@@ -154,7 +155,7 @@ void wsMenu()
     case 2:
       {
         // Write Save
-        sd.chdir("/");
+        chdir("/");
         switch (saveType)
         {
           case 0: println_Msg(F("No save for this game")); break;
@@ -425,8 +426,8 @@ void readROM_WS(char *outPathBuf, size_t bufferSize)
   // create a new folder for storing rom file
   foldern = loadFolderNumber();
   snprintf(folder, sizeof(folder), "WS/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   // filling output file path to buffer
   if (outPathBuf != NULL && bufferSize > 0)
@@ -439,8 +440,7 @@ void readROM_WS(char *outPathBuf, size_t bufferSize)
   display_Update();
 
   // open file on sdcard
-  if (!myFile.open(fileName, O_RDWR | O_CREAT))
-    print_Error(F("Can't create file on SD"), true);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // write new folder number back to EEPROM
   foldern++;
@@ -470,7 +470,7 @@ void readROM_WS(char *outPathBuf, size_t bufferSize)
       for (uint32_t w = 0; w < 512; w += 2)
         * ((uint16_t*)(sdBuffer + w)) = readWord_WS(0x20000 + addr + w);
 
-      myFile.write(sdBuffer, 512);
+      outputFile.write(sdBuffer, 512);
     }
   }
 
@@ -481,7 +481,7 @@ void readROM_WS(char *outPathBuf, size_t bufferSize)
     writeByte_WSPort(0xcd, 0x00);
   }
 
-  myFile.close();
+  outputFile.close();
 }
 
 void readSRAM_WS()
@@ -492,8 +492,8 @@ void readSRAM_WS()
   // create a new folder for storing rom file
   foldern = loadFolderNumber();
   snprintf(folder, sizeof(folder), "WS/SAVE/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   display_Clear();
   print_Msg(F("Saving "));
@@ -504,8 +504,7 @@ void readSRAM_WS()
   foldern++;
   saveFolderNumber(foldern);
 
-  if (!myFile.open(fileName, O_RDWR | O_CREAT))
-    print_Error(F("Can't create file on SD"), true);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   uint32_t bank_size = (sramSize << 7);
   uint16_t end_bank = (bank_size >> 16);  // 64KB per bank
@@ -531,11 +530,11 @@ void readSRAM_WS()
       for (uint32_t w = 0; w < 512; w++)
         sdBuffer[w] = readByte_WS(0x10000 + addr + w);
 
-      myFile.write(sdBuffer, 512);
+      outputFile.write(sdBuffer, 512);
     }
   } while (++bank < end_bank);
 
-  myFile.close();
+  outputFile.close();
 
   println_Msg(F("Done"));
   display_Update();
@@ -546,60 +545,55 @@ void verifySRAM_WS()
   print_Msg(F("Verifying... "));
   display_Update();
 
-  if (myFile.open(filePath, O_READ))
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+
+  uint32_t bank_size = (sramSize << 7);
+  uint16_t end_bank = (bank_size >> 16);  // 64KB per bank
+  uint16_t bank = 0;
+  uint32_t write_errors = 0;
+
+  if (bank_size > 0x10000)
+    bank_size = 0x10000;
+
+  do
   {
-    uint32_t bank_size = (sramSize << 7);
-    uint16_t end_bank = (bank_size >> 16);  // 64KB per bank
-    uint16_t bank = 0;
-    uint32_t write_errors = 0;
+    dataOut_WS();
+    writeByte_WSPort(0xc1, bank);
 
-    if (bank_size > 0x10000)
-      bank_size = 0x10000;
-
-    do
+    dataIn_WS();
+    for (uint32_t addr = 0; addr < bank_size && inputFile.bytesAvailable() > 0; addr += 512)
     {
-      dataOut_WS();
-      writeByte_WSPort(0xc1, bank);
+      inputFile.read(sdBuffer, 512);
 
-      dataIn_WS();
-      for (uint32_t addr = 0; addr < bank_size && myFile.available(); addr += 512)
+      // SRAM data on D0-D7, with A-1 to select high/low byte
+      for (uint32_t w = 0; w < 512; w++)
       {
-        myFile.read(sdBuffer, 512);
-
-        // SRAM data on D0-D7, with A-1 to select high/low byte
-        for (uint32_t w = 0; w < 512; w++)
-        {
-          if (readByte_WS(0x10000 + addr + w) != sdBuffer[w])
-            write_errors++;
-        }
+        if (readByte_WS(0x10000 + addr + w) != sdBuffer[w])
+          write_errors++;
       }
-    } while (++bank < end_bank);
-
-    myFile.close();
-
-    if (write_errors == 0)
-    {
-      println_Msg(F("passed"));
     }
-    else
-    {
-      println_Msg(F("failed"));
-      print_Msg(F("Error: "));
-      print_Msg(write_errors);
-      println_Msg(F(" bytes "));
-      print_Error(F("did not verify."), false);
-    }
+  } while (++bank < end_bank);
+
+  inputFile.close();
+
+  if (write_errors == 0)
+  {
+    println_Msg(F("passed"));
   }
   else
   {
-    print_Error(F("File doesn't exist"), false);
+    println_Msg(F("failed"));
+    print_Msg(F("Error: "));
+    print_Msg(write_errors);
+    println_Msg(F(" bytes "));
+    print_Warning(F("did not verify."));
   }
 }
 
 void writeSRAM_WS()
 {
   filePath[0] = 0;
-  sd.chdir("/");
+  chdir("/");
   fileBrowser(F("Select sav file"));
   snprintf(filePath, FILEPATH_LENGTH, "%s/%s", filePath, fileName);
 
@@ -609,43 +603,38 @@ void writeSRAM_WS()
   println_Msg(F("..."));
   display_Update();
 
-  if (myFile.open(filePath, O_READ))
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+
+  uint32_t bank_size = (sramSize << 7);
+  uint16_t end_bank = (bank_size >> 16);  // 64KB per bank
+
+  if (bank_size > 0x10000)
+    bank_size = 0x10000;
+
+  uint16_t bank = 0;
+  dataOut_WS();
+  do
   {
-    uint32_t bank_size = (sramSize << 7);
-    uint16_t end_bank = (bank_size >> 16);  // 64KB per bank
+    writeByte_WSPort(0xc1, bank);
 
-    if (bank_size > 0x10000)
-      bank_size = 0x10000;
-
-    uint16_t bank = 0;
-    dataOut_WS();
-    do
+    for (uint32_t addr = 0; addr < bank_size && inputFile.bytesAvailable(); addr += 512)
     {
-      writeByte_WSPort(0xc1, bank);
+      // blink LED
+      if ((addr & ((1 << 14) - 1)) == 0)
+        PORTB ^= (1 << 4);
 
-      for (uint32_t addr = 0; addr < bank_size && myFile.available(); addr += 512)
-      {
-        // blink LED
-        if ((addr & ((1 << 14) - 1)) == 0)
-          PORTB ^= (1 << 4);
+      inputFile.read(sdBuffer, 512);
 
-        myFile.read(sdBuffer, 512);
+      // SRAM data on D0-D7, with A-1 to select high/low byte
+      for (uint32_t w = 0; w < 512; w++)
+        writeByte_WS(0x10000 + addr + w, sdBuffer[w]);
+    }
+  } while (++bank < end_bank);
 
-        // SRAM data on D0-D7, with A-1 to select high/low byte
-        for (uint32_t w = 0; w < 512; w++)
-          writeByte_WS(0x10000 + addr + w, sdBuffer[w]);
-      }
-    } while (++bank < end_bank);
+  inputFile.close();
 
-    myFile.close();
-
-    println_Msg(F("Writing finished"));
-    display_Update();
-  }
-  else
-  {
-    print_Error(F("File doesn't exist"), false);
-  }
+  println_Msg(F("Writing finished"));
+  display_Update();
 }
 
 void readEEPROM_WS()
@@ -656,8 +645,8 @@ void readEEPROM_WS()
   // create a new folder for storing eep file
   foldern = loadFolderNumber();
   snprintf(folder, sizeof(folder), "WS/SAVE/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   display_Clear();
   print_Msg(F("Saving "));
@@ -668,8 +657,7 @@ void readEEPROM_WS()
   foldern++;
   saveFolderNumber(foldern);
 
-  if (!myFile.open(fileName, O_RDWR | O_CREAT))
-    print_Error(F("Can't create file on SD"), true);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   uint32_t eepromSize = (sramSize << 7);
   uint32_t bufSize = (eepromSize < 512 ? eepromSize : 512);
@@ -698,10 +686,10 @@ void readEEPROM_WS()
       sdBuffer[j + 1] = readByte_WSPort(0xc5);
     }
 
-    myFile.write(sdBuffer, bufSize);
+    outputFile.write(sdBuffer, bufSize);
   }
 
-  myFile.close();
+  outputFile.close();
 
   println_Msg(F("Done"));
 }
@@ -711,67 +699,62 @@ void verifyEEPROM_WS()
   print_Msg(F("Verifying... "));
   display_Update();
 
-  if (myFile.open(filePath, O_READ))
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+
+  uint32_t write_errors = 0;
+  uint32_t eepromSize = (sramSize << 7);
+  uint32_t bufSize = (eepromSize < 512 ? eepromSize : 512);
+
+  for (uint32_t i = 0; i < eepromSize; i += bufSize)
   {
-    uint32_t write_errors = 0;
-    uint32_t eepromSize = (sramSize << 7);
-    uint32_t bufSize = (eepromSize < 512 ? eepromSize : 512);
+    inputFile.read(sdBuffer, bufSize);
 
-    for (uint32_t i = 0; i < eepromSize; i += bufSize)
+    for (uint32_t j = 0; j < bufSize; j += 2)
     {
-      myFile.read(sdBuffer, bufSize);
+      // blink LED
+      if ((j & 0x1f) == 0x00)
+        PORTB ^= (1 << 4);
 
-      for (uint32_t j = 0; j < bufSize; j += 2)
-      {
-        // blink LED
-        if ((j & 0x1f) == 0x00)
-          PORTB ^= (1 << 4);
+      generateEepromInstruction_WS(wsEepromShiftReg, 0x2, ((i + j) >> 1));
 
-        generateEepromInstruction_WS(wsEepromShiftReg, 0x2, ((i + j) >> 1));
+      dataOut_WS();
+      writeByte_WSPort(0xc6, wsEepromShiftReg[0]);
+      writeByte_WSPort(0xc7, wsEepromShiftReg[1]);
+      writeByte_WSPort(0xc8, 0x10);
 
-        dataOut_WS();
-        writeByte_WSPort(0xc6, wsEepromShiftReg[0]);
-        writeByte_WSPort(0xc7, wsEepromShiftReg[1]);
-        writeByte_WSPort(0xc8, 0x10);
+      // MMC will shift out from port 0xc7 to 0xc6
+      // and shift in 16bits into port 0xc5 to 0xc4
+      pulseCLK_WS(1 + 32 + 3);
 
-        // MMC will shift out from port 0xc7 to 0xc6
-        // and shift in 16bits into port 0xc5 to 0xc4
-        pulseCLK_WS(1 + 32 + 3);
+      dataIn_WS();
+      if (readByte_WSPort(0xc4) != sdBuffer[j])
+        write_errors++;
 
-        dataIn_WS();
-        if (readByte_WSPort(0xc4) != sdBuffer[j])
-          write_errors++;
-
-        if (readByte_WSPort(0xc5) != sdBuffer[j + 1])
-          write_errors++;
-      }
+      if (readByte_WSPort(0xc5) != sdBuffer[j + 1])
+        write_errors++;
     }
+  }
 
-    myFile.close();
+  inputFile.close();
 
-    if (write_errors == 0)
-    {
-      println_Msg(F("passed"));
-    }
-    else
-    {
-      println_Msg(F("failed"));
-      print_Msg(F("Error: "));
-      print_Msg(write_errors);
-      println_Msg(F(" bytes "));
-      print_Error(F("did not verify."), false);
-    }
+  if (write_errors == 0)
+  {
+    println_Msg(F("passed"));
   }
   else
   {
-    print_Error(F("File doesn't exist"), false);
+    println_Msg(F("failed"));
+    print_Msg(F("Error: "));
+    print_Msg(write_errors);
+    println_Msg(F(" bytes "));
+    print_Warning(F("did not verify."));
   }
 }
 
 void writeEEPROM_WS()
 {
   filePath[0] = 0;
-  sd.chdir("/");
+  chdir("/");
   fileBrowser(F("Select eep file"));
   snprintf(filePath, FILEPATH_LENGTH, "%s/%s", filePath, fileName);
 
@@ -781,49 +764,44 @@ void writeEEPROM_WS()
   println_Msg(F("..."));
   display_Update();
 
-  if (myFile.open(filePath, O_READ))
-  {
-    uint32_t eepromSize = (sramSize << 7);
-    uint32_t bufSize = (eepromSize < 512 ? eepromSize : 512);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    for (uint32_t i = 0; i < eepromSize; i += bufSize)
+  uint32_t eepromSize = (sramSize << 7);
+  uint32_t bufSize = (eepromSize < 512 ? eepromSize : 512);
+
+  for (uint32_t i = 0; i < eepromSize; i += bufSize)
+  {
+    inputFile.read(sdBuffer, bufSize);
+
+    for (uint32_t j = 0; j < bufSize; j += 2)
     {
-      myFile.read(sdBuffer, bufSize);
+      // blink LED
+      if ((j & 0x1f) == 0x00)
+        PORTB ^= (1 << 4);
 
-      for (uint32_t j = 0; j < bufSize; j += 2)
-      {
-        // blink LED
-        if ((j & 0x1f) == 0x00)
-          PORTB ^= (1 << 4);
+      generateEepromInstruction_WS(wsEepromShiftReg, 0x1, ((i + j) >> 1));
 
-        generateEepromInstruction_WS(wsEepromShiftReg, 0x1, ((i + j) >> 1));
+      dataOut_WS();
+      writeByte_WSPort(0xc6, wsEepromShiftReg[0]);
+      writeByte_WSPort(0xc7, wsEepromShiftReg[1]);
+      writeByte_WSPort(0xc4, sdBuffer[j]);
+      writeByte_WSPort(0xc5, sdBuffer[j + 1]);
+      writeByte_WSPort(0xc8, 0x20);
 
-        dataOut_WS();
-        writeByte_WSPort(0xc6, wsEepromShiftReg[0]);
-        writeByte_WSPort(0xc7, wsEepromShiftReg[1]);
-        writeByte_WSPort(0xc4, sdBuffer[j]);
-        writeByte_WSPort(0xc5, sdBuffer[j + 1]);
-        writeByte_WSPort(0xc8, 0x20);
+      // MMC will shift out from port 0xc7 to 0xc4
+      pulseCLK_WS(1 + 32 + 3);
 
-        // MMC will shift out from port 0xc7 to 0xc4
-        pulseCLK_WS(1 + 32 + 3);
-
-        dataIn_WS();
-        do {
-          pulseCLK_WS(128);
-        }
-        while ((readByte_WSPort(0xc8) & 0x02) == 0x00);
+      dataIn_WS();
+      do {
+        pulseCLK_WS(128);
       }
+      while ((readByte_WSPort(0xc8) & 0x02) == 0x00);
     }
-
-    myFile.close();
-
-    println_Msg(F("Done"));
   }
-  else
-  {
-    print_Error(F("File doesn't exist"), false);
-  }
+
+  inputFile.close();
+
+  println_Msg(F("Done"));
 }
 
 void writeWitchOS_WS()
@@ -838,90 +816,85 @@ void writeWitchOS_WS()
   if (readWord_WS(0xe0004) || readWord_WS(0xe4004) || readWord_WS(0xec004) || readWord_WS(0xee004))
   {
     display_Clear();
-    print_Error(F("OS sectors are protected!"), false);
+    print_Warning(F("OS sectors are protected!"));
   }
   else
   {
     filePath[0] = 0;
-    sd.chdir("/");
+    chdir("/");
     fileBrowser(F("Select fbin file"));
     snprintf(filePath, FILEPATH_LENGTH, "%s/%s", filePath, fileName);
 
     display_Clear();
 
-    if (myFile.open(filePath, O_READ))
+    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+
+    println_Msg(F("Erasing OS..."));
+    display_Update();
+    eraseWitchFlashSector_WS(0xe0000);
+    eraseWitchFlashSector_WS(0xe4000);
+    eraseWitchFlashSector_WS(0xec000);
+    eraseWitchFlashSector_WS(0xee000);
+
+    print_Msg(F("Flashing OS "));
+    print_Msg(filePath);
+    println_Msg(F("..."));
+    display_Update();
+
+    uint32_t fbin_length = inputFile.fileSize();
+    uint32_t i, bytes_read;
+    uint16_t pd;
+    uint8_t key;
+
+    // OS size seems limit to 64KBytes
+    // last 16 bytes contains jmpf code and block count (written by BIOS)
+    if (fbin_length > 65520)
+      fbin_length = 65520;
+
+    // enter fast program mode
+    dataOut_WS();
+    writeWord_WS(0x80aaa, 0xaaaa);
+    writeWord_WS(0x80555, 0x5555);
+    writeWord_WS(0x80aaa, 0x2020);
+
+    // 128bytes per block
+    for (i = 0; i < fbin_length; i += 128)
     {
-      println_Msg(F("Erasing OS..."));
-      display_Update();
-      eraseWitchFlashSector_WS(0xe0000);
-      eraseWitchFlashSector_WS(0xe4000);
-      eraseWitchFlashSector_WS(0xec000);
-      eraseWitchFlashSector_WS(0xee000);
+      // blink LED
+      if ((i & 0x3ff) == 0)
+        PORTB ^= (1 << 4);
 
-      print_Msg(F("Flashing OS "));
-      print_Msg(filePath);
-      println_Msg(F("..."));
-      display_Update();
+      // reset key
+      key = 0xff;
+      bytes_read = inputFile.read(sdBuffer, 128);
 
-      uint32_t fbin_length = myFile.fileSize();
-      uint32_t i, bytes_read;
-      uint16_t pd;
-      uint8_t key;
-
-      // OS size seems limit to 64KBytes
-      // last 16 bytes contains jmpf code and block count (written by BIOS)
-      if (fbin_length > 65520)
-        fbin_length = 65520;
-
-      // enter fast program mode
-      dataOut_WS();
-      writeWord_WS(0x80aaa, 0xaaaa);
-      writeWord_WS(0x80555, 0x5555);
-      writeWord_WS(0x80aaa, 0x2020);
-
-      // 128bytes per block
-      for (i = 0; i < fbin_length; i += 128)
+      for (uint32_t j = 0; j < bytes_read; j += 2)
       {
-        // blink LED
-        if ((i & 0x3ff) == 0)
-          PORTB ^= (1 << 4);
+        // for each decoded[n] = encoded[n] ^ key
+        // where key = encoded[n - 1]
+        // key = 0xff when n = 0, 0 <= n < 128
+        pd = ((sdBuffer[j] ^ key) | ((sdBuffer[j + 1] ^ sdBuffer[j]) << 8));
+        key = sdBuffer[j + 1];
 
-        // reset key
-        key = 0xff;
-        bytes_read = myFile.read(sdBuffer, 128);
-
-        for (uint32_t j = 0; j < bytes_read; j += 2)
-        {
-          // for each decoded[n] = encoded[n] ^ key
-          // where key = encoded[n - 1]
-          // key = 0xff when n = 0, 0 <= n < 128
-          pd = ((sdBuffer[j] ^ key) | ((sdBuffer[j + 1] ^ sdBuffer[j]) << 8));
-          key = sdBuffer[j + 1];
-
-          fastProgramWitchFlash_WS(0xe0000 + i + j, pd);
-        }
+        fastProgramWitchFlash_WS(0xe0000 + i + j, pd);
       }
-
-      // write jmpf instruction and block counts at 0xe0000
-      memcpy_P(sdBuffer, wwLaunchCode, 8);
-      *((uint16_t*)(sdBuffer + 6)) = ((i >> 7) & 0xffff);
-
-      for (uint32_t i = 0; i < 8; i += 2)
-        fastProgramWitchFlash_WS(0xefff0 + i, *((uint16_t*)(sdBuffer + i)));
-
-      // leave fast program mode
-      dataOut_WS();
-      writeWord_WS(0xe0000, 0x9090);
-      writeWord_WS(0xe0000, 0xf0f0);
-
-      myFile.close();
-
-      println_Msg(F("Done"));
     }
-    else
-    {
-      print_Error(F("File doesn't exist"), false);
-    }
+
+    // write jmpf instruction and block counts at 0xe0000
+    memcpy_P(sdBuffer, wwLaunchCode, 8);
+    *((uint16_t*)(sdBuffer + 6)) = ((i >> 7) & 0xffff);
+
+    for (uint32_t i = 0; i < 8; i += 2)
+      fastProgramWitchFlash_WS(0xefff0 + i, *((uint16_t*)(sdBuffer + i)));
+
+    // leave fast program mode
+    dataOut_WS();
+    writeWord_WS(0xe0000, 0x9090);
+    writeWord_WS(0xe0000, 0xf0f0);
+
+    inputFile.close();
+
+    println_Msg(F("Done"));
   }
 
   dataOut_WS();
@@ -964,36 +937,32 @@ boolean compareChecksum_WS(const char *wsFilePath)
   println_Msg(F("Calculating Checksum"));
   display_Update();
 
-  if (!myFile.open(wsFilePath, O_READ))
-  {
-    print_Error(F("Failed to open file"), false);
-    return 0;
-  }
+  SafeSDFile inputFile = SafeSDFile::openForReading(wsFilePath);
 
-  uint32_t calLength = myFile.fileSize() - 512;
+  uint32_t calLength = inputFile.fileSize() - 512;
   uint32_t checksum = 0;
 
   if (wsWitch)
   {
     // only calcuate last 128Kbytes for wonderwitch (OS and BIOS region)
-    myFile.seekCur(myFile.fileSize() - 131072);
+    inputFile.seekCur(inputFile.fileSize() - 131072);
     calLength = 131072 - 512;
   }
 
   for (uint32_t i = 0; i < calLength; i += 512)
   {
-    myFile.read(sdBuffer, 512);
+    inputFile.read(sdBuffer, 512);
     for (uint32_t j = 0; j < 512; j++)
       checksum += sdBuffer[j];
   }
 
   // last 512 bytes
-  myFile.read(sdBuffer, 512);
+  inputFile.read(sdBuffer, 512);
   // skip last 2 bytes (checksum value)
   for (uint32_t j = 0; j < 510; j++)
     checksum += sdBuffer[j];
 
-  myFile.close();
+  inputFile.close();
 
   checksum &= 0x0000ffff;
   calLength = wsGameChecksum;
@@ -1014,7 +983,7 @@ boolean compareChecksum_WS(const char *wsFilePath)
   }
   else
   {
-    print_Error(F("Checksum Error"), false);
+    print_Warning(F("Checksum Error"));
     return 0;
   }
 }

@@ -11,6 +11,7 @@
 #include "globals.h"
 #include "utils.h"
 #include "options.h"
+#include "SD.h"
 
 /******************************************
    Variables
@@ -174,7 +175,7 @@ void mdMenu() {
       mode =  mode_MD_Cart;
       // Change working dir to root
       filePath[0] = '\0';
-      sd.chdir("/");
+      chdir("/");
       fileBrowser(F("Select file"));
       display_Clear();
       // Setting CS(PH3) LOW
@@ -191,7 +192,7 @@ void mdMenu() {
         flashSize = 2097152;
       }
       else {
-        print_Error(F("Error: Unknown flashrom"), true);
+        print_Error(F("Error: Unknown flashrom"));
       }
       display_Update();
 
@@ -235,7 +236,7 @@ void mdCartMenu() {
       // largest known game so far is supposedly "Paprium" at 10MB, so cap sanity check at 16MB
       if (cartSize != 0 && cartSize <= 16777216) {
         // Change working dir to root
-        sd.chdir("/");
+        chdir("/");
         if (realtec)
           readRealtec_MD();
         else
@@ -243,7 +244,7 @@ void mdCartMenu() {
         //compare_checksum_MD();
       }
       else {
-        print_Error(F("Cart has no ROM"), false);
+        print_Warning(F("Cart has no ROM"));
       }
       break;
 
@@ -252,7 +253,7 @@ void mdCartMenu() {
       // Does cartridge have SRAM
       if ((saveType == 1) || (saveType == 2) || (saveType == 3)) {
         // Change working dir to root
-        sd.chdir("/");
+        chdir("/");
         println_Msg(F("Reading Sram..."));
         display_Update();
         enableSram_MD(1);
@@ -260,7 +261,7 @@ void mdCartMenu() {
         enableSram_MD(0);
       }
       else {
-        print_Error(F("Cart has no Sram"), false);
+        print_Warning(F("Cart has no Sram"));
       }
       break;
 
@@ -269,7 +270,7 @@ void mdCartMenu() {
       // Does cartridge have SRAM
       if ((saveType == 1) || (saveType == 2) || (saveType == 3)) {
         // Change working dir to root
-        sd.chdir("/");
+        chdir("/");
         // Launch file browser
         fileBrowser(F("Select srm file"));
         display_Clear();
@@ -285,11 +286,11 @@ void mdCartMenu() {
           print_Msg(F("Error: "));
           print_Msg(writeErrors);
           println_Msg(F(" bytes "));
-          print_Error(F("did not verify."), false);
+          print_Warning(F("did not verify."));
         }
       }
       else {
-        print_Error(F("Cart has no Sram"), false);
+        print_Warning(F("Cart has no Sram"));
       }
       break;
 
@@ -298,7 +299,7 @@ void mdCartMenu() {
       if (saveType == 4)
         readEEP_MD();
       else {
-        print_Error(F("Cart has no EEPROM"), false);
+        print_Warning(F("Cart has no EEPROM"));
       }
       break;
 
@@ -311,7 +312,7 @@ void mdCartMenu() {
         writeEEP_MD();
       }
       else {
-        print_Error(F("Cart has no EEPROM"), false);
+        print_Warning(F("Cart has no EEPROM"));
       }
       break;
 
@@ -355,7 +356,7 @@ void segaCDMenu() {
       if (bramSize > 0)
         readBram_MD();
       else {
-        print_Error(F("Not CD Backup RAM Cart"), false);
+        print_Warning(F("Not CD Backup RAM Cart"));
       }
       break;
 
@@ -368,7 +369,7 @@ void segaCDMenu() {
         writeBram_MD();
       }
       else {
-        print_Error(F("Not CD Backup RAM Cart"), false);
+        print_Warning(F("Not CD Backup RAM Cart"));
       }
       break;
 
@@ -640,7 +641,7 @@ void getCartInfo_MD() {
           sramBase = sramBase / 2;
         }
         else
-          print_Error(F("Unknown Sram Base"), true);
+          print_Error(F("Unknown Sram Base"));
       }
       else if (sramType == 0xE020) { // SRAM BOTH BYTES
         // Get sram start and end
@@ -658,7 +659,7 @@ void getCartInfo_MD() {
           sramBase = sramBase >> 1;
         }
         else
-          print_Error(F("Unknown Sram Base"), true);
+          print_Error(F("Unknown Sram Base"));
       }
     }
     else {
@@ -827,8 +828,8 @@ void readROM_MD() {
   // create a new folder
   foldern = loadFolderNumber();
   sprintf(folder, "MD/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   display_Clear();
   print_Msg(F("Saving to "));
@@ -841,9 +842,7 @@ void readROM_MD() {
   saveFolderNumber(foldern);
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   byte buffer[1024] = { 0 };
 
@@ -909,14 +908,14 @@ void readROM_MD() {
       }
       d += 2;
     }
-    myFile.write(buffer, 1024);
+    outputFile.write(buffer, 1024);
 
     // update progress bar
     processedProgressBar += 1024;
     draw_progressbar(processedProgressBar, totalProgressBar);
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
 
   // Reset SSF2 Banks
   if (cartSize > 0x400000) {
@@ -940,7 +939,7 @@ void readROM_MD() {
     char calcsumStr[5];
     sprintf(calcsumStr, "%04X", calcCKS);
     println_Msg(calcsumStr);
-    print_Error(F(""), false);
+    print_Warning(F(""));
     display_Update();
   }
 }
@@ -976,30 +975,26 @@ void writeSram_MD() {
   display_Update();
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    // Write to the lower byte
-    if (saveType == 1) {
-      for (unsigned long currByte = sramBase; currByte < sramBase + sramSize; currByte++) {
-        writeWord_MD(currByte, (myFile.read() & 0xFF));
-      }
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  // Write to the lower byte
+  if (saveType == 1) {
+    for (unsigned long currByte = sramBase; currByte < sramBase + sramSize; currByte++) {
+      writeWord_MD(currByte, (inputFile.readByteOrDie() & 0xFF));
     }
-    // Write to the upper byte
-    else if (saveType == 2) {
-      for (unsigned long currByte = sramBase; currByte < sramBase + sramSize; currByte++) {
-        writeWord_MD(currByte, ((myFile.read() << 8 ) & 0xFF));
-      }
+  }
+  // Write to the upper byte
+  else if (saveType == 2) {
+    for (unsigned long currByte = sramBase; currByte < sramBase + sramSize; currByte++) {
+      writeWord_MD(currByte, ((inputFile.readByteOrDie() << 8 ) & 0xFF));
     }
-    else
-      print_Error(F("Unknown save type"), false);
+  }
+  else
+    print_Warning(F("Unknown save type"));
 
-    // Close the file:
-    myFile.close();
-    println_Msg(F("Done"));
-    display_Update();
-  }
-  else {
-    print_Error(F("SD Error"), true);
-  }
+  // Close the file:
+  inputFile.close();
+  println_Msg(F("Done"));
+  display_Update();
   dataIn_MD();
 }
 
@@ -1014,17 +1009,15 @@ void readSram_MD() {
   // create a new folder for the save file
   foldern = loadFolderNumber();
   sprintf(folder, "MD/SAVE/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   // write new folder number back to eeprom
   foldern = foldern + 1;
   saveFolderNumber(foldern);
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   for (unsigned long currBuffer = sramBase; currBuffer < sramBase + sramSize; currBuffer += 256) {
     for (int currWord = 0; currWord < 256; currWord++) {
@@ -1044,12 +1037,12 @@ void readSram_MD() {
       }
     }
     if (saveType == 3)
-      myFile.write(sdBuffer, 512);
+      outputFile.write(sdBuffer, 512);
     else
-      myFile.write(sdBuffer, 256);
+      outputFile.write(sdBuffer, 256);
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
   print_Msg(F("Saved to "));
   print_Msg(folder);
   println_Msg(F("/"));
@@ -1061,34 +1054,30 @@ unsigned long verifySram_MD() {
   writeErrors = 0;
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    for (unsigned long currBuffer = sramBase; currBuffer < sramBase + sramSize; currBuffer += 512) {
-      for (int currWord = 0; currWord < 512; currWord++) {
-        word myWord = readWord_MD(currBuffer + currWord);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  for (unsigned long currBuffer = sramBase; currBuffer < sramBase + sramSize; currBuffer += 512) {
+    for (int currWord = 0; currWord < 512; currWord++) {
+      word myWord = readWord_MD(currBuffer + currWord);
 
-        if (saveType == 2) {
-          // Only use the upper byte
-          sdBuffer[currWord] = (( myWord >> 8 ) & 0xFF);
-        }
-        else if (saveType == 1) {
-          // Only use the lower byte
-          sdBuffer[currWord] = (myWord & 0xFF);
-        }
+      if (saveType == 2) {
+        // Only use the upper byte
+        sdBuffer[currWord] = (( myWord >> 8 ) & 0xFF);
       }
-      // Check sdBuffer content against file on sd card
-      for (int i = 0; i < 512; i++) {
-        if (myFile.read() != sdBuffer[i]) {
-          writeErrors++;
-        }
+      else if (saveType == 1) {
+        // Only use the lower byte
+        sdBuffer[currWord] = (myWord & 0xFF);
       }
     }
+    // Check sdBuffer content against file on sd card
+    for (int i = 0; i < 512; i++) {
+      if (inputFile.readByteOrDie() != sdBuffer[i]) {
+        writeErrors++;
+      }
+    }
+  }
 
-    // Close the file:
-    myFile.close();
-  }
-  else {
-    print_Error(F("SD Error"), true);
-  }
+  // Close the file:
+  inputFile.close();
   // Return 0 if verified ok, or number of errors
   return writeErrors;
 }
@@ -1118,53 +1107,48 @@ void write29F1610_MD() {
   display_Update();
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    // Get rom size from file
-    fileSize = myFile.fileSize();
-    if (fileSize > flashSize) {
-      print_Error(F("File size exceeds flash size."), true);
-    }
-    // Set data pins to output
-    dataOut_MD();
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  // Get rom size from file
+  fileSize = inputFile.fileSize();
+  if (fileSize > flashSize) {
+    print_Error(F("File size exceeds flash size."));
+  }
+  // Set data pins to output
+  dataOut_MD();
 
-    // Fill sdBuffer with 1 page at a time then write it repeat until all bytes are written
-    int d = 0;
-    for (unsigned long currByte = 0; currByte < fileSize / 2; currByte += 64) {
-      myFile.read(sdBuffer, 128);
+  // Fill sdBuffer with 1 page at a time then write it repeat until all bytes are written
+  int d = 0;
+  for (unsigned long currByte = 0; currByte < fileSize / 2; currByte += 64) {
+    inputFile.read(sdBuffer, 128);
 
-      // Blink led
-      if (currByte % 4096 == 0) {
-        PORTB ^= (1 << 4);
-      }
-
-      // Write command sequence
-      writeFlash_MD(0x5555, 0xaa);
-      writeFlash_MD(0x2aaa, 0x55);
-      writeFlash_MD(0x5555, 0xa0);
-
-      // Write one full page at a time
-      for (byte c = 0; c < 64; c++) {
-        word currWord = ( ( sdBuffer[d] & 0xFF ) << 8 ) | ( sdBuffer[d + 1] & 0xFF );
-        writeFlash_MD(currByte + c, currWord);
-        d += 2;
-      }
-      d = 0;
-
-      // Check if write is complete
-      delayMicroseconds(100);
-      busyCheck_MD();
+    // Blink led
+    if (currByte % 4096 == 0) {
+      PORTB ^= (1 << 4);
     }
 
-    // Set data pins to input again
-    dataIn_MD();
+    // Write command sequence
+    writeFlash_MD(0x5555, 0xaa);
+    writeFlash_MD(0x2aaa, 0x55);
+    writeFlash_MD(0x5555, 0xa0);
 
-    // Close the file:
-    myFile.close();
+    // Write one full page at a time
+    for (byte c = 0; c < 64; c++) {
+      word currWord = ( ( sdBuffer[d] & 0xFF ) << 8 ) | ( sdBuffer[d + 1] & 0xFF );
+      writeFlash_MD(currByte + c, currWord);
+      d += 2;
+    }
+    d = 0;
+
+    // Check if write is complete
+    delayMicroseconds(100);
+    busyCheck_MD();
   }
-  else {
-    println_Msg(F("Can't open file"));
-    display_Update();
-  }
+
+  // Set data pins to input again
+  dataIn_MD();
+
+  // Close the file:
+  inputFile.close();
 }
 
 void idFlash_MD() {
@@ -1230,54 +1214,49 @@ void blankcheck_MD() {
     }
   }
   if (!blank) {
-    print_Error(F("Error: Not blank"), false);
+    print_Warning(F("Error: Not blank"));
   }
 }
 
 void verifyFlash_MD() {
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    // Get rom size from file
-    fileSize = myFile.fileSize();
-    if (fileSize > flashSize) {
-      print_Error(F("File size exceeds flash size."), true);
-    }
-
-    blank = 0;
-    word d = 0;
-    for (unsigned long currByte = 0; currByte < fileSize / 2; currByte += 256) {
-      if (currByte % 4096 == 0) {
-        PORTB ^= (1 << 4);
-      }
-      //fill sdBuffer
-      myFile.read(sdBuffer, 512);
-      for (int c = 0; c < 256; c++) {
-        word currWord = ((sdBuffer[d] << 8) | sdBuffer[d + 1]);
-
-        if (readFlash_MD(currByte + c) != currWord) {
-          blank++;
-        }
-        d += 2;
-      }
-      d = 0;
-    }
-    if (blank == 0) {
-      println_Msg(F("Flashrom verified OK"));
-      display_Update();
-    }
-    else {
-      print_Msg(F("Error: "));
-      print_Msg(blank);
-      println_Msg(F(" bytes "));
-      print_Error(F("did not verify."), false);
-    }
-    // Close the file:
-    myFile.close();
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  // Get rom size from file
+  fileSize = inputFile.fileSize();
+  if (fileSize > flashSize) {
+    print_Error(F("File size exceeds flash size."));
   }
-  else {
-    println_Msg(F("Can't open file"));
+
+  blank = 0;
+  word d = 0;
+  for (unsigned long currByte = 0; currByte < fileSize / 2; currByte += 256) {
+    if (currByte % 4096 == 0) {
+      PORTB ^= (1 << 4);
+    }
+    //fill sdBuffer
+    inputFile.read(sdBuffer, 512);
+    for (int c = 0; c < 256; c++) {
+      word currWord = ((sdBuffer[d] << 8) | sdBuffer[d + 1]);
+
+      if (readFlash_MD(currByte + c) != currWord) {
+        blank++;
+      }
+      d += 2;
+    }
+    d = 0;
+  }
+  if (blank == 0) {
+    println_Msg(F("Flashrom verified OK"));
     display_Update();
   }
+  else {
+    print_Msg(F("Error: "));
+    print_Msg(blank);
+    println_Msg(F(" bytes "));
+    print_Warning(F("did not verify."));
+  }
+  // Close the file:
+  inputFile.close();
 }
 
 // Delay between write operations based on status register
@@ -1794,10 +1773,10 @@ void readEEP_MD() {
 
   // create a new folder for the save file
   foldern = loadFolderNumber();
-  sd.chdir();
+  chdirToRoot();
   sprintf(folder, "MD/SAVE/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   // write new folder number back to eeprom
   foldern = foldern + 1;
@@ -1807,9 +1786,7 @@ void readEEP_MD() {
   display_Update();
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
   if (eepSize > 0x100) { // 24C04+
     for (word currByte = 0; currByte < eepSize; currByte += 256) {
       print_Msg(F("*"));
@@ -1817,7 +1794,7 @@ void readEEP_MD() {
       for (int i = 0; i < 256; i++) {
         readEepromByte(currByte + i);
       }
-      myFile.write(sdBuffer, 256);
+      outputFile.write(sdBuffer, 256);
     }
   }
   else { // 24C01/24C02
@@ -1828,10 +1805,10 @@ void readEEP_MD() {
       }
       readEepromByte(currByte);
     }
-    myFile.write(sdBuffer, eepSize);
+    outputFile.write(sdBuffer, eepSize);
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
   println_Msg(F(""));
   display_Clear();
   print_Msg(F("Saved to "));
@@ -1850,38 +1827,36 @@ void writeEEP_MD() {
   display_Update();
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
-    if (eepSize > 0x100) { // 24C04+
-      for (word currByte = 0; currByte < eepSize; currByte += 256) {
-        myFile.read(sdBuffer, 256);
-        for (int i = 0; i < 256; i++) {
-          writeEepromByte(currByte + i);
-          delay(50); // DELAY NEEDED
-        }
-        print_Msg(F("."));
-        display_Update();
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+
+  if (eepSize > 0x100) { // 24C04+
+    for (word currByte = 0; currByte < eepSize; currByte += 256) {
+      inputFile.read(sdBuffer, 256);
+      for (int i = 0; i < 256; i++) {
+        writeEepromByte(currByte + i);
+        delay(50); // DELAY NEEDED
       }
+      print_Msg(F("."));
+      display_Update();
     }
-    else { // 24C01/24C02
-      myFile.read(sdBuffer, eepSize);
-      for (word currByte = 0; currByte < eepSize; currByte++) {
-        writeEepromByte(currByte);
-        print_Msg(F("."));
-        if ((currByte != 0) && ((currByte + 1) % 64 == 0))
-          println_Msg(F(""));
-        display_Update(); // ON SERIAL = delay(100)
-      }
+  }
+  else { // 24C01/24C02
+    inputFile.read(sdBuffer, eepSize);
+    for (word currByte = 0; currByte < eepSize; currByte++) {
+      writeEepromByte(currByte);
+      print_Msg(F("."));
+      if ((currByte != 0) && ((currByte + 1) % 64 == 0))
+        println_Msg(F(""));
+      display_Update(); // ON SERIAL = delay(100)
     }
-    // Close the file:
-    myFile.close();
-    println_Msg(F(""));
-    display_Clear();
-    println_Msg(F("Done"));
-    display_Update();
   }
-  else {
-    print_Error(F("SD Error"), true);
-  }
+  // Close the file:
+  inputFile.close();
+  println_Msg(F(""));
+  display_Clear();
+  println_Msg(F("Done"));
+  display_Update();
+
   dataIn_MD();
 }
 
@@ -1896,10 +1871,10 @@ void readBram_MD() {
 
   // create a new folder for the save file
   foldern = loadFolderNumber();
-  sd.chdir();
+  chdirToRoot();
   sprintf(folder, "MD/RAM/%d", foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   // write new folder number back to eeprom
   foldern = foldern + 1;
@@ -1909,19 +1884,17 @@ void readBram_MD() {
   display_Update();
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   for (unsigned long currByte = 0; currByte < bramSize; currByte += 512) {
     for (int i = 0; i < 512; i++) {
       sdBuffer[i] = readWord_MD(0x300000 + currByte + i);
     }
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
   }
 
   // Close the file:
-  myFile.close();
+  outputFile.close();
   println_Msg(F(""));
   display_Clear();
   print_Msg(F("Saved to "));
@@ -1940,28 +1913,24 @@ void writeBram_MD() {
   display_Update();
 
   // Open file on sd card
-  if (myFile.open(filePath, O_READ)) {
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
-    // 0x700000-0x7FFFFF: Writes by /LWR latch D0; 1=RAM write enabled, 0=disabled
-    writeWord_MD(0x380000, 1); // Enable BRAM Writes
+  // 0x700000-0x7FFFFF: Writes by /LWR latch D0; 1=RAM write enabled, 0=disabled
+  writeWord_MD(0x380000, 1); // Enable BRAM Writes
 
-    for (unsigned long currByte = 0; currByte < bramSize; currByte += 512) {
-      myFile.read(sdBuffer, 512);
-      for (int i = 0; i < 512; i++) {
-        writeWord_MD(0x300000 + currByte + i, sdBuffer[i]);
-      }
+  for (unsigned long currByte = 0; currByte < bramSize; currByte += 512) {
+    inputFile.read(sdBuffer, 512);
+    for (int i = 0; i < 512; i++) {
+      writeWord_MD(0x300000 + currByte + i, sdBuffer[i]);
     }
-    writeWord_MD(0x380000, 0); // Disable BRAM Writes
-    // Close the file:
-    myFile.close();
-    println_Msg(F(""));
-    display_Clear();
-    println_Msg(F("Done"));
-    display_Update();
   }
-  else {
-    print_Error(F("SD Error"), true);
-  }
+  writeWord_MD(0x380000, 0); // Disable BRAM Writes
+  // Close the file:
+  inputFile.close();
+  println_Msg(F(""));
+  display_Clear();
+  println_Msg(F("Done"));
+  display_Update();
   dataIn_MD();
 }
 
@@ -1994,8 +1963,8 @@ void readRealtec_MD() {
   // create a new folder
   foldern = loadFolderNumber();
   sprintf(folder, "MD/ROM/%s/%d", romName, foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 
   display_Clear();
   print_Msg(F("Saving to "));
@@ -2008,9 +1977,7 @@ void readRealtec_MD() {
   saveFolderNumber(foldern);
 
   // Open file on sd card
-  if (!myFile.open(fileName, O_RDWR | O_CREAT)) {
-    print_Error(F("SD Error"), true);
-  }
+  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
 
   // Realtec Registers
   writeWord_MD(0x201000, 4); // Number of 128K Blocks 0x402000 (0x201000)
@@ -2032,11 +1999,11 @@ void readRealtec_MD() {
       sdBuffer[d + 1] = (myWord & 0xFF);
       d += 2;
     }
-    myFile.write(sdBuffer, 512);
+    outputFile.write(sdBuffer, 512);
     d = 0;
   }
   // Close the file:
-  myFile.close();
+  outputFile.close();
 }
 
 //******************************************

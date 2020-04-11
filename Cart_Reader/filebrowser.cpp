@@ -2,6 +2,7 @@
 #include "filebrowser.h"
 #include "menu.h"
 #include "globals.h"
+#include "SD.h"
 
 /******************************************
   Filebrowser Module
@@ -38,16 +39,18 @@ browserstart:
   lastPage = 1;
 
   // Read in File as long as there are files
-  while (myFile.openNext(sd.vwd(), O_READ)) {
+  SafeSDFile vwd = SafeSDFile::getVwd();
+  SafeSDFile dirEntry;
+  while ((dirEntry = vwd.readNextDirectoryEntry()).isOpen()) {
 
     // Get name of file
-    myFile.getName(nameStr, FILENAME_LENGTH);
+    dirEntry.getName(nameStr, FILENAME_LENGTH);
 
     // Ignore if hidden
-    if (myFile.isHidden()) {
+    if (dirEntry.isHidden()) {
     }
     // Indicate a directory.
-    else if (myFile.isDir()) {
+    else if (dirEntry.isDir()) {
       // Copy full dirname into fileNames
       snprintf(fileNames[currFile], FILENAME_LENGTH, "%s%s", "/", nameStr);
       // Copy short string into fileOptions
@@ -55,14 +58,14 @@ browserstart:
       currFile++;
     }
     // It's just a file
-    else if (myFile.isFile()) {
+    else if (dirEntry.isFile()) {
       // Copy full filename into fileNames
       snprintf(fileNames[currFile], FILENAME_LENGTH, "%s", nameStr);
       // Copy short string into fileOptions
       snprintf(fileOptions[currFile], FILEOPTS_LENGTH, "%s", nameStr);
       currFile++;
     }
-    myFile.close();
+    dirEntry.close();
   }
 
   // "Calculate number of needed pages"
@@ -130,7 +133,7 @@ page:
     // Rewind filesystem
     //sd.vwd()->rewind();
     // Change working dir to root
-    sd.chdir("/");
+    chdir("/");
     // Start again
     root = 0;
     goto browserstart;
@@ -179,13 +182,13 @@ page:
     // Remove / from dir name
     char* dirName = fileName + 1;
     // Change working dir
-    sd.chdir(dirName);
+    chdir(dirName);
     // Start browser in new directory again
     goto browserstart;
   }
   else {
     // Afer everything is done change SD working directory back to root
-    sd.chdir("/");
+    chdir("/");
   }
   filebrowse = 0;
 }

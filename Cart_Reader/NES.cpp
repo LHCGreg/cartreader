@@ -15,6 +15,7 @@
 #include "menu.h"
 #include "globals.h"
 #include "utils.h"
+#include "SD.h"
 
 //Line Content
 //26   Supported Mappers
@@ -174,9 +175,7 @@ char flashID[5];
 boolean flashfound = false; // NESmaker 39SF040 Flash Cart
 
 // Files
-File sdFile;
 char fileCount[3];
-File nesFile;
 char filePRG[] = "PRG.bin";
 char fileCHR[] = "CHR.bin";
 char fileNES[] = "CART.nes";
@@ -556,7 +555,6 @@ int int_pow(int base, int exp) { // Power for int
 /******************************************
    CRC Functions
  *****************************************/
-File crcFile;
 char tempCRC[9];
 
 inline uint32_t updateCRC32(uint8_t ch, uint32_t crc) {
@@ -565,11 +563,11 @@ inline uint32_t updateCRC32(uint8_t ch, uint32_t crc) {
   return tab_value ^ ((crc) >> 8);
 }
 
-uint32_t crc32(File &file, uint32_t &charcnt) {
+uint32_t crc32(SafeSDFile &file, uint32_t &charcnt) {
   uint32_t oldcrc32 = 0xFFFFFFFF;
   charcnt = 0;
-  while (file.available()) {
-    crcFile.read(sdBuffer, 512);
+  while (file.bytesAvailable() > 0) {
+    file.read(sdBuffer, 512);
     for (int x = 0; x < 512; x++) {
       uint8_t c = sdBuffer[x];
       charcnt++;
@@ -579,11 +577,11 @@ uint32_t crc32(File &file, uint32_t &charcnt) {
   return ~oldcrc32;
 }
 
-uint32_t crc32EEP(File &file, uint32_t &charcnt) {
+uint32_t crc32EEP(SafeSDFile &file, uint32_t &charcnt) {
   uint32_t oldcrc32 = 0xFFFFFFFF;
   charcnt = 0;
-  while (file.available()) {
-    crcFile.read(sdBuffer, 128);
+  while (file.bytesAvailable() > 0) {
+    file.read(sdBuffer, 128);
     for (int x = 0; x < 128; x++) {
       uint8_t c = sdBuffer[x];
       charcnt++;
@@ -595,7 +593,7 @@ uint32_t crc32EEP(File &file, uint32_t &charcnt) {
 
 void calcCRC(char* checkFile, uint32_t filesize) {
   uint32_t crc;
-  crcFile = sd.open(checkFile);
+  SafeSDFile crcFile = SafeSDFile::openForReading(checkFile);
   if (filesize < 1024)
     crc = crc32EEP(crcFile, filesize);
   else
@@ -612,85 +610,79 @@ void calcCRC(char* checkFile, uint32_t filesize) {
    File Functions
  *****************************************/
 void CreateROMFolderInSD() {
-  sd.chdir();
+  chdirToRoot();
   sprintf(folder, "NES/ROM");
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 }
 
-void CreatePRGFileInSD() {
+SafeSDFile CreatePRGFileInSD() {
   strcpy(fileName, "PRG");
   strcat(fileName, ".bin");
   for (byte i = 0; i < 100; i++) {
-    if (!sd.exists(fileName)) {
-      sdFile = sd.open(fileName, O_RDWR | O_CREAT);
-      break;
+    if (!fileExists(fileName)) {
+      return SafeSDFile::openForCreating(fileName);
     }
     sprintf(fileCount, "%02d", i);
     strcpy(fileName, "PRG.");
     strcat(fileName, fileCount);
     strcat(fileName, ".bin");
   }
-  if (!sdFile) {
-    LED_RED_ON;
 
-    display_Clear();
-    println_Msg(F("PRG FILE FAILED!"));
-    display_Update();
-    print_Error(F("SD Error"), true);
+  // If we somehow got through 100 numeric suffixes without getting a file name that's not already taken...
 
-    LED_RED_OFF;
-  }
+  LED_RED_ON;
+
+  display_Clear();
+  println_Msg(F("PRG FILE FAILED!"));
+  display_Update();
+  print_Error(F("SD Error"));
 }
 
-void CreateCHRFileInSD() {
+SafeSDFile CreateCHRFileInSD() {
   strcpy(fileName, "CHR");
   strcat(fileName, ".bin");
   for (byte i = 0; i < 100; i++) {
-    if (!sd.exists(fileName)) {
-      sdFile = sd.open(fileName, O_RDWR | O_CREAT);
-      break;
+    if (!fileExists(fileName)) {
+      return SafeSDFile::openForCreating(fileName);
     }
     sprintf(fileCount, "%02d", i);
     strcpy(fileName, "CHR.");
     strcat(fileName, fileCount);
     strcat(fileName, ".bin");
   }
-  if (!sdFile) {
-    LED_RED_ON;
 
-    display_Clear();
-    println_Msg(F("CHR FILE FAILED!"));
-    display_Update();
-    print_Error(F("SD Error"), true);
+  // If we somehow got through 100 numeric suffixes without getting a file name that's not already taken...
 
-    LED_RED_OFF;
-  }
+  LED_RED_ON;
+
+  display_Clear();
+  println_Msg(F("CHR FILE FAILED!"));
+  display_Update();
+  print_Error(F("SD Error"));
 }
 
-void CreateRAMFileInSD() {
+SafeSDFile CreateRAMFileInSD() {
   strcpy(fileName, "RAM");
   strcat(fileName, ".bin");
   for (byte i = 0; i < 100; i++) {
-    if (!sd.exists(fileName)) {
-      sdFile = sd.open(fileName, O_RDWR | O_CREAT);
-      break;
+    if (!fileExists(fileName)) {
+      return SafeSDFile::openForCreating(fileName);
     }
     sprintf(fileCount, "%02d", i);
     strcpy(fileName, "RAM.");
     strcat(fileName, fileCount);
     strcat(fileName, ".bin");
   }
-  if (!sdFile) {
-    LED_RED_ON;
 
-    display_Clear();
-    println_Msg(F("RAM FILE FAILED!"));
-    display_Update();
-    print_Error(F("SD Error"), true);
+  // If we somehow got through 100 numeric suffixes without getting a file name that's not already taken...
 
-    LED_RED_OFF;
-  }
+  LED_RED_ON;
+
+  display_Clear();
+  println_Msg(F("RAM FILE FAILED!"));
+  display_Update();
+  print_Error(F("SD Error"));
 }
 
 void outputNES() {
@@ -699,52 +691,22 @@ void outputNES() {
   LED_RED_ON;
   LED_GREEN_ON;
   LED_BLUE_ON;
-  if (!sdFile.open(filePRG, FILE_READ)) {
-    LED_GREEN_OFF;
-    LED_BLUE_OFF;
+  SafeSDFile prgFile = SafeSDFile::openForReading(filePRG);
+  SafeSDFile cartFile = SafeSDFile::openForCreating(fileNES);
 
-    display_Clear();
-    println_Msg(F("PRG FILE FAILED!"));
-    display_Update();
-    print_Error(F("SD Error"), true);
-
-  }
-  if (!sd.exists(fileNES)) {
-    nesFile = sd.open(fileNES, O_RDWR | O_CREAT);
-  }
-  if (!nesFile) {
-    LED_GREEN_OFF;
-    LED_BLUE_OFF;
-
-    display_Clear();
-    println_Msg(F("NES FILE FAILED!"));
-    display_Update();
-    print_Error(F("SD Error"), true);
-
-  }
   size_t n;
-  while ((n = sdFile.read(sdBuffer, sizeof(sdBuffer))) > 0) {
-    nesFile.write(sdBuffer, n);
+  while ((n = prgFile.read(sdBuffer, sizeof(sdBuffer))) > 0) {
+    cartFile.write(sdBuffer, n);
   }
-  sdFile.close();
-  if (sd.exists(fileCHR)) {
-    if (!sdFile.open(fileCHR, FILE_READ)) {
-      LED_GREEN_OFF;
-      LED_BLUE_OFF;
-
-      display_Clear();
-      println_Msg(F("CHR FILE FAILED!"));
-      display_Update();
-      print_Error(F("SD Error"), true);
-
+  prgFile.close();
+  if (fileExists(fileCHR)) {
+    SafeSDFile chrFile = SafeSDFile::openForReading(fileCHR);
+    while ((n = chrFile.read(sdBuffer, sizeof(sdBuffer))) > 0) {
+      cartFile.write(sdBuffer, n);
     }
-    while ((n = sdFile.read(sdBuffer, sizeof(sdBuffer))) > 0) {
-      nesFile.write(sdBuffer, n);
-    }
-    sdFile.close();
+    chrFile.close();
   }
-  nesFile.flush();
-  nesFile.close();
+  cartFile.close();
 
   println_Msg(F("NES FILE OUTPUT!"));
   println_Msg(F(""));
@@ -757,17 +719,17 @@ void outputNES() {
 }
 
 void CartStart() {
-  sd.chdir();
+  chdirToRoot();
   foldern = loadFolderNumber(); // FOLDER #
   sprintf(folder, "NES/CART/%d", foldern);
-  sd.mkdir(folder, true);
-  sd.chdir(folder);
+  mkdir(folder, true);
+  chdir(folder);
 }
 
 void CartFinish() {
   foldern += 1;
   saveFolderNumber(foldern); // FOLDER #
-  sd.chdir();
+  chdirToRoot();
 }
 
 /******************************************
@@ -1369,21 +1331,21 @@ void checkStatus_NES() {
 /******************************************
    ROM Functions
  *****************************************/
-void dumpPRG(word base, word address) {
+void dumpPRG(word base, word address, SafeSDFile &sdFile) {
   for (int x = 0; x < 512; x++) {
     sdBuffer[x] = read_prg_byte(base + address + x);
   }
   sdFile.write(sdBuffer, 512);
 }
 
-void dumpCHR(word address) {
+void dumpCHR(word address, SafeSDFile &sdFile) {
   for (int x = 0; x < 512; x++) {
     sdBuffer[x] = read_chr_byte(address + x);
   }
   sdFile.write(sdBuffer, 512);
 }
 
-void dumpMMC5RAM(word base, word address) { // MMC5 SRAM DUMP - PULSE M2 LO/HI
+void dumpMMC5RAM(word base, word address, SafeSDFile &sdFile) { // MMC5 SRAM DUMP - PULSE M2 LO/HI
   for (int x = 0; x < 512; x++) {
     PHI2_LOW;
     sdBuffer[x] = read_prg_byte(base + address + x);
@@ -1391,7 +1353,7 @@ void dumpMMC5RAM(word base, word address) { // MMC5 SRAM DUMP - PULSE M2 LO/HI
   sdFile.write(sdBuffer, 512);
 }
 
-void writeMMC5RAM(word base, word address) { // MMC5 SRAM WRITE
+void writeMMC5RAM(word base, word address, SafeSDFile &sdFile) { // MMC5 SRAM WRITE
   sdFile.read(sdBuffer, 512);
   for (int x = 0; x < 512; x++) {
     do {
@@ -1413,486 +1375,484 @@ void readPRG() {
   LED_BLUE_ON;
   set_address(0);
   _delay_us(1);
-  CreatePRGFileInSD();
+  SafeSDFile prgFile = CreatePRGFileInSD();
   word base = 0x8000;
-  if (sdFile) {
-    switch (mapper) {
-      case 0:
-      case 3:
-      case 13:
-      case 87: // 16K/32K
-      case 184: // 32K
-      case 185: // 16K/32K
-        for (word address = 0; address < ((prgsize * 0x4000U) + 0x4000U); address += 512) { // 16K or 32K
-          dumpPRG(base, address);
-        }
-        break;
+  switch (mapper) {
+    case 0:
+    case 3:
+    case 13:
+    case 87: // 16K/32K
+    case 184: // 32K
+    case 185: // 16K/32K
+      for (word address = 0; address < ((prgsize * 0x4000U) + 0x4000U); address += 512) { // 16K or 32K
+        dumpPRG(base, address, prgFile);
+      }
+      break;
 
-      case 1:
-      case 155: // 32K/64K/128K/256K/512K
-        banks = int_pow(2, prgsize) - 1;
-        for (int i = 0; i < banks; i++) { // 16K Banks ($8000-$BFFF)
-          write_prg_byte(0x8000, 0x80); // Clear Register
-          write_mmc1_byte(0x8000, 0x0C); // Switch 16K Bank ($8000-$BFFF) + Fixed Last Bank ($C000-$FFFF)
-          if (prgsize > 4) // 512K
-            write_mmc1_byte(0xA000, 0x00); // Reset 512K Flag for Lower 256K
-          if (i > 15) // Switch Upper 256K
-            write_mmc1_byte(0xA000, 0x10); // Set 512K Flag
-          write_mmc1_byte(0xE000, i);
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        for (word address = 0x4000; address < 0x8000; address += 512) { // Final Bank ($C000-$FFFF)
-          dumpPRG(base, address);
-        }
-        break;
-
-      case 2: // 128K/256K
-        for (int i = 0; i < 8; i++) { // 128K/256K
-          write_prg_byte(0x8000, i);
-          for (word address = 0x0; address < (((prgsize - 3U) * 0x4000U) + 0x4000U); address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 4:
-      case 47:
-      case 118:
-      case 119:
-        banks = ((int_pow(2, prgsize) * 2)) - 2;  // Set Number of Banks
-        if (mapper == 47)
-          write_prg_byte(0xA001, 0x80); // Block Register - PRG RAM Chip Enable, Writable
-        for (int i = 0; i < banks; i += 2) { // 32K/64K/128K/256K/512K
-          if (mapper == 47) {
-            if (i == 0)
-              write_prg_byte(0x6000, 0); // Switch to Lower Block
-            else if (i == 16)
-              write_prg_byte(0x6000, 1); // Switch to Upper Block
-          }
-          write_prg_byte(0x8000, 6); // PRG Bank 0 ($8000-$9FFF)
-          write_prg_byte(0x8001, i);
-          write_prg_byte(0x8000, 7); // PRG Bank 1 ($A000-$BFFF)
-          write_prg_byte(0x8001, i + 1);
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        for (word address = 0x4000; address < 0x8000; address += 512) { // Final 2 Banks ($C000-$FFFF)
-          dumpPRG(base, address);
-        }
-        break;
-
-      case 5: // 128K/256K/512K
-        banks = int_pow(2, prgsize) * 2;
-        write_prg_byte(0x5100, 3); // 8K PRG Banks
-        for (int i = 0; i < banks; i += 2) { // 128K/256K/512K
-          write_prg_byte(0x5114, i | 0x80);
-          write_prg_byte(0x5115, (i + 1) | 0x80);
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 7: // 128K/256K
-      case 34:
-      case 77:
-      case 96: // 128K
-        banks = int_pow(2, prgsize) / 2;
-        for (int i = 0; i < banks; i++) { // 32K Banks
-          write_prg_byte(0x8000, i);
-          for (word address = 0x0; address < 0x8000; address += 512) { // 32K Banks ($8000-$FFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 9: // 128K
-        for (int i = 0; i < 13; i++) { // 16-3 = 13 = 128K
-          write_prg_byte(0xA000, i); // $8000-$9FFF
-          for (word address = 0x0; address < 0x2000; address += 512) { // Switch Bank ($8000-$9FFF)
-            dumpPRG(base, address);
-          }
-        }
-        for (word address = 0x2000; address < 0x8000; address += 512) { // Final 3 Banks ($A000-$FFFF)
-          dumpPRG(base, address);
-        }
-        break;
-
-      case 10: // 128K/256K
-        for (int i = 0; i < (((prgsize - 3) * 8) + 7); i++) {
-          write_prg_byte(0xA000, i); // $8000-$BFFF
-          for (word address = 0x0; address < 0x4000; address += 512) { // Switch Bank ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        for (word address = 0x4000; address < 0x8000; address += 512) { // Final Bank ($C000-$FFFF)
-          dumpPRG(base, address);
-        }
-        break;
-
-      case 16:
-      case 159: // 128K/256K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) {
-          write_prg_byte(0x6008, i); // Submapper 4
-          write_prg_byte(0x8008, i); // Submapper 5
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 18: // 128K/256K
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i += 2) {
-          write_prg_byte(0x8000, i & 0xF);
-          write_prg_byte(0x8001, (i >> 4) & 0xF);
-          write_prg_byte(0x8002, (i + 1) & 0xF);
-          write_prg_byte(0x8003, ((i + 1) >> 4) & 0xF);
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 19: // 128K/256K
-        for (int j = 0; j < 64; j++) { // Init Register
-          write_ram_byte(0xE000, 0); // PRG Bank 0 ($8000-$9FFF)
-        }
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i++) {
-          write_ram_byte(0xE000, i); // PRG Bank 0 ($8000-$9FFF)
-          for (word address = 0x0; address < 0x2000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 21:
-      case 22:
-      case 23:
-      case 25:
-      case 65:
-      case 75: // 128K/256K
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i += 2) {
-          write_prg_byte(0x8000, i);
-          write_prg_byte(0xA000, i + 1);
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 24:
-      case 26: // 256K
-      case 78: // 128K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) { // 128K
-          write_prg_byte(0x8000, i);
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 30: // 256K/512K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) { // 256K/512K
-          if (flashfound)
-            write_prg_byte(0xC000, i); // Flashable
-          else
-            write_prg_byte(0x8000, i); // Non-Flashable
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 32: // 128K/256K
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i++) { // 128K/256K
-          write_prg_byte(0x9000, 1); // PRG Mode 0 - Read $A000-$BFFF to avoid difference between Modes 0 and 1
-          write_prg_byte(0xA000, i); // PRG Bank
-          for (word address = 0x2000; address < 0x4000; address += 512) { // 8K Banks ($A000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 33:
-      case 48: // 128K/256K
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i += 2) {
-          write_prg_byte(0x8000, i); // PRG Bank 0 ($8000-$9FFF)
-          write_prg_byte(0x8001, i + 1); // PRG Bank 1 ($A000-$BFFF)
-          for (word address = 0x0; address < 0x4000; address += 512) { // 8K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 37:
-        banks = ((int_pow(2, prgsize) * 2)) - 2;  // Set Number of Banks
-        write_prg_byte(0xA001, 0x80); // Block Register - PRG RAM Chip Enable, Writable
-        for (int i = 0; i < banks; i += 2) { // 256K
-          if (i == 0)
-            write_prg_byte(0x6000, 0); // Switch to Lower Block ($0000-$FFFF)
-          else if (i == 8)
-            write_prg_byte(0x6000, 3); // Switch to 2nd 64K Block ($10000-$1FFFF)
-          else if (i == 16)
-            write_prg_byte(0x6000, 4); // Switch to 128K Block ($20000-$3FFFF)
-          write_prg_byte(0x8000, 6); // PRG Bank 0 ($8000-$9FFF)
-          write_prg_byte(0x8001, i);
-          write_prg_byte(0x8000, 7); // PRG Bank 1 ($A000-$BFFF)
-          write_prg_byte(0x8001, i + 1);
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        for (word address = 0x4000; address < 0x8000; address += 512) { // Final 2 Banks ($C000-$FFFF)
-          dumpPRG(base, address);
-        }
-        break;
-
-      case 66: // 64K/128K
-        banks = int_pow(2, prgsize) / 2;
-        for (int i = 0; i < banks; i++) { // 64K/128K
-          write_prg_byte(0x8000, i << 4); // bits 4-5
-          for (word address = 0x0; address < 0x8000; address += 512) { // 32K Banks ($8000-$FFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 67: // 128K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) { // 128K
-          write_reg_byte(0xF800, i); // [WRITE RAM SAFE]
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 68:
-      case 73: // 128K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) { // 128K
-          write_reg_byte(0xF000, i); // [WRITE RAM SAFE]
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 69: // 128K/256K
-        banks = int_pow(2, prgsize) * 2;
-        write_prg_byte(0x8000, 8); // Command Register - PRG Bank 0
-        write_prg_byte(0xA000, 0); // Parameter Register - PRG RAM Disabled, PRG ROM, Bank 0 to $6000-$7FFF
-        for (int i = 0; i < banks; i++) { // 128K/256K
-          write_prg_byte(0x8000, 9); // Command Register - PRG Bank 1
-          write_prg_byte(0xA000, i); // Parameter Register - ($8000-$9FFF)
-          for (word address = 0x0000; address < 0x2000; address += 512) { // 8K Banks ($8000-$9FFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 70:
-      case 89:
-      case 93: // 128K
-      case 152: // 64K/128K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) { // 128K
-          write_prg_byte(0x8000, i << 4);
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 71: // 64K/128K/256K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) {
-          write_prg_byte(0xC000, i);
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 72: // 128K
-        banks = int_pow(2, prgsize);
-        write_prg_byte(0x8000, 0); // Reset Register
-        for (int i = 0; i < banks; i++) { // 128K
-          write_prg_byte(0x8000, i | 0x80); // PRG Command + Bank
-          write_prg_byte(0x8000, i); // PRG Bank
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 76:
-      case 88:
-      case 95:
-      case 154: // 128K
-      case 206: // 32K/64K/128K
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i += 2) {
-          write_prg_byte(0x8000, 6); // PRG ROM Command ($8000-$9FFF)
-          write_prg_byte(0x8001, i); // PRG Bank
-          write_prg_byte(0x8000, 7); // PRG ROM Command ($A000-$BFFF)
-          write_prg_byte(0x8001, i + 1); // PRG Bank
-          for (word address = 0x0; address < 0x4000; address += 512) { // 8K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 80: // 128K
-      case 207: // 256K [CART SOMETIMES NEEDS POWERCYCLE]
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i += 2) {
-          write_prg_byte(0x7EFA, i); // PRG Bank 0 ($8000-$9FFF)
-          write_prg_byte(0x7EFC, i + 1); // PRG Bank 1 ($A000-$BFFF)
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 82: // 128K
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i += 2) {
-          write_prg_byte(0x7EFA, i << 2); // PRG Bank 0 ($8000-$9FFF)
-          write_prg_byte(0x7EFB, (i + 1) << 2); // PRG Bank 1 ($A000-$BFFF)
-          for (word address = 0x0; address < 0x4000; address += 512) { // 8K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 85: // 128K/512K
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i++) {
-          write_prg_byte(0x8000, i); // PRG Bank 0 ($8000-$9FFF)
-          for (word address = 0x0; address < 0x2000; address += 512) { // 8K Banks ($8000-$9FFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 86:
-      case 140: // 128K
-        banks = int_pow(2, prgsize) / 2;
-        for (int i = 0; i < banks; i++) { // 128K
-          write_prg_byte(0x6000, i << 4); // bits 4-5
-          for (word address = 0x0; address < 0x8000; address += 512) { // 32K Banks ($8000-$FFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 92: // 256K
-        banks = int_pow(2, prgsize);
-        write_prg_byte(0x8000, 0); // Reset Register
-        for (int i = 0; i < banks; i++) { // 256K
-          write_prg_byte(0x8000, i | 0x80); // PRG Command + Bank
-          write_prg_byte(0x8000, i); // PRG Bank
-          for (word address = 0x4000; address < 0x8000; address += 512) { // 16K Banks ($C000-$FFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 94:
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) { // 128K
-          write_prg_byte(0x8000, i << 2);
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 97: // 256K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) { // 256K
-          write_prg_byte(0x8000, i); // PRG Bank
-          for (word address = 0x4000; address < 0x8000; address += 512) { // 16K Banks ($C000-$FFFF)
-            dumpPRG(base, address);
-          }
-        }
-        break;
-
-      case 105: // 256K
-        write_mmc1_byte(0xA000, 0x00); // Clear PRG Init/IRQ (Bit 4)
-        write_mmc1_byte(0xA000, 0x10); // Set PRG Init/IRQ (Bit 4) to enable bank swapping
-        for (int i = 0; i < 4; i++) { // PRG CHIP 1 128K
-          write_mmc1_byte(0xA000, i << 1);
-          for (word address = 0x0; address < 0x8000; address += 512) { // 32K Banks ($8000-$FFFF)
-            dumpPRG(base, address);
-          }
-        }
+    case 1:
+    case 155: // 32K/64K/128K/256K/512K
+      banks = int_pow(2, prgsize) - 1;
+      for (int i = 0; i < banks; i++) { // 16K Banks ($8000-$BFFF)
+        write_prg_byte(0x8000, 0x80); // Clear Register
         write_mmc1_byte(0x8000, 0x0C); // Switch 16K Bank ($8000-$BFFF) + Fixed Last Bank ($C000-$FFFF)
-        write_mmc1_byte(0xA000, 0x08); // Select PRG CHIP 2 (Bit 3)
-        for (int j = 0; j < 8; j++) { // PRG CHIP 2 128K
-          write_mmc1_byte(0xE000, j);
-          for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
+        if (prgsize > 4) // 512K
+          write_mmc1_byte(0xA000, 0x00); // Reset 512K Flag for Lower 256K
+        if (i > 15) // Switch Upper 256K
+          write_mmc1_byte(0xA000, 0x10); // Set 512K Flag
+        write_mmc1_byte(0xE000, i);
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
         }
-        break;
+      }
+      for (word address = 0x4000; address < 0x8000; address += 512) { // Final Bank ($C000-$FFFF)
+        dumpPRG(base, address, prgFile);
+      }
+      break;
 
-      case 180: // 128K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) {
-          write_prg_byte(0x8000, i);
-          for (word address = 0x4000; address < 0x8000; address += 512) { // 16K Banks ($C000-$FFFF)
-            dumpPRG(base, address);
-          }
+    case 2: // 128K/256K
+      for (int i = 0; i < 8; i++) { // 128K/256K
+        write_prg_byte(0x8000, i);
+        for (word address = 0x0; address < (((prgsize - 3U) * 0x4000U) + 0x4000U); address += 512) {
+          dumpPRG(base, address, prgFile);
         }
-        break;
+      }
+      break;
 
-      case 153: // 512K
-        banks = int_pow(2, prgsize);
-        for (int i = 0; i < banks; i++) { // 512K
-          write_prg_byte(0x8000, i >> 4); // PRG Outer Bank (Documentation says duplicate over $8000-$8003 registers)
-          write_prg_byte(0x8001, i >> 4); // PRG Outer Bank
-          write_prg_byte(0x8002, i >> 4); // PRG Outer Bank
-          write_prg_byte(0x8003, i >> 4); // PRG Outer Bank
-          write_prg_byte(0x8008, i & 0xF); // PRG Inner Bank
-          for (word address = 0x0000; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
-            dumpPRG(base, address);
-          }
+    case 4:
+    case 47:
+    case 118:
+    case 119:
+      banks = ((int_pow(2, prgsize) * 2)) - 2;  // Set Number of Banks
+      if (mapper == 47)
+        write_prg_byte(0xA001, 0x80); // Block Register - PRG RAM Chip Enable, Writable
+      for (int i = 0; i < banks; i += 2) { // 32K/64K/128K/256K/512K
+        if (mapper == 47) {
+          if (i == 0)
+            write_prg_byte(0x6000, 0); // Switch to Lower Block
+          else if (i == 16)
+            write_prg_byte(0x6000, 1); // Switch to Upper Block
         }
-        break;
-
-      case 210: // 128K/256K
-        banks = int_pow(2, prgsize) * 2;
-        for (int i = 0; i < banks; i += 2) {
-          write_prg_byte(0xE000, i); // PRG Bank 0 ($8000-$9FFF) [WRITE NO RAM]
-          write_prg_byte(0xE800, i + 1); // PRG Bank 1 ($A000-$BFFF) [WRITE NO RAM]
-          for (word address = 0x0; address < 0x4000; address += 512) {
-            dumpPRG(base, address);
-          }
+        write_prg_byte(0x8000, 6); // PRG Bank 0 ($8000-$9FFF)
+        write_prg_byte(0x8001, i);
+        write_prg_byte(0x8000, 7); // PRG Bank 1 ($A000-$BFFF)
+        write_prg_byte(0x8001, i + 1);
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
         }
-        break;
-    }
-    sdFile.flush();
-    sdFile.close();
+      }
+      for (word address = 0x4000; address < 0x8000; address += 512) { // Final 2 Banks ($C000-$FFFF)
+        dumpPRG(base, address, prgFile);
+      }
+      break;
 
-    println_Msg(F("PRG FILE DUMPED!"));
-    println_Msg(F(""));
-    display_Update();
+    case 5: // 128K/256K/512K
+      banks = int_pow(2, prgsize) * 2;
+      write_prg_byte(0x5100, 3); // 8K PRG Banks
+      for (int i = 0; i < banks; i += 2) { // 128K/256K/512K
+        write_prg_byte(0x5114, i | 0x80);
+        write_prg_byte(0x5115, (i + 1) | 0x80);
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
 
-    calcCRC(fileName, prg * 1024);
+    case 7: // 128K/256K
+    case 34:
+    case 77:
+    case 96: // 128K
+      banks = int_pow(2, prgsize) / 2;
+      for (int i = 0; i < banks; i++) { // 32K Banks
+        write_prg_byte(0x8000, i);
+        for (word address = 0x0; address < 0x8000; address += 512) { // 32K Banks ($8000-$FFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 9: // 128K
+      for (int i = 0; i < 13; i++) { // 16-3 = 13 = 128K
+        write_prg_byte(0xA000, i); // $8000-$9FFF
+        for (word address = 0x0; address < 0x2000; address += 512) { // Switch Bank ($8000-$9FFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      for (word address = 0x2000; address < 0x8000; address += 512) { // Final 3 Banks ($A000-$FFFF)
+        dumpPRG(base, address, prgFile);
+      }
+      break;
+
+    case 10: // 128K/256K
+      for (int i = 0; i < (((prgsize - 3) * 8) + 7); i++) {
+        write_prg_byte(0xA000, i); // $8000-$BFFF
+        for (word address = 0x0; address < 0x4000; address += 512) { // Switch Bank ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      for (word address = 0x4000; address < 0x8000; address += 512) { // Final Bank ($C000-$FFFF)
+        dumpPRG(base, address, prgFile);
+      }
+      break;
+
+    case 16:
+    case 159: // 128K/256K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) {
+        write_prg_byte(0x6008, i); // Submapper 4
+        write_prg_byte(0x8008, i); // Submapper 5
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 18: // 128K/256K
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i += 2) {
+        write_prg_byte(0x8000, i & 0xF);
+        write_prg_byte(0x8001, (i >> 4) & 0xF);
+        write_prg_byte(0x8002, (i + 1) & 0xF);
+        write_prg_byte(0x8003, ((i + 1) >> 4) & 0xF);
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 19: // 128K/256K
+      for (int j = 0; j < 64; j++) { // Init Register
+        write_ram_byte(0xE000, 0); // PRG Bank 0 ($8000-$9FFF)
+      }
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i++) {
+        write_ram_byte(0xE000, i); // PRG Bank 0 ($8000-$9FFF)
+        for (word address = 0x0; address < 0x2000; address += 512) {
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 21:
+    case 22:
+    case 23:
+    case 25:
+    case 65:
+    case 75: // 128K/256K
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i += 2) {
+        write_prg_byte(0x8000, i);
+        write_prg_byte(0xA000, i + 1);
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 24:
+    case 26: // 256K
+    case 78: // 128K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) { // 128K
+        write_prg_byte(0x8000, i);
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 30: // 256K/512K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) { // 256K/512K
+        if (flashfound)
+          write_prg_byte(0xC000, i); // Flashable
+        else
+          write_prg_byte(0x8000, i); // Non-Flashable
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 32: // 128K/256K
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i++) { // 128K/256K
+        write_prg_byte(0x9000, 1); // PRG Mode 0 - Read $A000-$BFFF to avoid difference between Modes 0 and 1
+        write_prg_byte(0xA000, i); // PRG Bank
+        for (word address = 0x2000; address < 0x4000; address += 512) { // 8K Banks ($A000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 33:
+    case 48: // 128K/256K
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i += 2) {
+        write_prg_byte(0x8000, i); // PRG Bank 0 ($8000-$9FFF)
+        write_prg_byte(0x8001, i + 1); // PRG Bank 1 ($A000-$BFFF)
+        for (word address = 0x0; address < 0x4000; address += 512) { // 8K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 37:
+      banks = ((int_pow(2, prgsize) * 2)) - 2;  // Set Number of Banks
+      write_prg_byte(0xA001, 0x80); // Block Register - PRG RAM Chip Enable, Writable
+      for (int i = 0; i < banks; i += 2) { // 256K
+        if (i == 0)
+          write_prg_byte(0x6000, 0); // Switch to Lower Block ($0000-$FFFF)
+        else if (i == 8)
+          write_prg_byte(0x6000, 3); // Switch to 2nd 64K Block ($10000-$1FFFF)
+        else if (i == 16)
+          write_prg_byte(0x6000, 4); // Switch to 128K Block ($20000-$3FFFF)
+        write_prg_byte(0x8000, 6); // PRG Bank 0 ($8000-$9FFF)
+        write_prg_byte(0x8001, i);
+        write_prg_byte(0x8000, 7); // PRG Bank 1 ($A000-$BFFF)
+        write_prg_byte(0x8001, i + 1);
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      for (word address = 0x4000; address < 0x8000; address += 512) { // Final 2 Banks ($C000-$FFFF)
+        dumpPRG(base, address, prgFile);
+      }
+      break;
+
+    case 66: // 64K/128K
+      banks = int_pow(2, prgsize) / 2;
+      for (int i = 0; i < banks; i++) { // 64K/128K
+        write_prg_byte(0x8000, i << 4); // bits 4-5
+        for (word address = 0x0; address < 0x8000; address += 512) { // 32K Banks ($8000-$FFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 67: // 128K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) { // 128K
+        write_reg_byte(0xF800, i); // [WRITE RAM SAFE]
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 68:
+    case 73: // 128K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) { // 128K
+        write_reg_byte(0xF000, i); // [WRITE RAM SAFE]
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 69: // 128K/256K
+      banks = int_pow(2, prgsize) * 2;
+      write_prg_byte(0x8000, 8); // Command Register - PRG Bank 0
+      write_prg_byte(0xA000, 0); // Parameter Register - PRG RAM Disabled, PRG ROM, Bank 0 to $6000-$7FFF
+      for (int i = 0; i < banks; i++) { // 128K/256K
+        write_prg_byte(0x8000, 9); // Command Register - PRG Bank 1
+        write_prg_byte(0xA000, i); // Parameter Register - ($8000-$9FFF)
+        for (word address = 0x0000; address < 0x2000; address += 512) { // 8K Banks ($8000-$9FFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 70:
+    case 89:
+    case 93: // 128K
+    case 152: // 64K/128K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) { // 128K
+        write_prg_byte(0x8000, i << 4);
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 71: // 64K/128K/256K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) {
+        write_prg_byte(0xC000, i);
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 72: // 128K
+      banks = int_pow(2, prgsize);
+      write_prg_byte(0x8000, 0); // Reset Register
+      for (int i = 0; i < banks; i++) { // 128K
+        write_prg_byte(0x8000, i | 0x80); // PRG Command + Bank
+        write_prg_byte(0x8000, i); // PRG Bank
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 76:
+    case 88:
+    case 95:
+    case 154: // 128K
+    case 206: // 32K/64K/128K
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i += 2) {
+        write_prg_byte(0x8000, 6); // PRG ROM Command ($8000-$9FFF)
+        write_prg_byte(0x8001, i); // PRG Bank
+        write_prg_byte(0x8000, 7); // PRG ROM Command ($A000-$BFFF)
+        write_prg_byte(0x8001, i + 1); // PRG Bank
+        for (word address = 0x0; address < 0x4000; address += 512) { // 8K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 80: // 128K
+    case 207: // 256K [CART SOMETIMES NEEDS POWERCYCLE]
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i += 2) {
+        write_prg_byte(0x7EFA, i); // PRG Bank 0 ($8000-$9FFF)
+        write_prg_byte(0x7EFC, i + 1); // PRG Bank 1 ($A000-$BFFF)
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 82: // 128K
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i += 2) {
+        write_prg_byte(0x7EFA, i << 2); // PRG Bank 0 ($8000-$9FFF)
+        write_prg_byte(0x7EFB, (i + 1) << 2); // PRG Bank 1 ($A000-$BFFF)
+        for (word address = 0x0; address < 0x4000; address += 512) { // 8K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 85: // 128K/512K
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i++) {
+        write_prg_byte(0x8000, i); // PRG Bank 0 ($8000-$9FFF)
+        for (word address = 0x0; address < 0x2000; address += 512) { // 8K Banks ($8000-$9FFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 86:
+    case 140: // 128K
+      banks = int_pow(2, prgsize) / 2;
+      for (int i = 0; i < banks; i++) { // 128K
+        write_prg_byte(0x6000, i << 4); // bits 4-5
+        for (word address = 0x0; address < 0x8000; address += 512) { // 32K Banks ($8000-$FFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 92: // 256K
+      banks = int_pow(2, prgsize);
+      write_prg_byte(0x8000, 0); // Reset Register
+      for (int i = 0; i < banks; i++) { // 256K
+        write_prg_byte(0x8000, i | 0x80); // PRG Command + Bank
+        write_prg_byte(0x8000, i); // PRG Bank
+        for (word address = 0x4000; address < 0x8000; address += 512) { // 16K Banks ($C000-$FFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 94:
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) { // 128K
+        write_prg_byte(0x8000, i << 2);
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 97: // 256K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) { // 256K
+        write_prg_byte(0x8000, i); // PRG Bank
+        for (word address = 0x4000; address < 0x8000; address += 512) { // 16K Banks ($C000-$FFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 105: // 256K
+      write_mmc1_byte(0xA000, 0x00); // Clear PRG Init/IRQ (Bit 4)
+      write_mmc1_byte(0xA000, 0x10); // Set PRG Init/IRQ (Bit 4) to enable bank swapping
+      for (int i = 0; i < 4; i++) { // PRG CHIP 1 128K
+        write_mmc1_byte(0xA000, i << 1);
+        for (word address = 0x0; address < 0x8000; address += 512) { // 32K Banks ($8000-$FFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      write_mmc1_byte(0x8000, 0x0C); // Switch 16K Bank ($8000-$BFFF) + Fixed Last Bank ($C000-$FFFF)
+      write_mmc1_byte(0xA000, 0x08); // Select PRG CHIP 2 (Bit 3)
+      for (int j = 0; j < 8; j++) { // PRG CHIP 2 128K
+        write_mmc1_byte(0xE000, j);
+        for (word address = 0x0; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 180: // 128K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) {
+        write_prg_byte(0x8000, i);
+        for (word address = 0x4000; address < 0x8000; address += 512) { // 16K Banks ($C000-$FFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 153: // 512K
+      banks = int_pow(2, prgsize);
+      for (int i = 0; i < banks; i++) { // 512K
+        write_prg_byte(0x8000, i >> 4); // PRG Outer Bank (Documentation says duplicate over $8000-$8003 registers)
+        write_prg_byte(0x8001, i >> 4); // PRG Outer Bank
+        write_prg_byte(0x8002, i >> 4); // PRG Outer Bank
+        write_prg_byte(0x8003, i >> 4); // PRG Outer Bank
+        write_prg_byte(0x8008, i & 0xF); // PRG Inner Bank
+        for (word address = 0x0000; address < 0x4000; address += 512) { // 16K Banks ($8000-$BFFF)
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
+
+    case 210: // 128K/256K
+      banks = int_pow(2, prgsize) * 2;
+      for (int i = 0; i < banks; i += 2) {
+        write_prg_byte(0xE000, i); // PRG Bank 0 ($8000-$9FFF) [WRITE NO RAM]
+        write_prg_byte(0xE800, i + 1); // PRG Bank 1 ($A000-$BFFF) [WRITE NO RAM]
+        for (word address = 0x0; address < 0x4000; address += 512) {
+          dumpPRG(base, address, prgFile);
+        }
+      }
+      break;
   }
+  prgFile.close();
+
+  println_Msg(F("PRG FILE DUMPED!"));
+  println_Msg(F(""));
+  display_Update();
+
+  calcCRC(fileName, prg * 1024);
+
   set_address(0);
   PHI2_HI;
   ROMSEL_HI;
@@ -1912,546 +1872,544 @@ void readCHR() {
     display_Update();
   }
   else {
-    CreateCHRFileInSD();
-    if (sdFile) {
-      switch (mapper) {
-        case 0: // 8K
+    SafeSDFile chrFile = CreateCHRFileInSD();
+
+    switch (mapper) {
+      case 0: // 8K
+        for (word address = 0x0; address < 0x2000; address += 512) {
+          dumpCHR(address, chrFile);
+        }
+        break;
+
+      case 1:
+      case 155:
+        banks = int_pow(2, chrsize);
+        for (int i = 0; i < banks; i += 2) { // 8K/16K/32K/64K/128K (Bank #s are based on 4K Banks)
+          write_prg_byte(0x8000, 0x80); // Clear Register
+          write_mmc1_byte(0xA000, i);
           for (word address = 0x0; address < 0x2000; address += 512) {
-            dumpCHR(address);
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 1:
-        case 155:
-          banks = int_pow(2, chrsize);
-          for (int i = 0; i < banks; i += 2) { // 8K/16K/32K/64K/128K (Bank #s are based on 4K Banks)
-            write_prg_byte(0x8000, 0x80); // Clear Register
-            write_mmc1_byte(0xA000, i);
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
+      case 3: // 8K/16K/32K
+      case 66: // 16K/32K
+      case 70:
+      case 152: // 128K
+        banks = int_pow(2, chrsize) / 2;
+        for (int i = 0; i < banks; i++) { // 8K Banks
+          write_prg_byte(0x8000, i); // CHR Bank 0
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 3: // 8K/16K/32K
-        case 66: // 16K/32K
-        case 70:
-        case 152: // 128K
-          banks = int_pow(2, chrsize) / 2;
-          for (int i = 0; i < banks; i++) { // 8K Banks
-            write_prg_byte(0x8000, i); // CHR Bank 0
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 4:
-        case 47:
-        case 118:
-        case 119:
-          banks = int_pow(2, chrsize) * 4;
-          if (mapper == 47)
-            write_prg_byte(0xA001, 0x80); // Block Register - PRG RAM Chip Enable, Writable
-          for (int i = 0; i < banks; i += 4) { // 8K/16K/32K/64K/128K/256K
-            if (mapper == 47) {
-              if (i == 0)
-                write_prg_byte(0x6000, 0); // Switch to Lower Block
-              else if (i == 128)
-                write_prg_byte(0x6000, 1); // Switch to Upper Block
-            }
-            write_prg_byte(0x8000, 0); // CHR Bank 0 ($0000-$07FF)
-            write_prg_byte(0x8001, i);
-            write_prg_byte(0x8000, 1); // CHR Bank 1 ($0800-$0FFF)
-            write_prg_byte(0x8001, i + 2);
-            for (word address = 0x0; address < 0x1000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 5: // 128K/256K/512K
-          banks = int_pow(2, chrsize) / 2;
-          write_prg_byte(0x5101, 0); // 8K CHR Banks
-          for (int i = 0; i < banks; i++) {
-            if (i == 0)
-              write_prg_byte(0x5130, 0); // Set Upper 2 bits
-            else if (i == 8)
-              write_prg_byte(0x5130, 1); // Set Upper 2 bits
-            else if (i == 16)
-              write_prg_byte(0x5130, 2); // Set Upper 2 bits
-            else if (i == 24)
-              write_prg_byte(0x5130, 3); // Set Upper 2 bits
-            write_prg_byte(0x5127, i);
-            for (word address = 0x0; address < 0x2000; address += 512) { // ($0000-$1FFF)
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 9:
-        case 10: // Mapper 9: 128K, Mapper 10: 64K/128K
-          if (mapper == 9)
-            banks = 32;
-          else // Mapper 10
-            banks = int_pow(2, chrsize);
-          for (int i = 0; i < banks; i++) { // 64K/128K
-            write_prg_byte(0xB000, i);
-            write_prg_byte(0xC000, i);
-            for (word address = 0x0; address < 0x1000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 16:
-        case 159: // 128K/256K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i++) {
-            write_prg_byte(0x6000, i); // Submapper 4
-            write_prg_byte(0x8000, i); // Submapper 5
-            for (word address = 0x0; address < 0x400; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 18: // 128K/256K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i++) {
-            write_prg_byte(0xA000, i & 0xF); // CHR Bank Lower 4 bits
-            write_prg_byte(0xA001, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits
-            for (word address = 0x0; address < 0x400; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 19: // 128K/256K
-          for (int j = 0; j < 64; j++) { // Init Register
-            write_ram_byte(0xE800, 0xC0); // CHR RAM High/Low Disable (ROM Enable)
-          }
-          banks = int_pow(2, chrsize) * 4;
-          write_ram_byte(0xE800, 0xC0); // CHR RAM High/Low Disable (ROM Enable)
-          for (int i = 0; i < banks; i += 8) {
-            write_prg_byte(0x8000, i); // CHR Bank 0
-            write_prg_byte(0x8800, i + 1); // CHR Bank 1
-            write_prg_byte(0x9000, i + 2); // CHR Bank 2
-            write_prg_byte(0x9800, i + 3); // CHR Bank 3
-            write_prg_byte(0xA000, i + 4); // CHR Bank 4
-            write_prg_byte(0xA800, i + 5); // CHR Bank 5
-            write_prg_byte(0xB000, i + 6); // CHR Bank 6
-            write_prg_byte(0xB800, i + 7); // CHR Bank 7
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 21: // 128K/256K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i++) {
-            write_prg_byte(0xB000, i & 0xF); // CHR Bank Lower 4 bits
-            if (banks == 128)
-              write_prg_byte(0xB002, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC4a (Wai Wai World 2)
-            else  // banks == 256
-              write_prg_byte(0xB040, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC4c (Ganbare Goemon Gaiden 2)
-            for (word address = 0x0; address < 0x400; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 22: // 128K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i++) {
-            write_prg_byte(0xB000, (i << 1) & 0xF); // CHR Bank Lower 4 bits
-            write_prg_byte(0xB002, (i >> 3) & 0xF);  // CHR Bank Upper 4 bits
-            for (word address = 0x0; address < 0x400; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 23: // 128K
-          // Detect VRC4e Carts - read PRG 0x1FFF6 (DATE)
-          // Boku Dracula-kun = 890810, Tiny Toon = 910809
-          // Crisis Force = 910701, Parodius Da! = 900916
-          write_prg_byte(0x8000, 15);
-          prgchk0 = read_prg_byte(0x9FF6);
-          if (prgchk0 == 0x30) { // Check for "0" in middle of date
-            vrc4e = true; // VRC4e Cart
-          }
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i++) {
-            write_prg_byte(0xB000, i & 0xF); // CHR Bank Lower 4 bits
-            if (vrc4e == true)
-              write_prg_byte(0xB004, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC4e
-            else
-              write_prg_byte(0xB001, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC2b/VRC4f
-            for (word address = 0x0; address < 0x400; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 24: // 128K
-          banks = int_pow(2, chrsize) * 4;
-          write_prg_byte(0xB003, 0); // PPU Banking Mode 0
-          for (int i = 0; i < banks; i += 8) {
-            write_prg_byte(0xD000, i); // CHR Bank 0
-            write_prg_byte(0xD001, i + 1); // CHR Bank 1
-            write_prg_byte(0xD002, i + 2); // CHR Bank 2
-            write_prg_byte(0xD003, i + 3); // CHR Bank 3
-            write_prg_byte(0xE000, i + 4); // CHR Bank 4 [WRITE NO RAM]
-            write_prg_byte(0xE001, i + 5); // CHR Bank 5 [WRITE NO RAM]
-            write_prg_byte(0xE002, i + 6); // CHR Bank 6 [WRITE NO RAM]
-            write_prg_byte(0xE003, i + 7); // CHR Bank 7 [WRITE NO RAM]
-            for (word address = 0x0; address < 0x2000; address += 512) { // 1K Banks
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 25: // 128K/256K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i++) {
-            write_prg_byte(0xB000, i & 0xF); // CHR Bank Lower 4 bits
-            if ((ramsize > 0) || (banks == 128)) // VRC2c (Ganbare Goemon Gaiden)/VRC4b (Bio Miracle/Gradius 2/Racer Mini)
-              write_prg_byte(0xB002, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC2c/VRC4b
-            else
-              write_prg_byte(0xB008, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC4d (Teenage Mutant Ninja Turtles)
-            for (word address = 0x0; address < 0x400; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 26: // 128K/256K
-          banks = int_pow(2, chrsize) * 4;
-          write_prg_byte(0xB003, 0); // PPU Banking Mode 0
-          for (int i = 0; i < banks; i += 8) {
-            write_prg_byte(0xD000, i); // CHR Bank 0
-            write_prg_byte(0xD002, i + 1); // CHR Bank 1
-            write_prg_byte(0xD001, i + 2); // CHR Bank 2
-            write_prg_byte(0xD003, i + 3); // CHR Bank 3
-            write_reg_byte(0xE000, i + 4); // CHR Bank 4 [WRITE RAM SAFE]
-            write_reg_byte(0xE002, i + 5); // CHR Bank 5 [WRITE RAM SAFE]
-            write_reg_byte(0xE001, i + 6); // CHR Bank 6 [WRITE RAM SAFE]
-            write_reg_byte(0xE003, i + 7); // CHR Bank 7 [WRITE RAM SAFE]
-            for (word address = 0x0; address < 0x2000; address += 512) { // 1K Banks
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 32: // 128K
-        case 65: // 128K/256K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i += 8) {
-            write_prg_byte(0xB000, i); // CHR Bank 0
-            write_prg_byte(0xB001, i + 1); // CHR Bank 1
-            write_prg_byte(0xB002, i + 2); // CHR Bank 2
-            write_prg_byte(0xB003, i + 3); // CHR Bank 3
-            write_prg_byte(0xB004, i + 4); // CHR Bank 4
-            write_prg_byte(0xB005, i + 5); // CHR Bank 5
-            write_prg_byte(0xB006, i + 6); // CHR Bank 6
-            write_prg_byte(0xB007, i + 7); // CHR Bank 7
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 33: // 128K/256K
-        case 48: // 256K
-          banks = int_pow(2, chrsize) * 2;
-          for (int i = 0; i < banks; i += 2) { // 2K Banks
-            write_prg_byte(0x8002, i); // CHR Bank 0
-            write_prg_byte(0x8003, i + 1); // CHR Bank 1
-            for (word address = 0x0; address < 0x1000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 37:
-          banks = int_pow(2, chrsize) * 4;
+      case 4:
+      case 47:
+      case 118:
+      case 119:
+        banks = int_pow(2, chrsize) * 4;
+        if (mapper == 47)
           write_prg_byte(0xA001, 0x80); // Block Register - PRG RAM Chip Enable, Writable
-          for (int i = 0; i < banks; i += 4) { // 256K
+        for (int i = 0; i < banks; i += 4) { // 8K/16K/32K/64K/128K/256K
+          if (mapper == 47) {
             if (i == 0)
-              write_prg_byte(0x6000, 0); // Switch to Lower Block ($00000-$1FFFF)
+              write_prg_byte(0x6000, 0); // Switch to Lower Block
             else if (i == 128)
-              write_prg_byte(0x6000, 4); // Switch to Upper Block ($20000-$3FFFF)
-            write_prg_byte(0x8000, 0); // CHR Bank 0 ($0000-$07FF)
-            write_prg_byte(0x8001, i);
-            write_prg_byte(0x8000, 1); // CHR Bank 1 ($0800-$0FFF)
-            write_prg_byte(0x8001, i + 2);
-            for (word address = 0x0; address < 0x1000; address += 512) {
-              dumpCHR(address);
-            }
+              write_prg_byte(0x6000, 1); // Switch to Upper Block
           }
-          break;
-
-        case 67: // 128K
-          banks = int_pow(2, chrsize) * 2;
-          for (int i = 0; i < banks; i += 4) { // 2K Banks
-            write_prg_byte(0x8800, i); // CHR Bank 0
-            write_prg_byte(0x9800, i + 1); // CHR Bank 1
-            write_prg_byte(0xA800, i + 2); // CHR Bank 2
-            write_prg_byte(0xB800, i + 3); // CHR Bank 3
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
+          write_prg_byte(0x8000, 0); // CHR Bank 0 ($0000-$07FF)
+          write_prg_byte(0x8001, i);
+          write_prg_byte(0x8000, 1); // CHR Bank 1 ($0800-$0FFF)
+          write_prg_byte(0x8001, i + 2);
+          for (word address = 0x0; address < 0x1000; address += 512) {
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 68: // 128K/256K
-          banks = int_pow(2, chrsize) * 2;
-          for (int i = 0; i < banks; i += 4) { // 2K Banks
-            write_prg_byte(0x8000, i); // CHR Bank 0
-            write_prg_byte(0x9000, i + 1); // CHR Bank 1
-            write_prg_byte(0xA000, i + 2); // CHR Bank 2
-            write_prg_byte(0xB000, i + 3); // CHR Bank 3
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
+      case 5: // 128K/256K/512K
+        banks = int_pow(2, chrsize) / 2;
+        write_prg_byte(0x5101, 0); // 8K CHR Banks
+        for (int i = 0; i < banks; i++) {
+          if (i == 0)
+            write_prg_byte(0x5130, 0); // Set Upper 2 bits
+          else if (i == 8)
+            write_prg_byte(0x5130, 1); // Set Upper 2 bits
+          else if (i == 16)
+            write_prg_byte(0x5130, 2); // Set Upper 2 bits
+          else if (i == 24)
+            write_prg_byte(0x5130, 3); // Set Upper 2 bits
+          write_prg_byte(0x5127, i);
+          for (word address = 0x0; address < 0x2000; address += 512) { // ($0000-$1FFF)
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 69: // 128K/256K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i++) {
-            write_prg_byte(0x8000, 0); // Command Register - CHR Bank 0
-            write_prg_byte(0xA000, i); // Parameter Register - ($0000-$03FF)
-            for (word address = 0x0; address < 0x400; address += 512) { // 1K Banks
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 72: // 128K
-          banks = int_pow(2, chrsize) / 2;
-          write_prg_byte(0x8000, 0); // Reset Register
-          for (int i = 0; i < banks; i++) { // 8K Banks
-            write_prg_byte(0x8000, i | 0x40); // CHR Command + Bank
-            write_prg_byte(0x8000, i); // CHR Bank
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 75: // 128K
+      case 9:
+      case 10: // Mapper 9: 128K, Mapper 10: 64K/128K
+        if (mapper == 9)
+          banks = 32;
+        else // Mapper 10
           banks = int_pow(2, chrsize);
-          for (int i = 0; i < banks; i++) { // 4K Banks
-            write_reg_byte(0xE000, i); // CHR Bank Low Bits [WRITE RAM SAFE]
-            write_prg_byte(0x9000, (i & 0x10) >> 3); // High Bit
-            for (word address = 0x0; address < 0x1000; address += 512) {
-              dumpCHR(address);
-            }
+        for (int i = 0; i < banks; i++) { // 64K/128K
+          write_prg_byte(0xB000, i);
+          write_prg_byte(0xC000, i);
+          for (word address = 0x0; address < 0x1000; address += 512) {
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 76: // 128K
-          banks = int_pow(2, chrsize) * 2;
-          for (int i = 0; i < banks; i += 2) { // 2K Banks
-            write_prg_byte(0x8000, 2); // CHR Command ($0000-$07FF) 2K Bank
-            write_prg_byte(0x8001, i); // CHR Bank
-            write_prg_byte(0x8000, 3); // CHR Command ($0800-$0FFF) 2K Bank
-            write_prg_byte(0x8001, i + 1); // CHR Bank
-            for (word address = 0x0000; address < 0x1000; address += 512) {
-              dumpCHR(address);
-            }
+      case 16:
+      case 159: // 128K/256K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i++) {
+          write_prg_byte(0x6000, i); // Submapper 4
+          write_prg_byte(0x8000, i); // Submapper 5
+          for (word address = 0x0; address < 0x400; address += 512) {
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 77: // 32K
-          banks = int_pow(2, chrsize) * 2;
-          for (int i = 0; i < banks; i++) { // 2K Banks
-            write_prg_byte(0x8000, i << 4); // CHR Bank 0
+      case 18: // 128K/256K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i++) {
+          write_prg_byte(0xA000, i & 0xF); // CHR Bank Lower 4 bits
+          write_prg_byte(0xA001, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits
+          for (word address = 0x0; address < 0x400; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 19: // 128K/256K
+        for (int j = 0; j < 64; j++) { // Init Register
+          write_ram_byte(0xE800, 0xC0); // CHR RAM High/Low Disable (ROM Enable)
+        }
+        banks = int_pow(2, chrsize) * 4;
+        write_ram_byte(0xE800, 0xC0); // CHR RAM High/Low Disable (ROM Enable)
+        for (int i = 0; i < banks; i += 8) {
+          write_prg_byte(0x8000, i); // CHR Bank 0
+          write_prg_byte(0x8800, i + 1); // CHR Bank 1
+          write_prg_byte(0x9000, i + 2); // CHR Bank 2
+          write_prg_byte(0x9800, i + 3); // CHR Bank 3
+          write_prg_byte(0xA000, i + 4); // CHR Bank 4
+          write_prg_byte(0xA800, i + 5); // CHR Bank 5
+          write_prg_byte(0xB000, i + 6); // CHR Bank 6
+          write_prg_byte(0xB800, i + 7); // CHR Bank 7
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 21: // 128K/256K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i++) {
+          write_prg_byte(0xB000, i & 0xF); // CHR Bank Lower 4 bits
+          if (banks == 128)
+            write_prg_byte(0xB002, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC4a (Wai Wai World 2)
+          else  // banks == 256
+            write_prg_byte(0xB040, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC4c (Ganbare Goemon Gaiden 2)
+          for (word address = 0x0; address < 0x400; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 22: // 128K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i++) {
+          write_prg_byte(0xB000, (i << 1) & 0xF); // CHR Bank Lower 4 bits
+          write_prg_byte(0xB002, (i >> 3) & 0xF);  // CHR Bank Upper 4 bits
+          for (word address = 0x0; address < 0x400; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 23: // 128K
+        // Detect VRC4e Carts - read PRG 0x1FFF6 (DATE)
+        // Boku Dracula-kun = 890810, Tiny Toon = 910809
+        // Crisis Force = 910701, Parodius Da! = 900916
+        write_prg_byte(0x8000, 15);
+        prgchk0 = read_prg_byte(0x9FF6);
+        if (prgchk0 == 0x30) { // Check for "0" in middle of date
+          vrc4e = true; // VRC4e Cart
+        }
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i++) {
+          write_prg_byte(0xB000, i & 0xF); // CHR Bank Lower 4 bits
+          if (vrc4e == true)
+            write_prg_byte(0xB004, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC4e
+          else
+            write_prg_byte(0xB001, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC2b/VRC4f
+          for (word address = 0x0; address < 0x400; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 24: // 128K
+        banks = int_pow(2, chrsize) * 4;
+        write_prg_byte(0xB003, 0); // PPU Banking Mode 0
+        for (int i = 0; i < banks; i += 8) {
+          write_prg_byte(0xD000, i); // CHR Bank 0
+          write_prg_byte(0xD001, i + 1); // CHR Bank 1
+          write_prg_byte(0xD002, i + 2); // CHR Bank 2
+          write_prg_byte(0xD003, i + 3); // CHR Bank 3
+          write_prg_byte(0xE000, i + 4); // CHR Bank 4 [WRITE NO RAM]
+          write_prg_byte(0xE001, i + 5); // CHR Bank 5 [WRITE NO RAM]
+          write_prg_byte(0xE002, i + 6); // CHR Bank 6 [WRITE NO RAM]
+          write_prg_byte(0xE003, i + 7); // CHR Bank 7 [WRITE NO RAM]
+          for (word address = 0x0; address < 0x2000; address += 512) { // 1K Banks
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 25: // 128K/256K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i++) {
+          write_prg_byte(0xB000, i & 0xF); // CHR Bank Lower 4 bits
+          if ((ramsize > 0) || (banks == 128)) // VRC2c (Ganbare Goemon Gaiden)/VRC4b (Bio Miracle/Gradius 2/Racer Mini)
+            write_prg_byte(0xB002, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC2c/VRC4b
+          else
+            write_prg_byte(0xB008, (i >> 4) & 0xF);  // CHR Bank Upper 4 bits VRC4d (Teenage Mutant Ninja Turtles)
+          for (word address = 0x0; address < 0x400; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 26: // 128K/256K
+        banks = int_pow(2, chrsize) * 4;
+        write_prg_byte(0xB003, 0); // PPU Banking Mode 0
+        for (int i = 0; i < banks; i += 8) {
+          write_prg_byte(0xD000, i); // CHR Bank 0
+          write_prg_byte(0xD002, i + 1); // CHR Bank 1
+          write_prg_byte(0xD001, i + 2); // CHR Bank 2
+          write_prg_byte(0xD003, i + 3); // CHR Bank 3
+          write_reg_byte(0xE000, i + 4); // CHR Bank 4 [WRITE RAM SAFE]
+          write_reg_byte(0xE002, i + 5); // CHR Bank 5 [WRITE RAM SAFE]
+          write_reg_byte(0xE001, i + 6); // CHR Bank 6 [WRITE RAM SAFE]
+          write_reg_byte(0xE003, i + 7); // CHR Bank 7 [WRITE RAM SAFE]
+          for (word address = 0x0; address < 0x2000; address += 512) { // 1K Banks
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 32: // 128K
+      case 65: // 128K/256K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i += 8) {
+          write_prg_byte(0xB000, i); // CHR Bank 0
+          write_prg_byte(0xB001, i + 1); // CHR Bank 1
+          write_prg_byte(0xB002, i + 2); // CHR Bank 2
+          write_prg_byte(0xB003, i + 3); // CHR Bank 3
+          write_prg_byte(0xB004, i + 4); // CHR Bank 4
+          write_prg_byte(0xB005, i + 5); // CHR Bank 5
+          write_prg_byte(0xB006, i + 6); // CHR Bank 6
+          write_prg_byte(0xB007, i + 7); // CHR Bank 7
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 33: // 128K/256K
+      case 48: // 256K
+        banks = int_pow(2, chrsize) * 2;
+        for (int i = 0; i < banks; i += 2) { // 2K Banks
+          write_prg_byte(0x8002, i); // CHR Bank 0
+          write_prg_byte(0x8003, i + 1); // CHR Bank 1
+          for (word address = 0x0; address < 0x1000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 37:
+        banks = int_pow(2, chrsize) * 4;
+        write_prg_byte(0xA001, 0x80); // Block Register - PRG RAM Chip Enable, Writable
+        for (int i = 0; i < banks; i += 4) { // 256K
+          if (i == 0)
+            write_prg_byte(0x6000, 0); // Switch to Lower Block ($00000-$1FFFF)
+          else if (i == 128)
+            write_prg_byte(0x6000, 4); // Switch to Upper Block ($20000-$3FFFF)
+          write_prg_byte(0x8000, 0); // CHR Bank 0 ($0000-$07FF)
+          write_prg_byte(0x8001, i);
+          write_prg_byte(0x8000, 1); // CHR Bank 1 ($0800-$0FFF)
+          write_prg_byte(0x8001, i + 2);
+          for (word address = 0x0; address < 0x1000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 67: // 128K
+        banks = int_pow(2, chrsize) * 2;
+        for (int i = 0; i < banks; i += 4) { // 2K Banks
+          write_prg_byte(0x8800, i); // CHR Bank 0
+          write_prg_byte(0x9800, i + 1); // CHR Bank 1
+          write_prg_byte(0xA800, i + 2); // CHR Bank 2
+          write_prg_byte(0xB800, i + 3); // CHR Bank 3
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 68: // 128K/256K
+        banks = int_pow(2, chrsize) * 2;
+        for (int i = 0; i < banks; i += 4) { // 2K Banks
+          write_prg_byte(0x8000, i); // CHR Bank 0
+          write_prg_byte(0x9000, i + 1); // CHR Bank 1
+          write_prg_byte(0xA000, i + 2); // CHR Bank 2
+          write_prg_byte(0xB000, i + 3); // CHR Bank 3
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 69: // 128K/256K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i++) {
+          write_prg_byte(0x8000, 0); // Command Register - CHR Bank 0
+          write_prg_byte(0xA000, i); // Parameter Register - ($0000-$03FF)
+          for (word address = 0x0; address < 0x400; address += 512) { // 1K Banks
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 72: // 128K
+        banks = int_pow(2, chrsize) / 2;
+        write_prg_byte(0x8000, 0); // Reset Register
+        for (int i = 0; i < banks; i++) { // 8K Banks
+          write_prg_byte(0x8000, i | 0x40); // CHR Command + Bank
+          write_prg_byte(0x8000, i); // CHR Bank
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 75: // 128K
+        banks = int_pow(2, chrsize);
+        for (int i = 0; i < banks; i++) { // 4K Banks
+          write_reg_byte(0xE000, i); // CHR Bank Low Bits [WRITE RAM SAFE]
+          write_prg_byte(0x9000, (i & 0x10) >> 3); // High Bit
+          for (word address = 0x0; address < 0x1000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 76: // 128K
+        banks = int_pow(2, chrsize) * 2;
+        for (int i = 0; i < banks; i += 2) { // 2K Banks
+          write_prg_byte(0x8000, 2); // CHR Command ($0000-$07FF) 2K Bank
+          write_prg_byte(0x8001, i); // CHR Bank
+          write_prg_byte(0x8000, 3); // CHR Command ($0800-$0FFF) 2K Bank
+          write_prg_byte(0x8001, i + 1); // CHR Bank
+          for (word address = 0x0000; address < 0x1000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 77: // 32K
+        banks = int_pow(2, chrsize) * 2;
+        for (int i = 0; i < banks; i++) { // 2K Banks
+          write_prg_byte(0x8000, i << 4); // CHR Bank 0
+          for (word address = 0x0; address < 0x800; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 78: // 128K
+        banks = int_pow(2, chrsize) / 2;
+        for (int i = 0; i < banks; i++) { // 8K Banks
+          write_prg_byte(0x8000, i << 4); // CHR Bank 0
+          for (word address = 0x0; address < 0x2000; address += 512) { // 8K Banks ($0000-$1FFF)
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 80: // 128K/256K
+      case 82: // 128K/256K
+      case 207: // 128K [CART SOMETIMES NEEDS POWERCYCLE]
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i += 4) {
+          write_prg_byte(0x7EF2, i);  // CHR Bank 2 [REGISTERS 0x7EF0/0x7EF1 WON'T WORK]
+          write_prg_byte(0x7EF3, i + 1);  // CHR Bank 3
+          write_prg_byte(0x7EF4, i + 2);  // CHR Bank 4
+          write_prg_byte(0x7EF5, i + 3);  // CHR Bank 5
+          for (word address = 0x1000; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 85: // 128K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i += 8) {
+          write_prg_byte(0xA000, i); // CHR Bank 0
+          write_prg_byte(0xA008, i + 1); // CHR Bank 1
+          write_prg_byte(0xB000, i + 2); // CHR Bank 2
+          write_prg_byte(0xB008, i + 3); // CHR Bank 3
+          write_prg_byte(0xC000, i + 4); // CHR Bank 4
+          write_prg_byte(0xC008, i + 5); // CHR Bank 5
+          write_prg_byte(0xD000, i + 6); // CHR Bank 6
+          write_prg_byte(0xD008, i + 7); // CHR Bank 7
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 86: // 64K
+        banks = int_pow(2, chrsize) / 2;
+        for (int i = 0; i < banks; i++) { // 8K Banks
+          if (i < 4)
+            write_prg_byte(0x6000, i & 0x3);
+          else
+            write_prg_byte(0x6000, (i | 0x40) & 0x43);
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 87: // 16K/32K
+        banks = int_pow(2, chrsize) / 2;
+        for (int i = 0; i < banks; i++) { // 16K/32K
+          write_prg_byte(0x6000, (((i & 0x1) << 1) | ((i & 0x2) >> 1)));
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
+          }
+        }
+        break;
+
+      case 88: // 128K
+      case 95: // 32K
+      case 154: // 128K
+      case 206: // 16K/32K/64K
+        banks = int_pow(2, chrsize) * 4;
+        for (int i = 0; i < banks; i += 2) { // 1K Banks
+          if (i < 64) {
+            write_prg_byte(0x8000, 0); // CHR Command ($0000-$07FF) 2K Bank
+            write_prg_byte(0x8001, i & 0x3F); // CHR Bank
             for (word address = 0x0; address < 0x800; address += 512) {
-              dumpCHR(address);
+              dumpCHR(address, chrFile);
             }
           }
-          break;
-
-        case 78: // 128K
-          banks = int_pow(2, chrsize) / 2;
-          for (int i = 0; i < banks; i++) { // 8K Banks
-            write_prg_byte(0x8000, i << 4); // CHR Bank 0
-            for (word address = 0x0; address < 0x2000; address += 512) { // 8K Banks ($0000-$1FFF)
-              dumpCHR(address);
+          else {
+            write_prg_byte(0x8000, 2); // CHR Command ($1000-$13FF) 1K Bank
+            write_prg_byte(0x8001, i); // CHR Bank
+            write_prg_byte(0x8000, 3); // CHR Command ($1400-$17FF) 1K Bank
+            write_prg_byte(0x8001, i + 1); // CHR Bank
+            for (word address = 0x1000; address < 0x1800; address += 512) {
+              dumpCHR(address, chrFile);
             }
           }
-          break;
+        }
+        break;
 
-        case 80: // 128K/256K
-        case 82: // 128K/256K
-        case 207: // 128K [CART SOMETIMES NEEDS POWERCYCLE]
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i += 4) {
-            write_prg_byte(0x7EF2, i);  // CHR Bank 2 [REGISTERS 0x7EF0/0x7EF1 WON'T WORK]
-            write_prg_byte(0x7EF3, i + 1);  // CHR Bank 3
-            write_prg_byte(0x7EF4, i + 2);  // CHR Bank 4
-            write_prg_byte(0x7EF5, i + 3);  // CHR Bank 5
-            for (word address = 0x1000; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
+      case 89: // 128K
+        banks = int_pow(2, chrsize) / 2;
+        for (int i = 0; i < banks; i++) { // 8K Banks
+          if (i < 8)
+            write_prg_byte(0x8000, i & 0x7);
+          else
+            write_prg_byte(0x8000, (i | 0x80) & 0x87);
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 85: // 128K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i += 8) {
-            write_prg_byte(0xA000, i); // CHR Bank 0
-            write_prg_byte(0xA008, i + 1); // CHR Bank 1
-            write_prg_byte(0xB000, i + 2); // CHR Bank 2
-            write_prg_byte(0xB008, i + 3); // CHR Bank 3
-            write_prg_byte(0xC000, i + 4); // CHR Bank 4
-            write_prg_byte(0xC008, i + 5); // CHR Bank 5
-            write_prg_byte(0xD000, i + 6); // CHR Bank 6
-            write_prg_byte(0xD008, i + 7); // CHR Bank 7
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
+      case 92: // 128K
+        banks = int_pow(2, chrsize) / 2;
+        write_prg_byte(0x8000, 0); // Reset Register
+        for (int i = 0; i < banks; i++) { // 8K Banks
+          write_prg_byte(0x8000, i | 0x40); // CHR Command + Bank
+          write_prg_byte(0x8000, i); // CHR Bank
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 86: // 64K
-          banks = int_pow(2, chrsize) / 2;
-          for (int i = 0; i < banks; i++) { // 8K Banks
-            if (i < 4)
-              write_prg_byte(0x6000, i & 0x3);
-            else
-              write_prg_byte(0x6000, (i | 0x40) & 0x43);
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
+      case 140: // 32K/128K
+        banks = int_pow(2, chrsize) / 2;
+        for (int i = 0; i < banks; i++) { // 8K Banks
+          write_prg_byte(0x6000, i);
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 87: // 16K/32K
-          banks = int_pow(2, chrsize) / 2;
-          for (int i = 0; i < banks; i++) { // 16K/32K
-            write_prg_byte(0x6000, (((i & 0x1) << 1) | ((i & 0x2) >> 1)));
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
+      case 184: // 16K/32K
+        banks = int_pow(2, chrsize);
+        for (int i = 0; i < banks; i++) { // 4K Banks
+          write_prg_byte(0x6000, i); // CHR LOW (Bits 0-2) ($0000-$0FFF)
+          for (word address = 0x0; address < 0x1000; address += 512) { // 4K Banks ($0000-$0FFF)
+            dumpCHR(address, chrFile);
           }
-          break;
+        }
+        break;
 
-        case 88: // 128K
-        case 95: // 32K
-        case 154: // 128K
-        case 206: // 16K/32K/64K
-          banks = int_pow(2, chrsize) * 4;
-          for (int i = 0; i < banks; i += 2) { // 1K Banks
-            if (i < 64) {
-              write_prg_byte(0x8000, 0); // CHR Command ($0000-$07FF) 2K Bank
-              write_prg_byte(0x8001, i & 0x3F); // CHR Bank
-              for (word address = 0x0; address < 0x800; address += 512) {
-                dumpCHR(address);
-              }
+      case 185: // 8K [READ 32K TO OVERRIDE LOCKOUT]
+        for (int i = 0; i < 4; i++) { // Read 32K to locate valid 8K
+          write_prg_byte(0x8000, i);
+          byte chrcheck = read_chr_byte(0);
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            for (int x = 0; x < 512; x++) {
+              sdBuffer[x] = read_chr_byte(address + x);
             }
-            else {
-              write_prg_byte(0x8000, 2); // CHR Command ($1000-$13FF) 1K Bank
-              write_prg_byte(0x8001, i); // CHR Bank
-              write_prg_byte(0x8000, 3); // CHR Command ($1400-$17FF) 1K Bank
-              write_prg_byte(0x8001, i + 1); // CHR Bank
-              for (word address = 0x1000; address < 0x1800; address += 512) {
-                dumpCHR(address);
-              }
-            }
+            if (chrcheck != 0xFF)
+              chrFile.write(sdBuffer, 512);
           }
-          break;
+        }
+        break;
 
-        case 89: // 128K
-          banks = int_pow(2, chrsize) / 2;
-          for (int i = 0; i < banks; i++) { // 8K Banks
-            if (i < 8)
-              write_prg_byte(0x8000, i & 0x7);
-            else
-              write_prg_byte(0x8000, (i | 0x80) & 0x87);
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
+      case 210: // 128K/256K
+        banks = int_pow(2, chrsize) * 4;
+        write_prg_byte(0xE800, 0xC0); // CHR RAM DISABLE (Bit 6 and 7) [WRITE NO RAM]
+        for (int i = 0; i < banks; i += 8) {
+          write_prg_byte(0x8000, i); // CHR Bank 0
+          write_prg_byte(0x8800, i + 1); // CHR Bank 1
+          write_prg_byte(0x9000, i + 2); // CHR Bank 2
+          write_prg_byte(0x9800, i + 3); // CHR Bank 3
+          write_prg_byte(0xA000, i + 4); // CHR Bank 4
+          write_prg_byte(0xA800, i + 5); // CHR Bank 5
+          write_prg_byte(0xB000, i + 6); // CHR Bank 6
+          write_prg_byte(0xB800, i + 7); // CHR Bank 7
+          for (word address = 0x0; address < 0x2000; address += 512) {
+            dumpCHR(address, chrFile);
           }
-          break;
-
-        case 92: // 128K
-          banks = int_pow(2, chrsize) / 2;
-          write_prg_byte(0x8000, 0); // Reset Register
-          for (int i = 0; i < banks; i++) { // 8K Banks
-            write_prg_byte(0x8000, i | 0x40); // CHR Command + Bank
-            write_prg_byte(0x8000, i); // CHR Bank
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 140: // 32K/128K
-          banks = int_pow(2, chrsize) / 2;
-          for (int i = 0; i < banks; i++) { // 8K Banks
-            write_prg_byte(0x6000, i);
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 184: // 16K/32K
-          banks = int_pow(2, chrsize);
-          for (int i = 0; i < banks; i++) { // 4K Banks
-            write_prg_byte(0x6000, i); // CHR LOW (Bits 0-2) ($0000-$0FFF)
-            for (word address = 0x0; address < 0x1000; address += 512) { // 4K Banks ($0000-$0FFF)
-              dumpCHR(address);
-            }
-          }
-          break;
-
-        case 185: // 8K [READ 32K TO OVERRIDE LOCKOUT]
-          for (int i = 0; i < 4; i++) { // Read 32K to locate valid 8K
-            write_prg_byte(0x8000, i);
-            byte chrcheck = read_chr_byte(0);
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              for (int x = 0; x < 512; x++) {
-                sdBuffer[x] = read_chr_byte(address + x);
-              }
-              if (chrcheck != 0xFF)
-                sdFile.write(sdBuffer, 512);
-            }
-          }
-          break;
-
-        case 210: // 128K/256K
-          banks = int_pow(2, chrsize) * 4;
-          write_prg_byte(0xE800, 0xC0); // CHR RAM DISABLE (Bit 6 and 7) [WRITE NO RAM]
-          for (int i = 0; i < banks; i += 8) {
-            write_prg_byte(0x8000, i); // CHR Bank 0
-            write_prg_byte(0x8800, i + 1); // CHR Bank 1
-            write_prg_byte(0x9000, i + 2); // CHR Bank 2
-            write_prg_byte(0x9800, i + 3); // CHR Bank 3
-            write_prg_byte(0xA000, i + 4); // CHR Bank 4
-            write_prg_byte(0xA800, i + 5); // CHR Bank 5
-            write_prg_byte(0xB000, i + 6); // CHR Bank 6
-            write_prg_byte(0xB800, i + 7); // CHR Bank 7
-            for (word address = 0x0; address < 0x2000; address += 512) {
-              dumpCHR(address);
-            }
-          }
-          break;
-      }
-      sdFile.flush();
-      sdFile.close();
-
-      println_Msg(F("CHR FILE DUMPED!"));
-      println_Msg(F(""));
-      display_Update();
-
-      calcCRC(fileName, chr * 1024);
+        }
+        break;
     }
+    chrFile.close();
+
+    println_Msg(F("CHR FILE DUMPED!"));
+    println_Msg(F(""));
+    display_Update();
+
+    calcCRC(fileName, chr * 1024);
   }
   set_address(0);
   PHI2_HI;
@@ -2476,177 +2434,174 @@ void readRAM() {
     display_Update();
   }
   else {
-    CreateRAMFileInSD();
+    SafeSDFile ramFile = CreateRAMFileInSD();
     word base = 0x6000;
-    if (sdFile) {
-      switch (mapper) {
-        case 0: // 2K/4K
-          for (word address = 0x0; address < (0x800 * ramsize); address += 512) { // 2K/4K
-            dumpPRG(base, address); // SWITCH MUST BE IN OFF POSITION
-          }
-          break;
+    switch (mapper) {
+      case 0: // 2K/4K
+        for (word address = 0x0; address < (0x800 * ramsize); address += 512) { // 2K/4K
+          dumpPRG(base, address, ramFile); // SWITCH MUST BE IN OFF POSITION
+        }
+        break;
 
-        case 1:
-        case 155: // 8K/16K/32K
-          banks = int_pow(2, ramsize) / 2; // banks = 1,2,4
-          for (int i = 0; i < banks; i++) { // 8K Banks ($6000-$7FFF)
-            write_prg_byte(0x8000, 0x80); // Clear Register
-            write_mmc1_byte(0x8000, 1 << 3);
-            write_mmc1_byte(0xE000, 0);
-            if (banks == 4) // 32K
-              write_mmc1_byte(0xA000, i << 2);
-            else
-              write_mmc1_byte(0xA000, i << 3);
-            for (word address = 0x0; address < 0x2000; address += 512) { // 8K
-              dumpPRG(base, address);
-            }
-          }
-          break;
-
-        case 4: // 1K/8K (MMC6/MMC3)
-          if (mmc6) { // MMC6 1K
-            write_prg_byte(0x8000, 0x20); // PRG RAM ENABLE
-            write_prg_byte(0xA001, 0x20); // PRG RAM PROTECT - Enable reading RAM at $7000-$71FF
-            for (word address = 0x1000; address < 0x1200; address += 512) { // 512B
-              dumpMMC5RAM(base, address);
-            }
-            write_prg_byte(0x8000, 0x20); // PRG RAM ENABLE
-            write_prg_byte(0xA001, 0x80); // PRG RAM PROTECT - Enable reading RAM at $7200-$73FF
-            for (word address = 0x1200; address < 0x1400; address += 512) { // 512B
-              dumpMMC5RAM(base, address);
-            }
-            write_prg_byte(0x8000, 6); // PRG RAM DISABLE
-          }
-          else { // MMC3 8K
-            write_prg_byte(0xA001, 0xC0); // PRG RAM CHIP ENABLE - Chip Enable, Write Protect
-            for (word address = 0; address < 0x2000; address += 512) { // 8K
-              dumpPRG(base, address);
-            }
-          }
-          break;
-
-        case 5: // 8K/16K/32K
-          write_prg_byte(0x5100, 3); // 8K PRG Banks
-          banks = int_pow(2, ramsize) / 2; // banks = 1,2,4
-          if (banks == 2) { // 16K - Split SRAM Chips 8K/8K
-            for (int i = 0; i < (banks / 2); i++) { // Chip 1
-              write_prg_byte(0x5113, i);
-              for (word address = 0; address < 0x2000; address += 512) { // 8K
-                dumpMMC5RAM(base, address);
-              }
-            }
-            for (int j = 4; j < (banks / 2) + 4; j++) { // Chip 2
-              write_prg_byte(0x5113, j);
-              for (word address = 0; address < 0x2000; address += 512) { // 8K
-                dumpMMC5RAM(base, address);
-              }
-            }
-          }
-          else { // 8K/32K Single SRAM Chip
-            for (int i = 0; i < banks; i++) { // banks = 1 or 4
-              write_prg_byte(0x5113, i);
-              for (word address = 0; address < 0x2000; address += 512) { // 8K
-                dumpMMC5RAM(base, address);
-              }
-            }
-          }
-          break;
-
-        case 16: // 256-byte EEPROM 24C02
-        case 159: // 128-byte EEPROM 24C01 [Little Endian]
-          if (mapper == 159)
-            eepsize = 128;
+      case 1:
+      case 155: // 8K/16K/32K
+        banks = int_pow(2, ramsize) / 2; // banks = 1,2,4
+        for (int i = 0; i < banks; i++) { // 8K Banks ($6000-$7FFF)
+          write_prg_byte(0x8000, 0x80); // Clear Register
+          write_mmc1_byte(0x8000, 1 << 3);
+          write_mmc1_byte(0xE000, 0);
+          if (banks == 4) // 32K
+            write_mmc1_byte(0xA000, i << 2);
           else
-            eepsize = 256;
-          for (word address = 0; address < eepsize; address++) {
-            EepromREAD(address);
+            write_mmc1_byte(0xA000, i << 3);
+          for (word address = 0x0; address < 0x2000; address += 512) { // 8K
+            dumpPRG(base, address, ramFile);
           }
-          sdFile.write(sdBuffer, eepsize);
-          //          display_Clear(); // TEST PURPOSES - DISPLAY EEPROM DATA
-          break;
+        }
+        break;
 
-        case 19:
-          if (ramsize == 2) { // PRG RAM 128B
-            for (int x = 0; x < 128; x++) {
-              write_ram_byte(0xF800, x); // PRG RAM ENABLE
-              sdBuffer[x] = read_prg_byte(0x4800); // DATA PORT
-            }
-            sdFile.write(sdBuffer, 128);
+      case 4: // 1K/8K (MMC6/MMC3)
+        if (mmc6) { // MMC6 1K
+          write_prg_byte(0x8000, 0x20); // PRG RAM ENABLE
+          write_prg_byte(0xA001, 0x20); // PRG RAM PROTECT - Enable reading RAM at $7000-$71FF
+          for (word address = 0x1000; address < 0x1200; address += 512) { // 512B
+            dumpMMC5RAM(base, address, ramFile);
           }
-          else { // SRAM 8K
-            for (int i = 0; i < 64; i++) { // Init Register
-              write_ram_byte(0xE000, 0);
-            }
-            for (word address = 0; address < 0x2000; address += 512) { // 8K
-              dumpPRG(base, address);
-            }
+          write_prg_byte(0x8000, 0x20); // PRG RAM ENABLE
+          write_prg_byte(0xA001, 0x80); // PRG RAM PROTECT - Enable reading RAM at $7200-$73FF
+          for (word address = 0x1200; address < 0x1400; address += 512) { // 512B
+            dumpMMC5RAM(base, address, ramFile);
           }
-          break;
-
-        case 80: // 1K
-          write_prg_byte(0x7EF8, 0xA3); // PRG RAM ENABLE 0
-          write_prg_byte(0x7EF9, 0xA3); // PRG RAM ENABLE 1
-          for (int x = 0; x < 128; x++) {  // PRG RAM 1K ($7F00-$7FFF) MIRRORED ONCE
-            sdBuffer[x] = read_prg_byte(0x7F00 + x);
-          }
-          sdFile.write(sdBuffer, 128);
-          write_prg_byte(0x7EF8, 0xFF); // PRG RAM DISABLE 0
-          write_prg_byte(0x7EF9, 0xFF); // PRG RAM DISABLE 1
-          break;
-
-        case 82: // 5K
-          write_prg_byte(0x7EF7, 0xCA); // PRG RAM ENABLE 0 ($6000-$67FF)
-          write_prg_byte(0x7EF8, 0x69); // PRG RAM ENABLE 1 ($6800-$6FFF)
-          write_prg_byte(0x7EF9, 0x84); // PRG RAM ENABLE 2 ($7000-$73FF)
-          for (word address = 0x0; address < 0x1400; address += 512) { // PRG RAM 5K ($6000-$73FF)
-            dumpMMC5RAM(base, address);
-          }
-          write_prg_byte(0x7EF7, 0xFF); // PRG RAM DISABLE 0 ($6000-$67FF)
-          write_prg_byte(0x7EF8, 0xFF); // PRG RAM DISABLE 1 ($6800-$6FFF)
-          write_prg_byte(0x7EF9, 0xFF); // PRG RAM DISABLE 2 ($7000-$73FF)
-          break;
-
-        default:
-          if (mapper == 118) // 8K
-            write_prg_byte(0xA001, 0xC0); // PRG RAM CHIP ENABLE - Chip Enable, Write Protect
-          else if (mapper == 19) {
-            for (int i = 0; i < 64; i++) { // Init Register
-              write_ram_byte(0xE000, 0);
-            }
-          }
-          else if ((mapper == 21) || (mapper == 25)) // 8K
-            write_prg_byte(0x8000, 0);
-          else if (mapper == 26) // 8K
-            write_prg_byte(0xB003, 0x80); // PRG RAM ENABLE
-          else if (mapper == 68) // 8K
-            write_reg_byte(0xF000, 0x10); // PRG RAM ENABLE [WRITE RAM SAFE]
-          else if (mapper == 69) { // 8K
-            write_prg_byte(0x8000, 8); // Command Register - PRG Bank 0
-            write_prg_byte(0xA000, 0xC0); // Parameter Register - PRG RAM Enabled, PRG RAM, Bank 0 to $6000-$7FFF
-          }
-          else if (mapper == 85) // 8K
-            write_ram_byte(0xE000, 0x80); // PRG RAM ENABLE
-          else if (mapper == 153) // 8K
-            write_prg_byte(0x800D, 0x20); // PRG RAM Chip Enable
+          write_prg_byte(0x8000, 6); // PRG RAM DISABLE
+        }
+        else { // MMC3 8K
+          write_prg_byte(0xA001, 0xC0); // PRG RAM CHIP ENABLE - Chip Enable, Write Protect
           for (word address = 0; address < 0x2000; address += 512) { // 8K
-            dumpPRG(base, address);
+            dumpPRG(base, address, ramFile);
           }
-          if (mapper == 85) // 8K
-            write_reg_byte(0xE000, 0); // PRG RAM DISABLE [WRITE RAM SAFE]
-          break;
-      }
-      sdFile.flush();
-      sdFile.close();
+        }
+        break;
 
-      println_Msg(F("RAM FILE DUMPED!"));
-      println_Msg(F(""));
-      display_Update();
+      case 5: // 8K/16K/32K
+        write_prg_byte(0x5100, 3); // 8K PRG Banks
+        banks = int_pow(2, ramsize) / 2; // banks = 1,2,4
+        if (banks == 2) { // 16K - Split SRAM Chips 8K/8K
+          for (int i = 0; i < (banks / 2); i++) { // Chip 1
+            write_prg_byte(0x5113, i);
+            for (word address = 0; address < 0x2000; address += 512) { // 8K
+              dumpMMC5RAM(base, address, ramFile);
+            }
+          }
+          for (int j = 4; j < (banks / 2) + 4; j++) { // Chip 2
+            write_prg_byte(0x5113, j);
+            for (word address = 0; address < 0x2000; address += 512) { // 8K
+              dumpMMC5RAM(base, address, ramFile);
+            }
+          }
+        }
+        else { // 8K/32K Single SRAM Chip
+          for (int i = 0; i < banks; i++) { // banks = 1 or 4
+            write_prg_byte(0x5113, i);
+            for (word address = 0; address < 0x2000; address += 512) { // 8K
+              dumpMMC5RAM(base, address, ramFile);
+            }
+          }
+        }
+        break;
 
-      if ((mapper == 16) || (mapper == 159))
-        calcCRC(fileName, eepsize);
-      else
-        calcCRC(fileName, ram * 1024);
+      case 16: // 256-byte EEPROM 24C02
+      case 159: // 128-byte EEPROM 24C01 [Little Endian]
+        if (mapper == 159)
+          eepsize = 128;
+        else
+          eepsize = 256;
+        for (word address = 0; address < eepsize; address++) {
+          EepromREAD(address);
+        }
+        ramFile.write(sdBuffer, eepsize);
+        //          display_Clear(); // TEST PURPOSES - DISPLAY EEPROM DATA
+        break;
+
+      case 19:
+        if (ramsize == 2) { // PRG RAM 128B
+          for (int x = 0; x < 128; x++) {
+            write_ram_byte(0xF800, x); // PRG RAM ENABLE
+            sdBuffer[x] = read_prg_byte(0x4800); // DATA PORT
+          }
+          ramFile.write(sdBuffer, 128);
+        }
+        else { // SRAM 8K
+          for (int i = 0; i < 64; i++) { // Init Register
+            write_ram_byte(0xE000, 0);
+          }
+          for (word address = 0; address < 0x2000; address += 512) { // 8K
+            dumpPRG(base, address, ramFile);
+          }
+        }
+        break;
+
+      case 80: // 1K
+        write_prg_byte(0x7EF8, 0xA3); // PRG RAM ENABLE 0
+        write_prg_byte(0x7EF9, 0xA3); // PRG RAM ENABLE 1
+        for (int x = 0; x < 128; x++) {  // PRG RAM 1K ($7F00-$7FFF) MIRRORED ONCE
+          sdBuffer[x] = read_prg_byte(0x7F00 + x);
+        }
+        ramFile.write(sdBuffer, 128);
+        write_prg_byte(0x7EF8, 0xFF); // PRG RAM DISABLE 0
+        write_prg_byte(0x7EF9, 0xFF); // PRG RAM DISABLE 1
+        break;
+
+      case 82: // 5K
+        write_prg_byte(0x7EF7, 0xCA); // PRG RAM ENABLE 0 ($6000-$67FF)
+        write_prg_byte(0x7EF8, 0x69); // PRG RAM ENABLE 1 ($6800-$6FFF)
+        write_prg_byte(0x7EF9, 0x84); // PRG RAM ENABLE 2 ($7000-$73FF)
+        for (word address = 0x0; address < 0x1400; address += 512) { // PRG RAM 5K ($6000-$73FF)
+          dumpMMC5RAM(base, address, ramFile);
+        }
+        write_prg_byte(0x7EF7, 0xFF); // PRG RAM DISABLE 0 ($6000-$67FF)
+        write_prg_byte(0x7EF8, 0xFF); // PRG RAM DISABLE 1 ($6800-$6FFF)
+        write_prg_byte(0x7EF9, 0xFF); // PRG RAM DISABLE 2 ($7000-$73FF)
+        break;
+
+      default:
+        if (mapper == 118) // 8K
+          write_prg_byte(0xA001, 0xC0); // PRG RAM CHIP ENABLE - Chip Enable, Write Protect
+        else if (mapper == 19) {
+          for (int i = 0; i < 64; i++) { // Init Register
+            write_ram_byte(0xE000, 0);
+          }
+        }
+        else if ((mapper == 21) || (mapper == 25)) // 8K
+          write_prg_byte(0x8000, 0);
+        else if (mapper == 26) // 8K
+          write_prg_byte(0xB003, 0x80); // PRG RAM ENABLE
+        else if (mapper == 68) // 8K
+          write_reg_byte(0xF000, 0x10); // PRG RAM ENABLE [WRITE RAM SAFE]
+        else if (mapper == 69) { // 8K
+          write_prg_byte(0x8000, 8); // Command Register - PRG Bank 0
+          write_prg_byte(0xA000, 0xC0); // Parameter Register - PRG RAM Enabled, PRG RAM, Bank 0 to $6000-$7FFF
+        }
+        else if (mapper == 85) // 8K
+          write_ram_byte(0xE000, 0x80); // PRG RAM ENABLE
+        else if (mapper == 153) // 8K
+          write_prg_byte(0x800D, 0x20); // PRG RAM Chip Enable
+        for (word address = 0; address < 0x2000; address += 512) { // 8K
+          dumpPRG(base, address, ramFile);
+        }
+        if (mapper == 85) // 8K
+          write_reg_byte(0xE000, 0); // PRG RAM DISABLE [WRITE RAM SAFE]
+        break;
     }
+    ramFile.close();
+
+    println_Msg(F("RAM FILE DUMPED!"));
+    println_Msg(F(""));
+    display_Update();
+
+    if ((mapper == 16) || (mapper == 159))
+      calcCRC(fileName, eepsize);
+    else
+      calcCRC(fileName, ram * 1024);
   }
   set_address(0);
   PHI2_HI;
@@ -2659,13 +2614,13 @@ void writeRAM() {
   display_Clear();
 
   if (ramsize == 0) {
-    print_Error(F("RAM SIZE 0K"), false);
+    print_Warning(F("RAM SIZE 0K"));
   }
   else {
     fileBrowser(F("Select RAM File"));
     word base = 0x6000;
 
-    sd.chdir();
+    chdirToRoot();
     sprintf(filePath, "%s/%s", filePath, fileName);
 
     display_Clear();
@@ -2675,222 +2630,217 @@ void writeRAM() {
     display_Update();
 
     //open file on sd card
-    if (sdFile.open(filePath, O_READ)) {
-      switch (mapper) {
-        case 0: // 2K/4K
-          for (word address = 0x0; address < (0x800 * ramsize); address += 512) { // 2K/4K
-            sdFile.read(sdBuffer, 512);
-            for (int x = 0; x < 512; x++) {
-              write_prg_byte(base + address + x, sdBuffer[x]); // SWITCH MUST BE IN OFF POSITION
-            }
+    SafeSDFile ramFile = SafeSDFile::openForReading(filePath);
+    switch (mapper) {
+      case 0: // 2K/4K
+        for (word address = 0x0; address < (0x800 * ramsize); address += 512) { // 2K/4K
+          ramFile.read(sdBuffer, 512);
+          for (int x = 0; x < 512; x++) {
+            write_prg_byte(base + address + x, sdBuffer[x]); // SWITCH MUST BE IN OFF POSITION
           }
-          break;
+        }
+        break;
 
-        case 1:
-        case 155:
-          banks = int_pow(2, ramsize) / 2; // banks = 1,2,4
-          for (int i = 0; i < banks; i++) { // 8K Banks ($6000-$7FFF)
-            write_prg_byte(0x8000, 0x80); // Clear Register
-            write_mmc1_byte(0x8000, 1 << 3); // PRG ROM MODE 32K
-            write_mmc1_byte(0xE000, 0); // PRG RAM ENABLED
-            if (banks == 4) // 32K
-              write_mmc1_byte(0xA000, i << 2);
-            else
-              write_mmc1_byte(0xA000, i << 3);
-            for (word address = 0x0; address < 0x2000; address += 512) { // 8K
-              sdFile.read(sdBuffer, 512);
-              for (int x = 0; x < 512; x++) {
-                write_prg_byte(base + address + x, sdBuffer[x]);
-              }
-            }
-          }
-          break;
-
-        case 4: // 1K/8K (MMC6/MMC3)
-          if (mmc6) { // MMC6 1K
-            write_prg_byte(0x8000, 0x20); // PRG RAM ENABLE
-            write_prg_byte(0xA001, 0x30); // PRG RAM PROTECT - Enable reading/writing to RAM at $7000-$71FF
-            for (word address = 0x1000; address < 0x1200; address += 512) { // 512B
-              sdFile.read(sdBuffer, 512);
-              for (int x = 0; x < 512; x++) {
-                write_wram_byte(base + address + x, sdBuffer[x]);
-              }
-            }
-            write_prg_byte(0x8000, 0x20); // PRG RAM ENABLE
-            write_prg_byte(0xA001, 0xC0); // PRG RAM PROTECT - Enable reading/writing to RAM at $7200-$73FF
-            for (word address = 0x1200; address < 0x1400; address += 512) { // 512B
-              sdFile.read(sdBuffer, 512);
-              for (int x = 0; x < 512; x++) {
-                write_wram_byte(base + address + x, sdBuffer[x]);
-              }
-            }
-            write_prg_byte(0x8000, 0x6); // PRG RAM DISABLE
-          }
-          else { // MMC3 8K
-            write_prg_byte(0xA001, 0x80); // PRG RAM CHIP ENABLE - Chip Enable, Allow Writes
-            for (word address = 0; address < 0x2000; address += 512) { // 8K
-              sdFile.read(sdBuffer, 512);
-              for (int x = 0; x < 512; x++) {
-                write_prg_byte(base + address + x, sdBuffer[x]);
-              }
-            }
-            write_prg_byte(0xA001, 0xC0); // PRG RAM CHIP ENABLE - Chip Enable, Write Protect
-          }
-          break;
-
-        case 5: // 8K/16K/32K
-          write_prg_byte(0x5100, 3); // 8K PRG Banks
-          banks = int_pow(2, ramsize) / 2; // banks = 1,2,4
-          if (banks == 2) { // 16K - Split SRAM Chips 8K/8K [ETROM = 16K (ONLY 1ST 8K BATTERY BACKED)]
-            for (int i = 0; i < (banks / 2); i++) { // Chip 1
-              write_prg_byte(0x5113, i);
-              for (word address = 0; address < 0x2000; address += 512) { // 8K
-                writeMMC5RAM(base, address);
-              }
-            }
-            for (int j = 4; j < (banks / 2) + 4; j++) { // Chip 2
-              write_prg_byte(0x5113, j);
-              for (word address = 0; address < 0x2000; address += 512) { // 8K
-                writeMMC5RAM(base, address);
-              }
-            }
-          }
-          else { // 8K/32K Single SRAM Chip [EKROM = 8K BATTERY BACKED, EWROM = 32K BATTERY BACKED]
-            for (int i = 0; i < banks; i++) { // banks = 1 or 4
-              write_prg_byte(0x5113, i);
-              for (word address = 0; address < 0x2000; address += 512) { // 8K
-                writeMMC5RAM(base, address);
-              }
-            }
-          }
-          break;
-
-        case 16: // 256-byte EEPROM 24C02
-        case 159: // 128-byte EEPROM 24C01 [Little Endian]
-          if (mapper == 159)
-            eepsize = 128;
+      case 1:
+      case 155:
+        banks = int_pow(2, ramsize) / 2; // banks = 1,2,4
+        for (int i = 0; i < banks; i++) { // 8K Banks ($6000-$7FFF)
+          write_prg_byte(0x8000, 0x80); // Clear Register
+          write_mmc1_byte(0x8000, 1 << 3); // PRG ROM MODE 32K
+          write_mmc1_byte(0xE000, 0); // PRG RAM ENABLED
+          if (banks == 4) // 32K
+            write_mmc1_byte(0xA000, i << 2);
           else
-            eepsize = 256;
-          sdFile.read(sdBuffer, eepsize);
-          for (word address = 0; address < eepsize; address++) {
-            EepromWRITE(address);
-            if ((address % 128) == 0)
-              display_Clear();
-            print_Msg(F("."));
-            display_Update();
-          }
-          break;
-
-        case 19:
-          if (ramsize == 2) { // PRG RAM 128B
-            sdFile.read(sdBuffer, 128);
-            for (int x = 0; x < 128; x++) {
-              write_ram_byte(0xF800, x); // PRG RAM ENABLE
-              write_prg_byte(0x4800, sdBuffer[x]); // DATA PORT
-            }
-          }
-          else { // SRAM 8K
-            for (int i = 0; i < 64; i++) { // Init Register
-              write_ram_byte(0xF800, 0x40); // PRG RAM WRITE ENABLE
-            }
-            write_ram_byte(0xF800, 0x40); // PRG RAM WRITE ENABLE
-            for (word address = 0; address < 0x2000; address += 512) { // 8K
-              sdFile.read(sdBuffer, 512);
-              for (int x = 0; x < 512; x++) {
-                write_prg_byte(base + address + x, sdBuffer[x]);
-              }
-            }
-            write_ram_byte(0xF800, 0x0F); // PRG RAM WRITE PROTECT
-          }
-          break;
-
-        case 80: // 1K
-          write_prg_byte(0x7EF8, 0xA3); // PRG RAM ENABLE 0
-          write_prg_byte(0x7EF9, 0xA3); // PRG RAM ENABLE 1
-          for (word address = 0x1F00; address < 0x2000; address += 512) { // PRG RAM 1K ($7F00-$7FFF)
-            sdFile.read(sdBuffer, 128);
-            for (int x = 0; x < 128; x++) {
-              write_prg_byte(base + address + x, sdBuffer[x]);
-            }
-          }
-          write_prg_byte(0x7EF8, 0xFF); // PRG RAM DISABLE 0
-          write_prg_byte(0x7EF9, 0xFF); // PRG RAM DISABLE 1
-          break;
-
-        case 82: // 5K
-          write_prg_byte(0x7EF7, 0xCA); // PRG RAM ENABLE 0 ($6000-$67FF)
-          write_prg_byte(0x7EF8, 0x69); // PRG RAM ENABLE 1 ($6800-$6FFF)
-          write_prg_byte(0x7EF9, 0x84); // PRG RAM ENABLE 2 ($7000-$73FF)
-          for (word address = 0x0; address < 0x1400; address += 1024) { // PRG RAM 5K ($6000-$73FF)
-            sdFile.read(sdBuffer, 512);
-            firstbyte = sdBuffer[0];
-            for (int x = 0; x < 512; x++)
-              write_prg_byte(base + address + x, sdBuffer[x]);
-            sdFile.read(sdBuffer, 512);
-            for (int x = 0; x < 512; x++)
-              write_prg_byte(base + address + x + 512, sdBuffer[x]);
-            write_prg_byte(base + address, firstbyte); // REWRITE 1ST BYTE
-          }
-          write_prg_byte(0x7EF7, 0xFF); // PRG RAM DISABLE 0 ($6000-$67FF)
-          write_prg_byte(0x7EF8, 0xFF); // PRG RAM DISABLE 1 ($6800-$6FFF)
-          write_prg_byte(0x7EF9, 0xFF); // PRG RAM DISABLE 2 ($7000-$73FF)
-          break;
-
-        default:
-          if (mapper == 118) // 8K
-            write_prg_byte(0xA001, 0x80); // PRG RAM CHIP ENABLE - Chip Enable, Allow Writes
-          else if ((mapper == 21) || (mapper == 25)) // 8K
-            write_prg_byte(0x8000, 0);
-          else if (mapper == 26) // 8K
-            write_prg_byte(0xB003, 0x80); // PRG RAM ENABLE
-          //            else if (mapper == 68) // 8K
-          //              write_reg_byte(0xF000, 0x10); // PRG RAM ENABLE [WRITE RAM SAFE]
-          else if (mapper == 69) { // 8K
-            write_prg_byte(0x8000, 8); // Command Register - PRG Bank 0
-            write_prg_byte(0xA000, 0xC0); // Parameter Register - PRG RAM Enabled, PRG RAM, Bank 0 to $6000-$7FFF
-          }
-          else if (mapper == 85) // 8K
-            write_ram_byte(0xE000, 0x80); // PRG RAM ENABLE
-          else if (mapper == 153) // 8K
-            write_prg_byte(0x800D, 0x20); // PRG RAM Chip Enable
-          for (word address = 0; address < 0x2000; address += 512) { // 8K
-            sdFile.read(sdBuffer, 512);
+            write_mmc1_byte(0xA000, i << 3);
+          for (word address = 0x0; address < 0x2000; address += 512) { // 8K
+            ramFile.read(sdBuffer, 512);
             for (int x = 0; x < 512; x++) {
               write_prg_byte(base + address + x, sdBuffer[x]);
             }
           }
-          if (mapper == 118) // 8K
-            write_prg_byte(0xA001, 0xC0); // PRG RAM CHIP ENABLE - Chip Enable, Write Protect
-          else if (mapper == 26) // 8K
-            write_prg_byte(0xB003, 0); // PRG RAM DISABLE
-          //            else if (mapper == 68) // 8K
-          //              write_reg_byte(0xF000, 0x00); // PRG RAM DISABLE [WRITE RAM SAFE]
-          else if (mapper == 69) { // 8K
-            write_prg_byte(0x8000, 8); // Command Register - PRG Bank 0
-            write_prg_byte(0xA000, 0); // Parameter Register - PRG RAM Disabled, PRG ROM, Bank 0 to $6000-$7FFF
+        }
+        break;
+
+      case 4: // 1K/8K (MMC6/MMC3)
+        if (mmc6) { // MMC6 1K
+          write_prg_byte(0x8000, 0x20); // PRG RAM ENABLE
+          write_prg_byte(0xA001, 0x30); // PRG RAM PROTECT - Enable reading/writing to RAM at $7000-$71FF
+          for (word address = 0x1000; address < 0x1200; address += 512) { // 512B
+            ramFile.read(sdBuffer, 512);
+            for (int x = 0; x < 512; x++) {
+              write_wram_byte(base + address + x, sdBuffer[x]);
+            }
           }
-          else if (mapper == 85) // 8K
-            write_reg_byte(0xE000, 0); // PRG RAM DISABLE [WRITE RAM SAFE]
-          break;
-      }
-      sdFile.close();
-      LED_GREEN_ON;
+          write_prg_byte(0x8000, 0x20); // PRG RAM ENABLE
+          write_prg_byte(0xA001, 0xC0); // PRG RAM PROTECT - Enable reading/writing to RAM at $7200-$73FF
+          for (word address = 0x1200; address < 0x1400; address += 512) { // 512B
+            ramFile.read(sdBuffer, 512);
+            for (int x = 0; x < 512; x++) {
+              write_wram_byte(base + address + x, sdBuffer[x]);
+            }
+          }
+          write_prg_byte(0x8000, 0x6); // PRG RAM DISABLE
+        }
+        else { // MMC3 8K
+          write_prg_byte(0xA001, 0x80); // PRG RAM CHIP ENABLE - Chip Enable, Allow Writes
+          for (word address = 0; address < 0x2000; address += 512) { // 8K
+            ramFile.read(sdBuffer, 512);
+            for (int x = 0; x < 512; x++) {
+              write_prg_byte(base + address + x, sdBuffer[x]);
+            }
+          }
+          write_prg_byte(0xA001, 0xC0); // PRG RAM CHIP ENABLE - Chip Enable, Write Protect
+        }
+        break;
 
-      println_Msg(F(""));
-      println_Msg(F("RAM FILE WRITTEN!"));
-      display_Update();
+      case 5: // 8K/16K/32K
+        write_prg_byte(0x5100, 3); // 8K PRG Banks
+        banks = int_pow(2, ramsize) / 2; // banks = 1,2,4
+        if (banks == 2) { // 16K - Split SRAM Chips 8K/8K [ETROM = 16K (ONLY 1ST 8K BATTERY BACKED)]
+          for (int i = 0; i < (banks / 2); i++) { // Chip 1
+            write_prg_byte(0x5113, i);
+            for (word address = 0; address < 0x2000; address += 512) { // 8K
+              writeMMC5RAM(base, address, ramFile);
+            }
+          }
+          for (int j = 4; j < (banks / 2) + 4; j++) { // Chip 2
+            write_prg_byte(0x5113, j);
+            for (word address = 0; address < 0x2000; address += 512) { // 8K
+              writeMMC5RAM(base, address, ramFile);
+            }
+          }
+        }
+        else { // 8K/32K Single SRAM Chip [EKROM = 8K BATTERY BACKED, EWROM = 32K BATTERY BACKED]
+          for (int i = 0; i < banks; i++) { // banks = 1 or 4
+            write_prg_byte(0x5113, i);
+            for (word address = 0; address < 0x2000; address += 512) { // 8K
+              writeMMC5RAM(base, address, ramFile);
+            }
+          }
+        }
+        break;
 
+      case 16: // 256-byte EEPROM 24C02
+      case 159: // 128-byte EEPROM 24C01 [Little Endian]
+        if (mapper == 159)
+          eepsize = 128;
+        else
+          eepsize = 256;
+        ramFile.read(sdBuffer, eepsize);
+        for (word address = 0; address < eepsize; address++) {
+          EepromWRITE(address);
+          if ((address % 128) == 0)
+            display_Clear();
+          print_Msg(F("."));
+          display_Update();
+        }
+        break;
+
+      case 19:
+        if (ramsize == 2) { // PRG RAM 128B
+          ramFile.read(sdBuffer, 128);
+          for (int x = 0; x < 128; x++) {
+            write_ram_byte(0xF800, x); // PRG RAM ENABLE
+            write_prg_byte(0x4800, sdBuffer[x]); // DATA PORT
+          }
+        }
+        else { // SRAM 8K
+          for (int i = 0; i < 64; i++) { // Init Register
+            write_ram_byte(0xF800, 0x40); // PRG RAM WRITE ENABLE
+          }
+          write_ram_byte(0xF800, 0x40); // PRG RAM WRITE ENABLE
+          for (word address = 0; address < 0x2000; address += 512) { // 8K
+            ramFile.read(sdBuffer, 512);
+            for (int x = 0; x < 512; x++) {
+              write_prg_byte(base + address + x, sdBuffer[x]);
+            }
+          }
+          write_ram_byte(0xF800, 0x0F); // PRG RAM WRITE PROTECT
+        }
+        break;
+
+      case 80: // 1K
+        write_prg_byte(0x7EF8, 0xA3); // PRG RAM ENABLE 0
+        write_prg_byte(0x7EF9, 0xA3); // PRG RAM ENABLE 1
+        for (word address = 0x1F00; address < 0x2000; address += 512) { // PRG RAM 1K ($7F00-$7FFF)
+          ramFile.read(sdBuffer, 128);
+          for (int x = 0; x < 128; x++) {
+            write_prg_byte(base + address + x, sdBuffer[x]);
+          }
+        }
+        write_prg_byte(0x7EF8, 0xFF); // PRG RAM DISABLE 0
+        write_prg_byte(0x7EF9, 0xFF); // PRG RAM DISABLE 1
+        break;
+
+      case 82: // 5K
+        write_prg_byte(0x7EF7, 0xCA); // PRG RAM ENABLE 0 ($6000-$67FF)
+        write_prg_byte(0x7EF8, 0x69); // PRG RAM ENABLE 1 ($6800-$6FFF)
+        write_prg_byte(0x7EF9, 0x84); // PRG RAM ENABLE 2 ($7000-$73FF)
+        for (word address = 0x0; address < 0x1400; address += 1024) { // PRG RAM 5K ($6000-$73FF)
+          ramFile.read(sdBuffer, 512);
+          firstbyte = sdBuffer[0];
+          for (int x = 0; x < 512; x++)
+            write_prg_byte(base + address + x, sdBuffer[x]);
+          ramFile.read(sdBuffer, 512);
+          for (int x = 0; x < 512; x++)
+            write_prg_byte(base + address + x + 512, sdBuffer[x]);
+          write_prg_byte(base + address, firstbyte); // REWRITE 1ST BYTE
+        }
+        write_prg_byte(0x7EF7, 0xFF); // PRG RAM DISABLE 0 ($6000-$67FF)
+        write_prg_byte(0x7EF8, 0xFF); // PRG RAM DISABLE 1 ($6800-$6FFF)
+        write_prg_byte(0x7EF9, 0xFF); // PRG RAM DISABLE 2 ($7000-$73FF)
+        break;
+
+      default:
+        if (mapper == 118) // 8K
+          write_prg_byte(0xA001, 0x80); // PRG RAM CHIP ENABLE - Chip Enable, Allow Writes
+        else if ((mapper == 21) || (mapper == 25)) // 8K
+          write_prg_byte(0x8000, 0);
+        else if (mapper == 26) // 8K
+          write_prg_byte(0xB003, 0x80); // PRG RAM ENABLE
+        //            else if (mapper == 68) // 8K
+        //              write_reg_byte(0xF000, 0x10); // PRG RAM ENABLE [WRITE RAM SAFE]
+        else if (mapper == 69) { // 8K
+          write_prg_byte(0x8000, 8); // Command Register - PRG Bank 0
+          write_prg_byte(0xA000, 0xC0); // Parameter Register - PRG RAM Enabled, PRG RAM, Bank 0 to $6000-$7FFF
+        }
+        else if (mapper == 85) // 8K
+          write_ram_byte(0xE000, 0x80); // PRG RAM ENABLE
+        else if (mapper == 153) // 8K
+          write_prg_byte(0x800D, 0x20); // PRG RAM Chip Enable
+        for (word address = 0; address < 0x2000; address += 512) { // 8K
+          ramFile.read(sdBuffer, 512);
+          for (int x = 0; x < 512; x++) {
+            write_prg_byte(base + address + x, sdBuffer[x]);
+          }
+        }
+        if (mapper == 118) // 8K
+          write_prg_byte(0xA001, 0xC0); // PRG RAM CHIP ENABLE - Chip Enable, Write Protect
+        else if (mapper == 26) // 8K
+          write_prg_byte(0xB003, 0); // PRG RAM DISABLE
+        //            else if (mapper == 68) // 8K
+        //              write_reg_byte(0xF000, 0x00); // PRG RAM DISABLE [WRITE RAM SAFE]
+        else if (mapper == 69) { // 8K
+          write_prg_byte(0x8000, 8); // Command Register - PRG Bank 0
+          write_prg_byte(0xA000, 0); // Parameter Register - PRG RAM Disabled, PRG ROM, Bank 0 to $6000-$7FFF
+        }
+        else if (mapper == 85) // 8K
+          write_reg_byte(0xE000, 0); // PRG RAM DISABLE [WRITE RAM SAFE]
+        break;
     }
-    else {
-      print_Error(F("SD ERROR"), true);
-    }
+    ramFile.close();
+    LED_GREEN_ON;
+
+    println_Msg(F(""));
+    println_Msg(F("RAM FILE WRITTEN!"));
+    display_Update();
   }
 
   display_Clear();
 
   LED_RED_OFF;
   LED_GREEN_OFF;
-  sd.chdir(); // root
+  chdirToRoot(); // root
   filePath[0] = '\0'; // Reset filePath
 }
 
@@ -3157,7 +3107,7 @@ void writeFLASH() {
     fileBrowser(F("Select FLASH File"));
     word base = 0x8000;
 
-    sd.chdir();
+    chdirToRoot();
     sprintf(filePath, "%s/%s", filePath, fileName);
 
     LED_RED_ON;
@@ -3168,63 +3118,58 @@ void writeFLASH() {
     display_Update();
 
     //open file on sd card
-    if (sdFile.open(filePath, O_READ)) {
-      banks = int_pow(2, prgsize); // 256K/512K
-      for (int i = 0; i < banks; i++) { // 16K Banks
-        for (word sector = 0; sector < 0x4000; sector += 0x1000) { // 4K Sectors ($8000/$9000/$A000/$B000)
-          // Sector Erase
-          NESmaker_SectorErase(i, base + sector);
-          delay(18); // Typical 18ms
-          for (byte j = 0; j < 2; j++) { // Confirm erase twice
-            do {
-              bytecheck = read_prg_byte(base + sector);
-              delay(18);
-            }
-            while (bytecheck != 0xFF);
+    SafeSDFile flashFile = SafeSDFile::openForReading(filePath);
+
+    banks = int_pow(2, prgsize); // 256K/512K
+    for (int i = 0; i < banks; i++) { // 16K Banks
+      for (word sector = 0; sector < 0x4000; sector += 0x1000) { // 4K Sectors ($8000/$9000/$A000/$B000)
+        // Sector Erase
+        NESmaker_SectorErase(i, base + sector);
+        delay(18); // Typical 18ms
+        for (byte j = 0; j < 2; j++) { // Confirm erase twice
+          do {
+            bytecheck = read_prg_byte(base + sector);
+            delay(18);
           }
-          // Program Byte
-          for (word addr = 0x0; addr < 0x1000; addr += 512) {
-            sdFile.read(sdBuffer, 512);
-            for (int x = 0; x < 512; x++) {
-              word location = base + sector + addr + x;
-              NESmaker_ByteProgram(i, location, sdBuffer[x]);
-              delayMicroseconds(14); // Typical 14us
-              for (byte k = 0; k < 2; k++) { // Confirm write twice
-                do {
-                  bytecheck = read_prg_byte(location);
-                  delayMicroseconds(14);
-                }
-                while (bytecheck != sdBuffer[x]);
+          while (bytecheck != 0xFF);
+        }
+        // Program Byte
+        for (word addr = 0x0; addr < 0x1000; addr += 512) {
+          flashFile.read(sdBuffer, 512);
+          for (int x = 0; x < 512; x++) {
+            word location = base + sector + addr + x;
+            NESmaker_ByteProgram(i, location, sdBuffer[x]);
+            delayMicroseconds(14); // Typical 14us
+            for (byte k = 0; k < 2; k++) { // Confirm write twice
+              do {
+                bytecheck = read_prg_byte(location);
+                delayMicroseconds(14);
               }
+              while (bytecheck != sdBuffer[x]);
             }
           }
         }
-#ifdef OLED
-        display.print(F("*"));
-        display.display();
-#else
-        Serial.print(F("*"));
-        if ((i != 0) && ((i + 1) % 16 == 0))
-          Serial.println(F(""));
-#endif
       }
-      sdFile.close();
-      LED_GREEN_ON;
+#ifdef OLED
+      display.print(F("*"));
+      display.display();
+#else
+      Serial.print(F("*"));
+      if ((i != 0) && ((i + 1) % 16 == 0))
+        Serial.println(F(""));
+#endif
+    }
+    flashFile.close();
+    LED_GREEN_ON;
 
-      println_Msg(F(""));
-      println_Msg(F("FLASH FILE WRITTEN!"));
-      display_Update();
-    }
-    else {
-      LED_RED_ON;
-      println_Msg(F("SD ERROR"));
-      display_Update();
-    }
+    println_Msg(F(""));
+    println_Msg(F("FLASH FILE WRITTEN!"));
+    display_Update();
   }
   display_Clear();
   LED_RED_OFF;
   LED_GREEN_OFF;
-  sd.chdir(); // root
+  chdirToRoot(); // root
   filePath[0] = '\0'; // Reset filePath
 }
 

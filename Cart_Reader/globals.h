@@ -2,8 +2,8 @@
 #define cartreader_globals_h
 
 #include <Adafruit_SSD1306.h>
-#include <SdFat.h>
 #include <si5351.h>
+// #include "SD.h"
 
 extern char ver[5];
 
@@ -15,9 +15,6 @@ extern Si5351 clockgen;
 // Graphic I2C LCD
 extern Adafruit_SSD1306 display;
 
-extern SdFat sd;
-extern SdFile myFile;
-
 // Array that holds the data
 extern byte sdBuffer[512];
 
@@ -28,7 +25,6 @@ extern char folder[36];
 // Global so that reading user input can send some clock pulses to the N64 Eeprom in case it locked up
 extern byte saveType;
 
-extern boolean ignoreError;
 extern char flashid[5];
 extern byte numBanks;
 extern unsigned long sramSize;

@@ -99,39 +99,6 @@ void draw_progressbar(uint32_t processed, uint32_t total) {
   }
 }
 
-void print_Error(const __FlashStringHelper *errorMessage, boolean forceReset) {
-  errorLvl = 1;
-  rgb.setColor(255, 0, 0);
-  println_Msg(errorMessage);
-  display_Update();
-
-  if (forceReset) {
-#ifdef enable_OLED
-    println_Msg(F(""));
-    println_Msg(F("Press Button..."));
-    display_Update();
-    wait();
-    if (ignoreError == 0) {
-      resetArduino();
-    }
-    else {
-      ignoreError = 0;
-      display_Clear();
-      println_Msg(F(""));
-      println_Msg(F(""));
-      println_Msg(F(""));
-      println_Msg(F("  Error Overwrite"));
-      display_Update();
-      delay(2000);
-    }
-#else
-    println_Msg(F("Fatal Error, please reset"));
-    while (1)
-      ;
-#endif
-  }
-}
-
 void wait() {
 #ifdef enable_OLED
   wait_btn();
