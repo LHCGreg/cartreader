@@ -112,7 +112,7 @@ page:
     wait();
   }
 
-  for (byte i = 0; i < 8; i++ ) {
+  for (byte i = 0; i < count; i++ ) {
     // Copy short string into fileOptions
     snprintf( answers[i], FILEOPTS_LENGTH, "%s", fileOptions[ ((currPage - 1) * 7 + i)] );
   }
