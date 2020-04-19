@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <EEPROM.h>
+#include <avr/io.h>
 
 // soft reset Arduino: jumps to 0
 // using the watchdog timer would be more elegant but some Mega2560 bootloaders are buggy with it
@@ -20,6 +21,23 @@ void dataIn() {
   DDRC = 0x00;
   // Pullups
   PORTC = 0xFF;
+}
+
+void ensureEndsInSlash(String &path) {
+  if (path[path.length() - 1] != '/') {
+    path.concat('/');
+  }
+}
+
+uint16_t int_pow(uint16_t base, uint8_t exp) {
+  uint16_t result = 1;
+  while (exp) {
+    if (exp & 1)
+      result *= base;
+    exp /= 2;
+    base *= base;
+  }
+  return result;
 }
 
 // Send a clock pulse of 2us length, 50% duty, 500kHz
@@ -105,6 +123,33 @@ uint8_t loadNESRAM() {
   uint8_t ram;
   EEPROM_readAnything(eepromAddress_NESRAM, ram);
   return ram;
+}
+
+uint32_t stringToNumber(const char *const str, int8_t &errorCode) {
+  const char *curCharPtr = str;
+  bool parsedAnyChars = false;
+  uint32_t number = 0;
+  errorCode = 0;
+
+  while (*curCharPtr != '\0') {
+    char curChar = *curCharPtr;
+    if (curChar < '0' || curChar > '9') {
+      errorCode = 1;
+      return 0;
+    }
+
+    uint32_t curDigit = curChar - '0';
+    number = number * 10 + curDigit;
+    parsedAnyChars = true;
+    curCharPtr++;
+  }
+
+  if (!parsedAnyChars) {
+    errorCode = 2;
+    return 0;
+  }
+
+  return number;
 }
 
 // CRC32 lookup table // 256 entries

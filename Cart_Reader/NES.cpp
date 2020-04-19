@@ -6,13 +6,10 @@
 // Pinout changes: LED and CIRAM_A10
 
 #include <Arduino.h>
-#include <SdFat.h>
-#include <Adafruit_GFX.h>
 #include "options.h"
 #include "NES.h"
-#include "OLED_menu.h"
 #include "filebrowser.h"
-#include "menu.h"
+#include "ui.h"
 #include "globals.h"
 #include "utils.h"
 #include "SD.h"
@@ -539,17 +536,6 @@ static void write_wram_byte(unsigned int address, uint8_t data) { // Mapper 5 (M
   set_address(0);
   // Set phi2 to high state to keep cartridge unreseted
   PHI2_HI;
-}
-
-int int_pow(int base, int exp) { // Power for int
-  int result = 1;
-  while (exp) {
-    if (exp & 1)
-      result *= base;
-    exp /= 2;
-    base *= base;
-  }
-  return result;
 }
 
 /******************************************

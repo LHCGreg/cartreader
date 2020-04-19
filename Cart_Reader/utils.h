@@ -50,6 +50,9 @@ String pathJoin(const String &path, const concatable &otherPath) {
   return result;
 }
 
+// Power for int
+uint16_t int_pow(uint16_t base, uint8_t exp);
+
 void pulseClock_N64(unsigned int times);
 
 // CRC32 lookup table // 256 entries
