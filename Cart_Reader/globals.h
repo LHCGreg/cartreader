@@ -1,9 +1,7 @@
 #ifndef cartreader_globals_h
 #define cartreader_globals_h
 
-#include <Adafruit_SSD1306.h>
 #include <si5351.h>
-// #include "SD.h"
 
 extern char ver[5];
 
@@ -12,15 +10,39 @@ extern bool errorLvl;
 // Adafruit Clock Generator
 extern Si5351 clockgen;
 
-// Graphic I2C LCD
-extern Adafruit_SSD1306 display;
-
 // Array that holds the data
 extern byte sdBuffer[512];
 
 //remember folder number to create a new folder for every save
 extern int foldern;
 extern char folder[36];
+
+enum class CartReaderMode : uint8_t {
+  N64Cart = 0,
+  N64Controller = 1,
+  SNES = 2,
+  SFM = 3,
+  SFMFlash = 4,
+  SFMGame = 5,
+  GB = 6,
+  FLASH8 = 7,
+  FLASH16 = 8,
+  GBA = 9,
+  GBM = 10,
+  MDCart = 11,
+  EPROM = 12,
+  PCE = 13,
+  SV = 14,
+  NES = 15,
+  SMS = 16,
+  SegaCD = 17,
+  GBSmart = 18,
+  GBSmartFlash = 19,
+  GBSmartGame = 20,
+  WS = 21,
+};
+
+extern CartReaderMode mode;
 
 // Global so that reading user input can send some clock pulses to the N64 Eeprom in case it locked up
 extern byte saveType;
@@ -43,31 +65,5 @@ extern byte eeptemp;
 
 // Variable to count errors
 extern unsigned long writeErrors;
-
-// Operation mode
-extern byte mode;
-
-#define mode_N64_Cart 0
-#define mode_N64_Controller 1
-#define mode_SNES 2
-#define mode_SFM 3
-#define mode_SFM_Flash 4
-#define mode_SFM_Game 5
-#define mode_GB 6
-#define mode_FLASH8 7
-#define mode_FLASH16 8
-#define mode_GBA 9
-#define mode_GBM 10
-#define mode_MD_Cart 11
-#define mode_EPROM 12
-#define mode_PCE 13
-#define mode_SV 14
-#define mode_NES 15
-#define mode_SMS 16
-#define mode_SEGA_CD 17
-#define mode_GB_GBSmart 18
-#define mode_GB_GBSmart_Flash 19
-#define mode_GB_GBSmart_Game 20
-#define mode_WS 21
 
 #endif

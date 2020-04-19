@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <SdFat.h>
-#include "menu.h"
+#include "ui.h"
 
 void initializeSD(uint8_t chipSelectPin, const SPISettings &speed);
 
@@ -26,8 +26,7 @@ class SafeSDFile {
   void readOrDie(byte *buffer, size_t numBytes, const printable &errorMessage) {
     size_t numBytesRead = read(buffer, numBytes);
     if (numBytesRead != numBytes) {
-      display_Clear();
-      print_Error(errorMessage);
+      ui->printErrorAndAbort(errorMessage);
     }
   }
 

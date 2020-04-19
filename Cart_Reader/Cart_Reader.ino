@@ -48,8 +48,7 @@
 #include <Arduino.h>
 #include "globals.h"
 #include "options.h"
-#include "menu.h"
-#include "OLED_menu.h"
+#include "ui.h"
 #include "SD.h"
 #include "utils.h"
 #include "RGB_LED.h"
@@ -67,103 +66,99 @@
 #include "SV.h"
 #include "WS.h"
 
-/******************************************
-  Menu
-*****************************************/
-// Main menu
-static const char modeItem1[] PROGMEM = "Add-ons";
-static const char modeItem2[] PROGMEM = "Super Nintendo";
-static const char modeItem3[] PROGMEM = "Mega Drive";
-static const char modeItem4[] PROGMEM = "Nintendo 64";
-static const char modeItem5[] PROGMEM = "Game Boy";
-static const char modeItem6[] PROGMEM = "About";
-static const char modeItem7[] PROGMEM = "Reset";
-static const char* const modeOptions[] PROGMEM = {modeItem1, modeItem2, modeItem3, modeItem4, modeItem5, modeItem6, modeItem7};
-
-// Add-ons submenu
-static const char addonsItem1[] PROGMEM = "NES/Famicom";
-static const char addonsItem2[] PROGMEM = "Flashrom Programmer";
-static const char addonsItem3[] PROGMEM = "PC Engine/TG16";
-static const char addonsItem4[] PROGMEM = "Sega Master System";
-static const char addonsItem6[] PROGMEM = "WonderSwan";
-static const char addonsItem5[] PROGMEM = "Reset";
-static const char* const addonsOptions[] PROGMEM = {addonsItem1, addonsItem2, addonsItem3, addonsItem4, addonsItem6, addonsItem5};
+// Info Screen
+void aboutScreen() {
+  String aboutMessage(F("Cartridge Reader\ngithub.com/sanni\n2019 Version "));
+  aboutMessage.concat(ver);
+  ui->displayAbout(aboutMessage);
+}
 
 // All included slots
 void mainMenu() {
-  // create menu with title and 6 options to choose from
-  unsigned char modeMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(modeOptions, 7);
-  modeMenu = question_box(F("Cartridge Reader"), menuOptions, 7, 0);
+  while (true) {
+    const __FlashStringHelper *item_Addons = F("Add-ons");
+    const __FlashStringHelper *item_SNES = F("Super Nintendo");
+    const __FlashStringHelper *item_Megadrive = F("Mega Drive");
+    const __FlashStringHelper *item_N64 = F("Nintendo 64");
+    const __FlashStringHelper *item_GameBoy = F("Game Boy");
+    const __FlashStringHelper *item_About = F("About");
+    const __FlashStringHelper *item_Reset = F("Reset");
+    const __FlashStringHelper *menu[] = {
+      item_Addons,
+      item_SNES,
+      item_Megadrive,
+      item_N64,
+      item_GameBoy,
+      item_About,
+      item_Reset,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (modeMenu)
-  {
-    case 0:
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Cartridge Reader"), menu, ARRAY_LENGTH(menu), item_Addons);
+
+    if (answer == item_Addons) {
       addonsMenu();
-      break;
-
-    case 1:
-      snsMenu();
-      break;
-
-    case 2:
+    }
+    else if (answer == item_SNES) {
+      snesMenu();
+    }
+    else if (answer == item_Megadrive) {
       mdMenu();
-      break;
-
-    case 3:
+    }
+    else if (answer == item_N64) {
       n64Menu();
-      break;
-
-    case 4:
+    }
+    else if (answer == item_GameBoy) {
       gbxMenu();
-      break;
-
-    case 5:
+    }
+    else if (answer == item_About) {
       aboutScreen();
-      break;
-
-    case 6:
+    }
+    else if (answer == item_Reset) {
       resetArduino();
-      break;
+    }
   }
 }
 
 // Everything that needs an adapter
 void addonsMenu() {
-  // create menu with title and 5 options to choose from
-  unsigned char addonsMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(addonsOptions, 6);
-  addonsMenu = question_box(F("Choose Adapter"), menuOptions, 6, 0);
+  while (true) {
+    const __FlashStringHelper *item_NES = F("NES/Famicom");
+    const __FlashStringHelper *item_Flashrom = F("Flashrom Programmer");
+    const __FlashStringHelper *item_PCE = F("PC Engine/TG16");
+    const __FlashStringHelper *item_SMS = F("Sega Master System");
+    const __FlashStringHelper *item_WS = F("WonderSwan");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_NES,
+      item_Flashrom,
+      item_PCE,
+      item_SMS,
+      item_WS,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (addonsMenu)
-  {
-    case 0:
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Choose Adapter"), menu, ARRAY_LENGTH(menu), item_NES);
+
+    if (answer == item_NES) {
       nesMenu();
-      break;
-
-    case 1:
+    }
+    else if (answer == item_Flashrom) {
       flashMenu();
-      break;
-
-    case 2:
+    }
+    else if (answer == item_PCE) {
       pcsMenu();
-      break;
-
-    case 3:
+    }
+    else if (answer == item_SMS) {
       smsMenu();
-      break;
-
-    case 4:
-      setup_WS();
-      break;
-
-    default:
-      resetArduino();
-      break;
+    }
+    else if (answer == item_WS) {
+      wsMenu();
+    }
+    else if (answer == item_Back) {
+      break; // exit this menu
+    }
   }
 }
 
@@ -181,66 +176,7 @@ void setup() {
   // Read current folder number out of eeprom
   foldern = loadFolderNumber();
 
-#ifdef enable_OLED
-  // GLCD
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
-
-  // Clear the screen buffer.
-  display_Clear();
-
-#ifndef fast_start
-  delay(100);
-
-  // Draw line
-  display.drawLine(0, 32, 127, 32, WHITE);
-  display_Update();
-  delay(100);
-
-  // Initialize LED
-  rgb.setColor(0, 0, 0);
-
-  // Clear the screen.
-  display_Clear();
-  display_Update();
-  delay(25);
-
-  // Draw the Logo
-  display.drawBitmap(28, 0, icon, 72, 64, 1);
-  for (int s = 1; s < 64; s += 2) {
-    // Draw Scanlines
-    display.drawLine(0, s, 127, s, BLACK);
-  }
-  display_Update();
-  delay(50);
-
-  // Clear the screen.
-  display_Clear();
-  display_Update();
-  delay(25);
-
-  // Draw the Logo
-  display.drawBitmap(28, 0, icon, 72, 64, 1);
-  for (int s = 1; s < 64; s += 2) {
-    // Draw Scanlines
-    display.drawLine(0, s, 127, s, BLACK);
-  }
-  display.setCursor(100, 55);
-  display.println(ver);
-  display_Update();
-  delay(200);
-#endif
-
-#else
-  // Serial Begin
-  Serial.begin(9600);
-  Serial.println(F("Cartridge Reader"));
-  Serial.println(F("2019 sanni"));
-  Serial.println("");
-  // LED Error
-  rgb.setColor(0, 0, 255);
-#endif
+  ui->initialize();
 
   initializeSD(sdChipSelectPin, sdSpeed);
 
@@ -251,85 +187,7 @@ void setup() {
   Main loop
 *****************************************/
 void loop() {
-  if (mode == mode_N64_Controller) {
-    n64ControllerMenu();
-  }
-  else if (mode == mode_N64_Cart) {
-    n64CartMenu();
-  }
-  else if (mode == mode_SNES) {
-    snesMenu();
-  }
-  else if (mode == mode_FLASH8) {
-    flashromMenu8();
-  }
-  else if (mode == mode_FLASH16) {
-    flashromMenu16();
-  }
-  else if (mode == mode_EPROM) {
-    epromMenu();
-  }
-  else if (mode == mode_SFM) {
-    sfmMenu();
-  }
-  else if (mode == mode_GB) {
-    gbMenu();
-  }
-  else if (mode == mode_GBA) {
-    gbaMenu();
-  }
-  else if (mode == mode_SFM_Flash) {
-    sfmFlashMenu();
-  }
-  else if (mode == mode_SFM_Game) {
-    sfmGameOptions();
-  }
-  else if (mode == mode_GBM) {
-    gbmMenu();
-  }
-  else if (mode == mode_MD_Cart) {
-    mdCartMenu();
-  }
-  else if (mode == mode_PCE) {
-    pceMenu();
-  }
-  else if (mode == mode_SV) {
-    svMenu();
-  }
-  else if (mode == mode_NES) {
-    nesMenu();
-  }
-  else if (mode == mode_SMS) {
-    smsMenu();
-  }
-  else if (mode == mode_SEGA_CD) {
-    segaCDMenu();
-  }
-  else if (mode == mode_GB_GBSmart) {
-    gbSmartMenu();
-  }
-  else if (mode == mode_GB_GBSmart_Flash) {
-    gbSmartFlashMenu();
-  }
-  else if (mode == mode_GB_GBSmart_Game) {
-    gbSmartGameOptions();
-  }
-  else if (mode == mode_WS) {
-    wsMenu();
-  }
-  else {
-    display_Clear();
-    println_Msg(F("Menu Error"));
-    println_Msg("");
-    println_Msg("");
-    print_Msg(F("Mode = "));
-    print_Msg(mode);
-    println_Msg(F(""));
-    println_Msg(F("Press Button..."));
-    display_Update();
-    wait();
-    resetArduino();
-  }
+  startMenu();
 }
 
 //******************************************

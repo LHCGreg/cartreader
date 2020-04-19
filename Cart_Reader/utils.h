@@ -30,6 +30,26 @@ void dataOut();
 // Switch data pins to read
 void dataIn();
 
+// get length of fixed size array
+#define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
+
+// Parses the null-terminated string str as an unsigned number.
+// Sets errorCode to 0 and returns the parsed number on success.
+// Sets errorCode to a non-zero value on failure.
+uint32_t stringToNumber(const char *const str, int8_t &errorCode);
+
+void ensureEndsInSlash(String &path);
+
+template <class concatable>
+String pathJoin(const String &path, const concatable &otherPath) {
+  String result = path;
+  if (result.length() != 0) {
+    ensureEndsInSlash(result);
+  }
+  result.concat(otherPath);
+  return result;
+}
+
 void pulseClock_N64(unsigned int times);
 
 // CRC32 lookup table // 256 entries
