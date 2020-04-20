@@ -50,6 +50,19 @@ String pathJoin(const String &path, const concatable &otherPath) {
   return result;
 }
 
+template <class concatable>
+void pathJoinInPlace(String &path, const concatable &otherPath) {
+  if (path.length() != 0) {
+    ensureEndsInSlash(path);
+  }
+  path.concat(otherPath);
+}
+
+String pathGetDir(const String &path);
+
+String getNextOutputPath(const String &console, const String &fileType, const String &gameName, const String &extension);
+String getNextOutputPathAndPrintMessage(const String &console, const String &fileType, const String &gameName, const String &extension);
+
 // Power for int
 uint16_t int_pow(uint16_t base, uint8_t exp);
 

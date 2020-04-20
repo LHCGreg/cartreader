@@ -1,7 +1,6 @@
 #include "globals.h"
 #include <Arduino.h>
 #include <si5351.h>
-// #include "SD.h"
 
 char ver[5] = "4.6a";
 
@@ -12,10 +11,6 @@ Si5351 clockgen;
 
 // Array that holds the data
 byte sdBuffer[512];
-
-//remember folder number to create a new folder for every save
-int foldern;
-char folder[36];
 
 // Operation mode
 CartReaderMode mode;

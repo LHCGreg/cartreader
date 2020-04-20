@@ -110,12 +110,35 @@ void testIntPow() {
   TEST_ASSERT_EQUAL_UINT16(250000, result);
 }
 
+void testPathGetDir() {
+  TEST_ASSERT_EQUAL_STRING("", pathGetDir("").c_str());
+  TEST_ASSERT_EQUAL_STRING("", pathGetDir("foo").c_str());
+  TEST_ASSERT_EQUAL_STRING("", pathGetDir("foo/").c_str());
+  TEST_ASSERT_EQUAL_STRING("foo", pathGetDir("foo/bar").c_str());
+  TEST_ASSERT_EQUAL_STRING("foo", pathGetDir("foo/bar/").c_str());
+  TEST_ASSERT_EQUAL_STRING("foo", pathGetDir("foo//bar").c_str());
+  TEST_ASSERT_EQUAL_STRING("foo", pathGetDir("foo//bar//").c_str());
+  TEST_ASSERT_EQUAL_STRING("foo/bar", pathGetDir("foo/bar/baz").c_str());
+  TEST_ASSERT_EQUAL_STRING("foo/bar", pathGetDir("foo/bar/baz/").c_str());
+  TEST_ASSERT_EQUAL_STRING("foo//bar", pathGetDir("foo//bar/baz").c_str());
+  TEST_ASSERT_EQUAL_STRING("/", pathGetDir("/").c_str());
+  TEST_ASSERT_EQUAL_STRING("/", pathGetDir("//").c_str());
+  TEST_ASSERT_EQUAL_STRING("/", pathGetDir("/foo").c_str());
+  TEST_ASSERT_EQUAL_STRING("/", pathGetDir("/foo/").c_str());
+  TEST_ASSERT_EQUAL_STRING("/foo", pathGetDir("/foo/bar").c_str());
+  TEST_ASSERT_EQUAL_STRING("/foo", pathGetDir("/foo/bar/").c_str());
+  TEST_ASSERT_EQUAL_STRING("/foo/bar", pathGetDir("/foo/bar/baz").c_str());
+  TEST_ASSERT_EQUAL_STRING("/foo/bar", pathGetDir("/foo/bar/baz/").c_str());
+  TEST_ASSERT_EQUAL_STRING("//foo//bar", pathGetDir("//foo//bar//baz").c_str());
+}
+
 int main(int arc, char **argv) {
   UNITY_BEGIN();
   RUN_TEST(testStringToNumber);
   RUN_TEST(testEnsureEndsInSlash);
   RUN_TEST(testPathJoin);
   RUN_TEST(testIntPow);
+  RUN_TEST(testPathGetDir);
   UNITY_END();
 
   return 0;

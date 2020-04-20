@@ -7,7 +7,7 @@ SdFat sd;
 
 void initializeSD(uint8_t chipSelectPin, const SPISettings &speed) {
   if (!sd.begin(chipSelectPin, speed)) {
-    ui->printErrorAndAbort(F("SD Error"));
+    ui->printErrorAndAbort(F("SD Error"), true);
   }
 
   // Print SD Info
@@ -36,13 +36,13 @@ SafeSDFile::SafeSDFile(SdFat &sd, const String &path, oflag_t mode)
       String errorMessage = String(F("ERROR CREATING "));
       errorMessage.concat(path);
       errorMessage.concat(F("\nSD ERROR"));
-      ui->printErrorAndAbort(errorMessage);
+      ui->printErrorAndAbort(errorMessage, true);
     }
     else {
       String errorMessage = String(F("ERROR OPENING "));
       errorMessage.concat(path);
       errorMessage.concat(F("\nSD ERROR"));
-      ui->printErrorAndAbort(errorMessage);
+      ui->printErrorAndAbort(errorMessage, true);
     }
   }
 }
@@ -68,6 +68,10 @@ SafeSDFile SafeSDFile::openForReading(const String &path) {
 }
 
 SafeSDFile SafeSDFile::openForCreating(const String &path) {
+  String containingDir = pathGetDir(path);
+  if (containingDir.length() > 0 && containingDir != "/") {
+    mkdir(containingDir, true);
+  }
   return SafeSDFile(sd, path, O_RDWR | O_CREAT | O_EXCL);
 }
 
@@ -88,7 +92,7 @@ size_t SafeSDFile::read(byte *buffer, size_t numBytes) {
     String errorMessage = F("ERROR READING ");
     errorMessage.concat(m_path);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
   return numBytesRead;
 }
@@ -107,7 +111,7 @@ void SafeSDFile::write(byte *buffer, size_t numBytes) {
     String errorMessage = F("ERROR WRITING ");
     errorMessage.concat(m_path);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
   // numBytesWritten is always numBytes if it succeeds.
 }
@@ -124,7 +128,7 @@ void SafeSDFile::seekCur(int32_t offset) {
     errorMessage.concat(F(" BYTES FROM CURRENT IN "));
     errorMessage.concat(m_path);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 }
 
@@ -136,7 +140,7 @@ void SafeSDFile::seekSet(uint32_t pos) {
     errorMessage.concat(F(" IN "));
     errorMessage.concat(m_path);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 }
 
@@ -147,7 +151,7 @@ SafeSDFile SafeSDFile::readNextDirectoryEntry() {
     String errorMessage = F("ERROR READING DIR ");
     errorMessage.concat(m_path);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 
   if (success) {
@@ -161,7 +165,7 @@ SafeSDFile SafeSDFile::readNextDirectoryEntry() {
 void SafeSDFile::getName(char *outName, size_t size) {
   bool success = m_file.getName(outName, size);
   if (!success) {
-    ui->printErrorAndAbort(F("ERROR GETTING NAME OF FILE\nSD ERROR"));
+    ui->printErrorAndAbort(F("ERROR GETTING NAME OF FILE\nSD ERROR"), true);
   }
 }
 
@@ -201,7 +205,7 @@ void SafeSDFile::renameInCurrentDir(const String &newName) {
     errorMessage.concat(F(" TO "));
     errorMessage.concat(newName);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 }
 
@@ -213,7 +217,7 @@ void SafeSDFile::rename(SafeSDFile &dirFile, const String &newName) {
     errorMessage.concat(F(" TO "));
     errorMessage.concat(newName);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 }
 
@@ -223,7 +227,7 @@ void SafeSDFile::remove() {
     String errorMessage = F("ERROR DELETING ");
     errorMessage.concat(m_path);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 }
 
@@ -237,7 +241,7 @@ void SafeSDFile::close() {
     String errorMessage = F("ERROR CLOSING ");
     errorMessage.concat(m_path);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 
   m_dontClose = true;
@@ -256,7 +260,7 @@ void mkdir(const char *path, bool createParentDirectories) {
     String errorMessage = F("ERROR CREATING ");
     errorMessage.concat(path);
     errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 }
 
@@ -267,7 +271,7 @@ void mkdir(const String &path, bool createParentDirectories) {
 void chdirToRoot() {
   bool success = sd.chdir();
   if (!success) {
-    ui->printErrorAndAbort(F("CHDIR TO ROOT FAILED\nSD ERROR"));
+    ui->printErrorAndAbort(F("CHDIR TO ROOT FAILED\nSD ERROR"), true);
   }
 }
 
@@ -277,7 +281,7 @@ void chdir(const char *path) {
     String errorMessage = F("CHDIR ");
     errorMessage.concat(path);
     errorMessage.concat(F(" FAILED\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage);
+    ui->printErrorAndAbort(errorMessage, true);
   }
 }
 

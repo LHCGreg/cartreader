@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <EEPROM.h>
 #include <avr/io.h>
+#include "ui.h"
 
 // soft reset Arduino: jumps to 0
 // using the watchdog timer would be more elegant but some Mega2560 bootloaders are buggy with it
@@ -27,6 +28,102 @@ void ensureEndsInSlash(String &path) {
   if (path[path.length() - 1] != '/') {
     path.concat('/');
   }
+}
+
+String pathGetDir(const String &path) {
+  //   empty string -> empty string
+  //   foo -> empty string [processedNonSlashChar = true, lastSlashFound = false, lastSlashIndex = ?]
+  //   foo/ -> empty string [processedNonSlashChar = true, lastSlashFound = false, lastSlashIndex = ?]
+  //   foo/bar -> foo [processedNonSlashChar = true, lastSlashFound = true, lastSlashIndex = 3]
+  //   foo/bar/ -> foo [processedNonSlashChar = true, lastSlashFound = true, lastSlashIndex = 3]
+  //   foo//bar -> foo [processedNonSlashChar = true, lastSlashFound = true, lastSlashIndex = 3]
+  //   foo//bar// -> foo [processedNonSlashChar = true, lastSlashFound = true, lastSlashIndex = 3]
+  //   foo/bar/baz -> foo/bar
+  //   foo/bar/baz/ -> foo/bar
+  //   / -> / [processedNonSlashChar = false, lastSlashFound = false, lastSlashIndex = ?]
+  //   // -> / or // [processedNonSlashChar = false, lastSlashFound = false, lastSlashIndex = ?]
+  //   /foo -> / [processedNonSlashChar = true, lastSlashFound = true, lastSlashIndex = 0]
+  //   /foo/ -> / [processedNonSlashChar = true, lastSlashFound = true, lastSlashIndex = 0]
+  //   /foo/bar -> /foo [processedNonSlashChar = true, lastSlashFound = true, lastSlashIndex = 4]
+  //   /foo/bar/ -> /foo [processedNonSlashChar = true, lastSlashFound = true, lastSlashIndex = 4]
+  //   /foo/bar/baz -> /foo/bar
+  //   /foo/bar/baz/ -> /foo/bar
+  if (path.length() == 0) {
+    return String();
+  }
+
+  // everything before last set of slashs, not counting a trailing set of slashes.
+
+  bool processedNonSlashChar = false;
+  bool lastSlashFound = false;
+  unsigned int lastSlashIndex;
+  for (unsigned int index = path.length() - 1; index >= 0; index--) {
+    if (!processedNonSlashChar && path[index] == '/') {
+      ;
+    }
+    else {
+      processedNonSlashChar = true;
+
+      if (path[index] == '/') {
+        lastSlashFound = true;
+        lastSlashIndex = index;
+      }
+      else if (lastSlashFound) {
+        break;
+      }
+    }
+
+    if (index == 0) {
+      // prevent underflow causing an infinite loop
+      break;
+    }
+  }
+
+  if (!processedNonSlashChar) {
+    // This refers to the root dir
+    return String(F("/"));
+  }
+  else if (!lastSlashFound || lastSlashIndex == 0) {
+    // Only one path component. return empty string is relative path or / if absolute path
+    if (path[0] == '/') {
+      return String(F("/"));
+    }
+    else {
+      return String();
+    }
+  }
+  else {
+    // return from beginning of string up to but not including lastSlashIndex
+    return path.substring(0, lastSlashIndex);
+  }
+}
+
+String getNextOutputPath(const String &console, const String &fileType, const String &gameName, const String &extension) {
+  String fileName(gameName);
+  fileName.concat(extension);
+
+  int16_t folderNumber = loadFolderNumber();
+
+  String outputFilePath(F("/"));
+  pathJoinInPlace(outputFilePath, console);
+  pathJoinInPlace(outputFilePath, fileType);
+  pathJoinInPlace(outputFilePath, gameName);
+  pathJoinInPlace(outputFilePath, String(folderNumber));
+  pathJoinInPlace(outputFilePath, fileName);
+
+  saveFolderNumber(folderNumber + 1);
+
+  return outputFilePath;
+}
+
+String getNextOutputPathAndPrintMessage(const String &console, const String &fileType, const String &gameName, const String &extension) {
+  String outputFilePath = getNextOutputPath(console, fileType, gameName, extension);
+
+  ui->clearOutput();
+  ui->printMsg(F("Saving to "));
+  ui->printMsg(outputFilePath);
+  ui->printlnMsg(F("..."));
+  ui->flushOutput();
 }
 
 uint16_t int_pow(uint16_t base, uint8_t exp) {

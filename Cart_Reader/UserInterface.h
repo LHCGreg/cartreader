@@ -49,10 +49,14 @@ class UserInterface {
   }
 
   template <class printableType>
-  [[noreturn]] void printErrorAndAbort(const printableType &errorMessage) {
+  [[noreturn]] void printErrorAndAbort(const printableType &errorMessage, bool clearOutput) {
     errorLvl = 1;
     rgb.setColor(255, 0, 0);
-    clearOutput();
+    
+    if (clearOutput) {
+      clearOutput();
+    }
+
     printlnMsg(errorMessage);
     flushOutput();
     forceReset();

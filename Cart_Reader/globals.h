@@ -13,10 +13,6 @@ extern Si5351 clockgen;
 // Array that holds the data
 extern byte sdBuffer[512];
 
-//remember folder number to create a new folder for every save
-extern int foldern;
-extern char folder[36];
-
 enum class CartReaderMode : uint8_t {
   N64Cart = 0,
   N64Controller = 1,

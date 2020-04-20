@@ -26,200 +26,189 @@ bool hiROM = 1;
 /******************************************
    Function prototypes
  *****************************************/
+String getNextFlashOutputPathAndPrintMessage();
 void id_Flash16();
 void setup_Flash16();
 void setup_Eprom();
 byte readByte_Flash(unsigned long myAddress);
 void idFlash29F032();
 void eraseFlash29F032();
-void writeFlash29F032();
+void writeFlash29F032(const String &inputFilePath);
 void busyCheck29F032(byte c);
-void writeFlash29F1610();
-void writeFlash29F1601();
+void writeFlash29F1610(const String &inputFilePath);
+void writeFlash29F1601(const String &inputFilePath);
 void idFlash29F1610();
 void eraseFlash29F1610();
 void busyCheck29F1610();
-void writeFlash29LV640();
-void writeFlash29GL(unsigned long sectorSize, byte bufferSize);
-void writeFlash29F800();
+void writeFlash29LV640(const String &inputFilePath);
+void writeFlash29GL(const String &inputFilePath, unsigned long sectorSize, byte bufferSize);
+void writeFlash29F800(const String &inputFilePath);
 void idFlash28FXXX();
 void eraseFlash28FXXX();
-void writeFlash28FXXX();
+void writeFlash28FXXX(const String &inputFilePath);
 void writeFlashE28FXXXJ3A(SafeSDFile &inputFile);
 void writeFlashLH28F0XX(SafeSDFile &inputFile);
 void blankcheck_Flash();
-void verifyFlash();
+void verifyFlash(const String &inputFilePath);
 void readFlash();
 void printFlash(int numBytes);
 void resetFlash8();
 void resetFlash16();
-void writeFlash16();
-void writeFlash16_29F1601();
+void writeFlash16(const String &inputFilePath);
+void writeFlash16_29F1601(const String &inputFilePath);
 void idFlash16();
 void eraseFlash16();
 void blankcheck16();
-void verifyFlash16();
+void verifyFlash16(const String &inputFilePath);
 void readFlash16();
 void printFlash16(int numBytes);
 void busyCheck16();
-void writeFlash16_29LV640();
+void writeFlash16_29LV640(const String &inputFilePath);
 void blankcheck_Eprom();
 void read_Eprom();
-void write_Eprom();
-void verify_Eprom();
+void write_Eprom(const String &inputFilePath);
+void verify_Eprom(const String &inputFilePath);
 void print_Eprom(int numBytes);
 
-/******************************************
-   Menu
- *****************************************/
-// Flash start menu
-static const char flashMenuItem1[] PROGMEM = "8bit Flash adapter";
-static const char flashMenuItem2[] PROGMEM = "Eprom adapter";
-static const char flashMenuItem3[] PROGMEM = "MX26L6420 adapter";
-static const char* const menuOptionsFlash[] PROGMEM = {flashMenuItem1, flashMenuItem2, flashMenuItem3};
-
-// 8bit Flash menu items
-static const char flash8MenuItem1[] PROGMEM = "Blankcheck";
-static const char flash8MenuItem2[] PROGMEM = "Erase";
-static const char flash8MenuItem3[] PROGMEM = "Read";
-static const char flash8MenuItem4[] PROGMEM = "Write";
-static const char flash8MenuItem5[] PROGMEM = "ID";
-static const char flash8MenuItem6[] PROGMEM = "Print";
-static const char flash8MenuItem7[] PROGMEM = "Reset";
-static const char* const menuOptionsFLASH8[] PROGMEM = {flash8MenuItem1, flash8MenuItem2, flash8MenuItem3, flash8MenuItem4, flash8MenuItem5, flash8MenuItem6, flash8MenuItem7};
-
-// 16bit Flash menu items
-static const char flash16MenuItem1[] PROGMEM = "Blankcheck";
-static const char flash16MenuItem2[] PROGMEM = "Erase";
-static const char flash16MenuItem3[] PROGMEM = "Read";
-static const char flash16MenuItem4[] PROGMEM = "Write";
-static const char flash16MenuItem5[] PROGMEM = "ID";
-static const char flash16MenuItem6[] PROGMEM = "Print";
-static const char flash16MenuItem7[] PROGMEM = "Reset";
-static const char* const menuOptionsFLASH16[] PROGMEM = {flash16MenuItem1, flash16MenuItem2, flash16MenuItem3, flash16MenuItem4, flash16MenuItem5, flash16MenuItem6, flash16MenuItem7};
-
-// Eprom menu items
-static const char epromMenuItem1[] PROGMEM = "Blankcheck";
-static const char epromMenuItem2[] PROGMEM = "Read";
-static const char epromMenuItem3[] PROGMEM = "Write";
-static const char epromMenuItem4[] PROGMEM = "Verify";
-static const char epromMenuItem5[] PROGMEM = "Print";
-static const char epromMenuItem6[] PROGMEM = "Reset";
-static const char* const menuOptionsEprom[] PROGMEM = {epromMenuItem1, epromMenuItem2, epromMenuItem3, epromMenuItem4, epromMenuItem5, epromMenuItem6};
-
 void flashMenu() {
-  // create menu with title and 3 options to choose from
-  unsigned char flashSlot;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsFlash, 3);
-  flashSlot = question_box(F("Select adapter PCB"), menuOptions, 3, 0);
+  while (true) {
+    const __FlashStringHelper *item_8bit = F("8bit Flash adapter");
+    const __FlashStringHelper *item_Eprom = F("Eprom adapter");
+    const __FlashStringHelper *item_MX = F("MX26L6420 adapter");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_8bit,
+      item_Eprom,
+      item_MX,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (flashSlot)
-  {
-    case 0:
-      display_Clear();
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Select adapter PCB"), menu, ARRAY_LENGTH(menu), item_8bit);
+
+    if (answer == item_8bit) {
+      ui->clearOutput();
+      ui->flushOutput();
       hiROM = 1;
       setup_Flash8();
       id_Flash8();
-      wait();
-      mode =  mode_FLASH8;
-      break;
-
-    case 1:
-      display_Clear();
-      display_Update();
+      ui->waitForUserInput();
+      mode = CartReaderMode::FLASH8;
+      flashromMenu8();
+    }
+    else if (answer == item_Eprom) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_Eprom();
-      mode =  mode_EPROM;
-      break;
-
-    case 2:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::EPROM;
+      epromMenu();
+    }
+    else if (answer == item_MX) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_Flash16();
       id_Flash16();
-      wait();
-      mode =  mode_FLASH16;
+      ui->waitForUserInput();
+      mode = CartReaderMode::FLASH16;
+      flashromMenu16();
+    }
+    else if (answer == item_Back) {
       break;
+    }
   }
 }
 
 void flashromMenu8() {
-  // create menu with title and 7 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsFLASH8, 7);
-  mainMenu = question_box(F("Flashrom Writer 8"), menuOptions, 7, 0);
+  while (true) {
+    const __FlashStringHelper *item_BlankCheck = F("Blankcheck");
+    const __FlashStringHelper *item_Erase = F("Erase");
+    const __FlashStringHelper *item_Read = F("Read");
+    const __FlashStringHelper *item_Write = F("Write");
+    const __FlashStringHelper *item_ID = F("ID");
+    const __FlashStringHelper *item_Print = F("Print");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_BlankCheck,
+      item_Erase,
+      item_Read,
+      item_Write,
+      item_ID,
+      item_Print,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      display_Clear();
-      println_Msg(F("Blankcheck"));
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Flashrom Writer 8"), menu, ARRAY_LENGTH(menu), item_BlankCheck);
+
+    if (answer == item_BlankCheck) {
+      ui->clearOutput();
+      ui->printlnMsg(F("Blankcheck"));
+      ui->flushOutput();
       time = millis();
       resetFlash8();
       blankcheck_Flash();
-      break;
-
-    case 1:
-      display_Clear();
-      println_Msg(F("Erasing Flashrom"));
-      println_Msg(F("Please wait..."));
-      display_Update();
-      time = millis();
-
-      switch (flashromType) {
-        case 1: eraseFlash29F032(); break;
-        case 2: eraseFlash29F1610(); break;
-        case 3: eraseFlash28FXXX(); break;
-      }
-
-      println_Msg(F("Flashrom erased"));
-      display_Update();
-      resetFlash8();
-      break;
-
-    case 2:
-      time = millis();
-      resetFlash8();
-      readFlash();
-      break;
-
-    case 3:
-      filePath[0] = '\0';
-      chdir("/");
-      fileBrowser(F("Select file"));
-      display_Clear();
+    }
+    else if (answer == item_Erase) {
+      ui->clearOutput();
+      ui->printlnMsg(F("Erasing Flashrom"));
+      ui->printlnMsg(F("Please wait..."));
+      ui->flushOutput();
       time = millis();
 
       switch (flashromType) {
         case 1:
-          writeFlash29F032();
+          eraseFlash29F032();
           break;
         case 2:
+          eraseFlash29F1610();
+          break;
+        case 3:
+          eraseFlash28FXXX();
+          break;
+      }
+
+      ui->printlnMsg(F("Flashrom erased"));
+      ui->flushOutput();
+      resetFlash8();
+    }
+    else if (answer == item_Read) {
+      time = millis();
+      resetFlash8();
+      readFlash();
+    }
+    else if (answer == item_Write) {
+      String inputFilePath = fileBrowser(F("Select file"));
+      ui->clearOutput();
+      time = millis();
+
+      switch (flashromType) {
+        case 1: {
+          writeFlash29F032(inputFilePath);
+          break;
+        }
+        case 2: {
           if (strcmp(flashid, "C2F3") == 0)
-            writeFlash29F1601();
+            writeFlash29F1601(inputFilePath);
           else if ((strcmp(flashid, "C2F1") == 0) || (strcmp(flashid, "C2F9") == 0))
-            writeFlash29F1610();
+            writeFlash29F1610(inputFilePath);
           else if ((strcmp(flashid, "C2C4") == 0) || (strcmp(flashid, "C249") == 0) ||
                    (strcmp(flashid, "C2A7") == 0) || (strcmp(flashid, "C2A8") == 0) ||
                    (strcmp(flashid, "C2C9") == 0) || (strcmp(flashid, "C2CB") == 0))
-            writeFlash29LV640();
+            writeFlash29LV640(inputFilePath);
           else if (strcmp(flashid, "017E") == 0) {
             // sector size, write buffer size
-            writeFlash29GL(sectorSize, bufferSize);
+            writeFlash29GL(inputFilePath, sectorSize, bufferSize);
           }
           else if ((strcmp(flashid, "0458") == 0) || (strcmp(flashid, "0158") == 0) ||
                    (strcmp(flashid, "01AB") == 0))
-            writeFlash29F800();
+            writeFlash29F800(inputFilePath);
 
           break;
-        case 3:
-          writeFlash28FXXX();
+        }
+        case 3: {
+          writeFlash28FXXX(inputFilePath);
           break;
+        }
       }
 
       delay(100);
@@ -228,216 +217,247 @@ void flashromMenu8() {
       resetFlash8();
       resetFlash8();
 
-      verifyFlash();
-      break;
-
-    case 4:
+      verifyFlash(inputFilePath);
+    }
+    else if (answer == item_ID) {
       time = 0;
-      display_Clear();
-      println_Msg(F("ID Flashrom"));
+      ui->clearOutput();
+      ui->printlnMsg(F("ID Flashrom"));
       switch (flashromType) {
-        case 1: idFlash29F032(); break;
-        case 2: idFlash29F1610(); break;
-        case 3: idFlash28FXXX(); break;
+        case 1:
+          idFlash29F032();
+          break;
+        case 2:
+          idFlash29F1610();
+          break;
+        case 3:
+          idFlash28FXXX();
+          break;
       }
 
-      println_Msg(F(""));
+      ui->printlnMsg(F(""));
       printFlash(40);
-      println_Msg(F(""));
-      display_Update();
+      ui->printlnMsg(F(""));
+      ui->flushOutput();
 
       resetFlash8();
-      break;
-
-    case 5:
+    }
+    else if (answer == item_Print) {
       time = 0;
-      display_Clear();
-      println_Msg(F("Print first 70Bytes"));
-      display_Update();
+      ui->clearOutput();
+      ui->printlnMsg(F("Print first 70Bytes"));
+      ui->flushOutput();
       resetFlash8();
       printFlash(70);
-      break;
-
-    case 6:
+    }
+    else if (answer == item_Back) {
       time = 0;
-      display_Clear();
-      display_Update();
+      ui->clearOutput();
+      ui->flushOutput();
       resetFlash8();
-      resetArduino();
       break;
+    }
+
+    if (time != 0) {
+      ui->printMsg(F("Operation took : "));
+      ui->printMsg((millis() - time) / 1000, DEC);
+      ui->printlnMsg(F("s"));
+      ui->flushOutput();
+    }
+    ui->printMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
-  if (time != 0) {
-    print_Msg(F("Operation took : "));
-    print_Msg((millis() - time) / 1000, DEC);
-    println_Msg(F("s"));
-    display_Update();
-  }
-  print_Msg(F("Press Button..."));
-  display_Update();
-  wait();
 }
 
 void flashromMenu16() {
-  // create menu with title "Flashrom Writer 16" and 7 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsFLASH16, 7);
-  mainMenu = question_box(F("Flashrom Writer 16"), menuOptions, 7, 0);
+  while (true) {
+    const __FlashStringHelper *item_BlankCheck = F("Blankcheck");
+    const __FlashStringHelper *item_Erase = F("Erase");
+    const __FlashStringHelper *item_Read = F("Read");
+    const __FlashStringHelper *item_Write = F("Write");
+    const __FlashStringHelper *item_ID = F("ID");
+    const __FlashStringHelper *item_Print = F("Print");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_BlankCheck,
+      item_Erase,
+      item_Read,
+      item_Write,
+      item_ID,
+      item_Print,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      display_Clear();
-      println_Msg(F("Blankcheck"));
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Flashrom Writer 16"), menu, ARRAY_LENGTH(menu), item_BlankCheck);
+
+    if (answer == item_BlankCheck) {
+      ui->clearOutput();
+      ui->printlnMsg(F("Blankcheck"));
+      ui->flushOutput();
       time = millis();
       resetFlash16();
       blankcheck16();
-      break;
-
-    case 1:
-      display_Clear();
-      println_Msg(F("Erase Flashrom"));
-      display_Update();
+    }
+    else if (answer == item_Erase) {
+      ui->clearOutput();
+      ui->printlnMsg(F("Erase Flashrom"));
+      ui->flushOutput();
       time = millis();
       resetFlash16();
       eraseFlash16();
-      println_Msg(F("Flashrom erased."));
-      display_Update();
-      break;
-
-    case 2:
-      display_Clear();
+      ui->printlnMsg(F("Flashrom erased."));
+      ui->flushOutput();
+    }
+    else if (answer == item_Read) {
+      ui->clearOutput();
       time = millis();
       resetFlash16();
       readFlash16();
-      break;
-
-    case 3:
-      filePath[0] = '\0';
-      chdir("/");
-      fileBrowser(F("Select file"));
-      display_Clear();
+    }
+    else if (answer == item_Write) {
+      String inputFilePath = fileBrowser(F("Select file"));
+      ui->clearOutput();
       time = millis();
       if (strcmp(flashid, "C2F3") == 0) {
-        writeFlash16_29F1601();
+        writeFlash16_29F1601(inputFilePath);
       }
       else if ((strcmp(flashid, "C2C4") == 0) || (strcmp(flashid, "C249") == 0) || (strcmp(flashid, "C2A7") == 0) || (strcmp(flashid, "C2A8") == 0) || (strcmp(flashid, "C2C9") == 0) || (strcmp(flashid, "C2CB") == 0) || (strcmp(flashid, "C2FC") == 0)) {
-        writeFlash16_29LV640();
+        writeFlash16_29LV640(inputFilePath);
       }
       else {
-        writeFlash16();
+        writeFlash16(inputFilePath);
       }
       delay(100);
       resetFlash16();
       delay(100);
-      verifyFlash16();
-      break;
-
-    case 4:
+      verifyFlash16(inputFilePath);
+    }
+    else if (answer == item_ID) {
       time = 0;
-      display_Clear();
-      println_Msg(F("ID Flashrom"));
+      ui->clearOutput();
+      ui->printlnMsg(F("ID Flashrom"));
       idFlash16();
-      println_Msg(F(""));
+      ui->printlnMsg(F(""));
       printFlash16(40);
-      println_Msg(F(""));
-      display_Update();
+      ui->printlnMsg(F(""));
+      ui->flushOutput();
       resetFlash16();
-      break;
-
-    case 5:
+    }
+    else if (answer == item_Print) {
       time = 0;
-      display_Clear();
-      println_Msg(F("Print first 70Bytes"));
-      display_Update();
+      ui->clearOutput();
+      ui->printlnMsg(F("Print first 70Bytes"));
+      ui->flushOutput();
       resetFlash16();
       printFlash16(70);
-      break;
-
-    case 6:
+    }
+    else if (answer == item_Back) {
       time = 0;
-      display_Clear();
-      display_Update();
+      ui->clearOutput();
+      ui->flushOutput();
       resetFlash16();
-      resetArduino();
       break;
+    }
+
+    if (time != 0) {
+      ui->printMsg(F("Operation took: "));
+      ui->printMsg((millis() - time) / 1000, DEC);
+      ui->printlnMsg("s");
+      ui->flushOutput();
+    }
+    ui->waitForUserInput();
   }
-  if (time != 0) {
-    print_Msg(F("Operation took: "));
-    print_Msg((millis() - time) / 1000, DEC);
-    println_Msg("s");
-    display_Update();
-  }
-  wait();
 }
 
 void epromMenu() {
-  // create menu with title "Eprom Writer" and 4 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsEprom, 6);
-  mainMenu = question_box(F("Eprom Writer"), menuOptions, 6, 0);
+  while (true) {
+    const __FlashStringHelper *item_BlankCheck = F("Blankcheck");
+    const __FlashStringHelper *item_Read = F("Read");
+    const __FlashStringHelper *item_Write = F("Write");
+    const __FlashStringHelper *item_Verify = F("Verify");
+    const __FlashStringHelper *item_Print = F("Print");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_BlankCheck,
+      item_Read,
+      item_Write,
+      item_Verify,
+      item_Print,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      display_Clear();
-      println_Msg(F("Blankcheck"));
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Eprom Writer"), menu, ARRAY_LENGTH(menu), item_BlankCheck);
+
+    if (answer == item_BlankCheck) {
+      ui->clearOutput();
+      ui->printlnMsg(F("Blankcheck"));
+      ui->flushOutput();
       time = millis();
       blankcheck_Eprom();
-      break;
-
-    case 1:
-      display_Clear();
+    }
+    else if (answer == item_Read) {
+      ui->clearOutput();
       time = millis();
       read_Eprom();
-      break;
-
-    case 2:
-      filePath[0] = '\0';
-      chdir("/");
-      fileBrowser(F("Select file"));
-      display_Clear();
+    }
+    else if (answer == item_Write) {
+      String inputFilePath = fileBrowser(F("Select file"));
+      ui->clearOutput();
       time = millis();
-      write_Eprom();
+      write_Eprom(inputFilePath);
       delay(1000);
-      verify_Eprom();
-      break;
-
-    case 3:
-      filePath[0] = '\0';
-      chdir("/");
-      fileBrowser(F("Verify against"));
-      sprintf(filePath, "%s/%s", filePath, fileName);
-      display_Clear();
+      verify_Eprom(inputFilePath);
+    }
+    else if (answer == item_Verify) {
+      String inputFilePath = fileBrowser(F("Verify against"));
+      ui->clearOutput();
       time = millis();
-      verify_Eprom();
-      break;
-
-    case 4:
-      display_Clear();
+      verify_Eprom(inputFilePath);
+    }
+    else if (answer == item_Print) {
+      ui->clearOutput();
       time = millis();
       print_Eprom(80);
-      break;
-
-    case 5:
+    }
+    else if (answer == item_Back) {
       time = 0;
-      display_Clear();
-      display_Update();
-      resetArduino();
+      ui->clearOutput();
+      ui->flushOutput();
       break;
+    }
+
+    if (time != 0) {
+      ui->printMsg(F("Operation took: "));
+      ui->printMsg((millis() - time) / 1000, DEC);
+      ui->printlnMsg("s");
+      ui->flushOutput();
+    }
+    ui->waitForUserInput();
   }
-  if (time != 0) {
-    print_Msg(F("Operation took: "));
-    print_Msg((millis() - time) / 1000, DEC);
-    println_Msg("s");
-    display_Update();
-  }
-  wait();
+}
+
+String getNextFlashOutputPathAndPrintMessage() {
+  // Get name and add extension
+  int16_t folderNumber = loadFolderNumber();
+  String folder = F("/FLASH");
+
+  String fileName = F("FL");
+  fileName.concat(folderNumber);
+  fileName.concat(F(".bin"));
+
+  String outputFilePath = pathJoin(folder, fileName);
+
+  // write new folder number back to eeprom
+  saveFolderNumber(folderNumber + 1);
+
+  ui->clearOutput();
+  ui->printMsg(F("Saving as "));
+  ui->printMsg(outputFilePath);
+  ui->printlnMsg(F("..."));
+  ui->flushOutput();
 }
 
 /******************************************
@@ -449,115 +469,115 @@ void id_Flash8() {
 
   // Print start screen
 idtheflash:
-  display_Clear();
-  display_Update();
-  println_Msg(F("Flashrom Writer 8bit"));
-  println_Msg(" ");
-  println_Msg(" ");
-  print_Msg(F("Flash ID: "));
-  println_Msg(flashid);
+  ui->clearOutput();
+  ui->flushOutput();
+  ui->printlnMsg(F("Flashrom Writer 8bit"));
+  ui->printlnMsg(" ");
+  ui->printlnMsg(" ");
+  ui->printMsg(F("Flash ID: "));
+  ui->printlnMsg(flashid);
 
   if (strcmp(flashid, "C2F1") == 0) {
-    println_Msg(F("MX29F1610 detected"));
+    ui->printlnMsg(F("MX29F1610 detected"));
     flashSize = 2097152;
     flashromType = 2;
   }
   else if (strcmp(flashid, "C2F3") == 0) {
-    println_Msg(F("MX29F1601 detected"));
+    ui->printlnMsg(F("MX29F1601 detected"));
     flashSize = 2097152;
     flashromType = 2;
   }
   else if (strcmp(flashid, "C2F9") == 0) {
-    println_Msg(F("MX29L3211 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX29L3211 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 4194304;
     flashromType = 2;
   }
   else if ((strcmp(flashid, "C2C4") == 0) || (strcmp(flashid, "C249") == 0)) {
-    println_Msg(F("MX29LV160 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX29LV160 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 2097152;
     flashromType = 2;
   }
   else if ((strcmp(flashid, "C2A7") == 0) || (strcmp(flashid, "C2A8") == 0)) {
-    println_Msg(F("MX29LV320 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX29LV320 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 4194304;
     flashromType = 2;
   }
   else if ((strcmp(flashid, "C2C9") == 0) || (strcmp(flashid, "C2CB") == 0)) {
-    println_Msg(F("MX29LV640 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX29LV640 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 8388608;
     flashromType = 2;
   }
   else if (strcmp(flashid, "0141") == 0) {
-    println_Msg(F("AM29F032B detected"));
+    ui->printlnMsg(F("AM29F032B detected"));
     flashSize = 4194304;
     flashromType = 1;
   }
   else if (strcmp(flashid, "01AD") == 0) {
-    println_Msg(F("AM29F016B detected"));
+    ui->printlnMsg(F("AM29F016B detected"));
     flashSize = 2097152;
     flashromType = 1;
   }
   else if (strcmp(flashid, "20AD") == 0) {
-    println_Msg(F("AM29F016D detected"));
+    ui->printlnMsg(F("AM29F016D detected"));
     flashSize = 2097152;
     flashromType = 1;
   }
   else if (strcmp(flashid, "04AD") == 0) {
-    println_Msg(F("AM29F016D detected"));
+    ui->printlnMsg(F("AM29F016D detected"));
     flashSize = 2097152;
     flashromType = 1;
   }
   else if (strcmp(flashid, "04D4") == 0) {
-    println_Msg(F("MBM29F033C detected"));
+    ui->printlnMsg(F("MBM29F033C detected"));
     flashSize = 4194304;
     flashromType = 1;
   }
   else if (strcmp(flashid, "0458") == 0) {
-    println_Msg(F("MBM29F800BA detected"));
+    ui->printlnMsg(F("MBM29F800BA detected"));
     flashSize = 1048576;
     flashromType = 2;
   }
   else if (strcmp(flashid, "01AB") == 0) {
-    println_Msg(F("AM29F400AB detected"));
+    ui->printlnMsg(F("AM29F400AB detected"));
     flashSize = 131072 * 4;
     flashromType = 2;
   }
   else if (strcmp(flashid, "0158") == 0) {
-    println_Msg(F("AM29F800BB detected"));
+    ui->printlnMsg(F("AM29F800BB detected"));
     flashSize = 1048576;
     flashromType = 2;
   }
   else if (strcmp(flashid, "01A3") == 0) {
-    println_Msg(F("AM29LV033C detected"));
+    ui->printlnMsg(F("AM29LV033C detected"));
     flashSize = 131072 * 32;
     flashromType = 1;
   }
   else if (strcmp(flashid, "017E") == 0) {
     // S29GL032M
     if (readByte_Flash(28) == 0x1A) {
-      println_Msg(F("S29GL032M detected"));
+      ui->printlnMsg(F("S29GL032M detected"));
       flashSize = 4194304;
       sectorSize = 65536;
       bufferSize = 32;
     }
     // Unknown S29GL type
     else {
-      println_Msg(F("Unknown S29GL Type"));
+      ui->printlnMsg(F("Unknown S29GL Type"));
       flashSize = 4194304;
       sectorSize = 65536;
       bufferSize = 32;
     }
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashromType = 2;
   }
   else if (strcmp(flashid, "B088") == 0) {
     // LH28F016SUT
-    println_Msg(F("LH28F016SUT detected"));
-    println_Msg(F("ATTENTION 3/5 setting"));
+    ui->printlnMsg(F("LH28F016SUT detected"));
+    ui->printlnMsg(F("ATTENTION 3/5 setting"));
     flashSize = 2097152;
     sectorSize = 65536;
     bufferSize = 256;
@@ -567,24 +587,24 @@ idtheflash:
            (strcmp(flashid, "8917") == 0) ||
            (strcmp(flashid, "8918") == 0)) {
     // E28FXXXJ3A
-    print_Msg(F("E28F"));
+    ui->printMsg(F("E28F"));
 
     switch (flashid[3]) {
       case '6':
         flashSize = 131072 * 32;
-        print_Msg(F("320"));
+        ui->printMsg(F("320"));
         break;
       case '7':
         flashSize = 131072 * 64;
-        print_Msg(F("640"));
+        ui->printMsg(F("640"));
         break;
       case '8':
         flashSize = 131072 * 128;
-        print_Msg(F("128"));
+        ui->printMsg(F("128"));
         break;
     }
 
-    println_Msg(F("J3A detected"));
+    ui->printlnMsg(F("J3A detected"));
     sectorSize = 131072;
     bufferSize = 32;
     flashromType = 3;
@@ -605,19 +625,19 @@ idtheflash:
   }
   else {
     // ID not found
-    display_Clear();
-    println_Msg(F("Flashrom Writer 8bit"));
-    println_Msg(" ");
-    print_Msg(F("ID Type 1: "));
-    println_Msg(vendorID);
-    print_Msg(F("ID Type 2: "));
-    println_Msg(flashid);
-    println_Msg(" ");
-    print_Error(F("UNKNOWN FLASHROM"));
+    ui->clearOutput();
+    ui->printlnMsg(F("Flashrom Writer 8bit"));
+    ui->printlnMsg(" ");
+    ui->printMsg(F("ID Type 1: "));
+    ui->printlnMsg(vendorID);
+    ui->printMsg(F("ID Type 2: "));
+    ui->printlnMsg(flashid);
+    ui->printlnMsg(" ");
+    ui->printErrorAndAbort(F("UNKNOWN FLASHROM"), false);
   }
-  println_Msg(" ");
-  println_Msg(F("Press Button..."));
-  display_Update();
+  ui->printlnMsg(" ");
+  ui->printlnMsg(F("Press Button..."));
+  ui->flushOutput();
 
   resetFlash8();
 }
@@ -627,58 +647,57 @@ void id_Flash16() {
   idFlash16();
   resetFlash16();
 
-  println_Msg(F("Flashrom Writer 16bit"));
-  println_Msg(" ");
-  print_Msg(F("Flash ID: "));
-  println_Msg(flashid);
+  ui->printlnMsg(F("Flashrom Writer 16bit"));
+  ui->printlnMsg(" ");
+  ui->printMsg(F("Flash ID: "));
+  ui->printlnMsg(flashid);
   if (strcmp(flashid, "C2F1") == 0) {
-    println_Msg(F("MX29F1610 detected"));
-    println_Msg(" ");
+    ui->printlnMsg(F("MX29F1610 detected"));
+    ui->printlnMsg(" ");
     flashSize = 2097152;
     flashromType = 2;
   }
   else if (strcmp(flashid, "C2F3") == 0) {
-    println_Msg(F("MX29F1601 detected"));
+    ui->printlnMsg(F("MX29F1601 detected"));
     flashSize = 2097152;
     flashromType = 2;
   }
   else if (strcmp(flashid, "C2F9") == 0) {
-    println_Msg(F("MX29L3211 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX29L3211 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 4194304;
     flashromType = 2;
   }
   else if ((strcmp(flashid, "C2C4") == 0) || (strcmp(flashid, "C249") == 0)) {
-    println_Msg(F("MX29LV160 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX29LV160 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 2097152;
     flashromType = 2;
   }
   else if ((strcmp(flashid, "C2A7") == 0) || (strcmp(flashid, "C2A8") == 0)) {
-    println_Msg(F("MX29LV320 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX29LV320 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 4194304;
     flashromType = 2;
   }
   else if ((strcmp(flashid, "C2C9") == 0) || (strcmp(flashid, "C2CB") == 0)) {
-    println_Msg(F("MX29LV640 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX29LV640 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 8388608;
     flashromType = 2;
   }
   else if (strcmp(flashid, "C2FC") == 0) {
-    println_Msg(F("MX26L6420 detected"));
-    println_Msg(F("ATTENTION 3.3V"));
+    ui->printlnMsg(F("MX26L6420 detected"));
+    ui->printlnMsg(F("ATTENTION 3.3V"));
     flashSize = 8388608;
     flashromType = 2;
   }
   else {
-    print_Error(F("Unknown flashrom"));
-    println_Msg(" ");
+    ui->printErrorAndAbort(F("Unknown flashrom"), false);
   }
-  println_Msg(" ");
-  println_Msg(F("Press Button..."));
-  display_Update();
+  ui->printlnMsg(" ");
+  ui->printlnMsg(F("Press Button..."));
+  ui->flushOutput();
 }
 
 /******************************************
@@ -956,20 +975,19 @@ void eraseFlash29F032() {
   }
 }
 
-void writeFlash29F032() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  print_Msg(F("Flashing file "));
-  print_Msg(filePath);
-  println_Msg(F("..."));
-  display_Update();
+void writeFlash29F032(const String &inputFilePath) {
+  ui->printMsg(F("Flashing file "));
+  ui->printMsg(inputFilePath);
+  ui->printlnMsg(F("..."));
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut();
@@ -1035,19 +1053,18 @@ void resetFlash29F1610() {
   delay(500);
 }
 
-void writeFlash29F1610() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash29F1610(const String &inputFilePath) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut();
@@ -1085,19 +1102,18 @@ void writeFlash29F1610() {
   inputFile.close();
 }
 
-void writeFlash29F1601() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash29F1601(const String &inputFilePath) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut();
@@ -1224,19 +1240,18 @@ void busyCheck29LV640(unsigned long myAddress, byte myData) {
   dataOut();
 }
 
-void writeFlash29LV640() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash29LV640(const String &inputFilePath) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut();
@@ -1267,19 +1282,18 @@ void writeFlash29LV640() {
 /******************************************
   S29GL flashrom functions
 *****************************************/
-void writeFlash29GL(unsigned long sectorSize, byte bufferSize) {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash29GL(const String &inputFilePath, unsigned long sectorSize, byte bufferSize) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut();
@@ -1330,19 +1344,18 @@ void writeFlash29GL(unsigned long sectorSize, byte bufferSize) {
 /******************************************
   29F800 functions
 *****************************************/
-void writeFlash29F800() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash29F800(const String &inputFilePath) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut();
@@ -1417,14 +1430,13 @@ void eraseFlash28FXXX() {
   }
 }
 
-void writeFlash28FXXX() {
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  print_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash28FXXX(const String &inputFilePath) {
+  ui->printMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   if ((strcmp(flashid, "B088") == 0))
     writeFlashLH28F0XX(inputFile);
@@ -1440,7 +1452,7 @@ void writeFlash28FXXX() {
 void writeFlashE28FXXXJ3A(SafeSDFile &inputFile) {
   fileSize = inputFile.fileSize();
   if (fileSize > flashSize) {
-    print_Warning(F("File size exceeds flash size."));
+    ui->printError(F("File size exceeds flash size."));
     return;
   }
 
@@ -1489,7 +1501,7 @@ void writeFlashE28FXXXJ3A(SafeSDFile &inputFile) {
 void writeFlashLH28F0XX(SafeSDFile &inputFile) {
   fileSize = inputFile.fileSize();
   if (fileSize > flashSize) {
-    print_Warning(F("File size exceeds flash size."));
+    ui->printError(F("File size exceeds flash size."));
     return;
   }
 
@@ -1528,8 +1540,8 @@ void writeFlashLH28F0XX(SafeSDFile &inputFile) {
   Common flashrom functions
 *****************************************/
 void blankcheck_Flash() {
-  println_Msg(F("Please wait..."));
-  display_Update();
+  ui->printlnMsg(F("Please wait..."));
+  ui->flushOutput();
 
   blank = 1;
   for (unsigned long currByte = 0; currByte < flashSize; currByte++) {
@@ -1540,24 +1552,25 @@ void blankcheck_Flash() {
     }
   }
   if (blank) {
-    println_Msg(F("Flashrom is empty"));
-    display_Update();
+    ui->printlnMsg(F("Flashrom is empty"));
+    ui->flushOutput();
   }
   else {
-    print_Warning(F("Error: Not blank"));
+    ui->printError(F("Error: Not blank"));
   }
 }
 
-void verifyFlash() {
-  println_Msg(F("Verifying..."));
-  display_Update();
+void verifyFlash(const String &inputFilePath) {
+  ui->printlnMsg(F("Verifying..."));
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   blank = 0;
   for (unsigned long currByte = 0; currByte < fileSize; currByte += 512) {
@@ -1570,41 +1583,24 @@ void verifyFlash() {
     }
   }
   if (blank == 0) {
-    println_Msg(F("Flashrom verified OK"));
-    display_Update();
+    ui->printlnMsg(F("Flashrom verified OK"));
+    ui->flushOutput();
   }
   else {
-    print_Msg(F("Error: "));
-    print_Msg(blank);
-    println_Msg(F(" bytes "));
-    print_Warning(F("did not verify."));
+    ui->printMsg(F("Error: "));
+    ui->printMsg(blank);
+    ui->printlnMsg(F(" bytes "));
+    ui->printError(F("did not verify."));
   }
   // Close the file:
   inputFile.close();
 }
 
 void readFlash() {
-  // Reset to root directory
-  chdir("/");
-
-  // Get name, add extension and convert to char array for sd lib
-  foldern = loadFolderNumber();
-  mkdir("FLASH", true);
-  chdir("FLASH");
-  sprintf(fileName, "FL%d", foldern);
-  strcat(fileName, ".bin");
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
-
-  display_Clear();
-  print_Msg(F("Saving as "));
-  print_Msg(fileName);
-  println_Msg(F("..."));
-  display_Update();
+  String outputFilePath = getNextFlashOutputPathAndPrintMessage();
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
   for (unsigned long currByte = 0; currByte < flashSize; currByte += 512) {
     for (int c = 0; c < 512; c++) {
       sdBuffer[c] = readByte_Flash(currByte + c);
@@ -1614,8 +1610,8 @@ void readFlash() {
 
   // Close the file:
   outputFile.close();
-  println_Msg(F("Finished reading"));
-  display_Update();
+  ui->printlnMsg(F("Finished reading"));
+  ui->flushOutput();
 }
 
 void printFlash(int numBytes) {
@@ -1625,14 +1621,14 @@ void printFlash(int numBytes) {
     for (int c = 0; c < 10; c++) {
       itoa (readByte_Flash(currByte + c), myBuffer, 16);
       for (size_t i = 0; i < 2 - strlen(myBuffer); i++) {
-        print_Msg("0");
+        ui->printMsg("0");
       }
       // Now print the significant bits
-      print_Msg(myBuffer);
+      ui->printMsg(myBuffer);
     }
-    println_Msg("");
+    ui->printlnMsg("");
   }
-  display_Update();
+  ui->flushOutput();
 }
 
 void resetFlash8() {
@@ -1661,19 +1657,18 @@ void resetFlash16() {
   delay(500);
 }
 
-void writeFlash16() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash16(const String &inputFilePath) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut16();
@@ -1715,19 +1710,18 @@ void writeFlash16() {
   inputFile.close();
 }
 
-void writeFlash16_29F1601() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash16_29F1601(const String &inputFilePath) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut16();
@@ -1827,8 +1821,8 @@ void eraseFlash16() {
 
 void blankcheck16() {
 
-  println_Msg(F("Please wait..."));
-  display_Update();
+  ui->printlnMsg(F("Please wait..."));
+  ui->flushOutput();
 
   blank = 1;
   for (unsigned long currByte = 0; currByte < flashSize / 2; currByte++) {
@@ -1838,24 +1832,24 @@ void blankcheck16() {
     }
   }
   if (blank) {
-    println_Msg(F("Flashrom is empty."));
-    display_Update();
+    ui->printlnMsg(F("Flashrom is empty."));
+    ui->flushOutput();
   }
   else {
-    print_Warning(F("Error: Not blank"));
+    ui->printError(F("Error: Not blank"));
   }
 }
 
-void verifyFlash16() {
-  println_Msg(F("Verifying..."));
-  display_Update();
+void verifyFlash16(const String &inputFilePath) {
+  ui->printlnMsg(F("Verifying..."));
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
   if (fileSize > flashSize) {
-    print_Error(F("File size exceeds flash size."));
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
   }
 
   blank = 0;
@@ -1874,41 +1868,24 @@ void verifyFlash16() {
     d = 0;
   }
   if (blank == 0) {
-    println_Msg(F("Flashrom verified OK"));
-    display_Update();
+    ui->printlnMsg(F("Flashrom verified OK"));
+    ui->flushOutput();
   }
   else {
-    println_Msg(F("Verification ERROR!"));
-    print_Msg(blank);
-    print_Warning(F("B did not verify."));
-    display_Update();
+    ui->printlnMsg(F("Verification ERROR!"));
+    ui->printMsg(blank);
+    ui->printError(F("B did not verify."));
+    ui->flushOutput();
   }
   // Close the file:
   inputFile.close();
 }
 
 void readFlash16() {
-  // Reset to root directory
-  chdir("/");
-
-  // Get name, add extension and convert to char array for sd lib
-  foldern = loadFolderNumber();
-  mkdir("FLASH", true);
-  chdir("FLASH");
-  sprintf(fileName, "FL%d", foldern);
-  strcat(fileName, ".bin");
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
-
-  display_Clear();
-  print_Msg(F("Saving as "));
-  print_Msg(fileName);
-  println_Msg(F("..."));
-  display_Update();
+  String outputFilePath = getNextFlashOutputPathAndPrintMessage();
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
   word d = 0;
   for (unsigned long currByte = 0; currByte < flashSize / 2; currByte += 256) {
     for (word c = 0; c < 256; c++) {
@@ -1926,8 +1903,8 @@ void readFlash16() {
 
   // Close the file:
   outputFile.close();
-  println_Msg(F("Finished reading."));
-  display_Update();
+  ui->printlnMsg(F("Finished reading."));
+  ui->flushOutput();
 }
 
 void printFlash16(int numBytes) {
@@ -1951,21 +1928,21 @@ void printFlash16(int numBytes) {
 
       sprintf (buf, "%x", left_byte);
       for (size_t i = 0; i < 2 - strlen(buf); i++) {
-        print_Msg("0");
+        ui->printMsg("0");
       }
       // Now print the significant bits
-      print_Msg(buf);
+      ui->printMsg(buf);
 
       sprintf (buf, "%x", right_byte);
       for (size_t i = 0; i < 2 - strlen(buf); i++) {
-        print_Msg("0");
+        ui->printMsg("0");
       }
       // Now print the significant bits
-      print_Msg(buf);
+      ui->printMsg(buf);
     }
-    println_Msg("");
+    ui->printlnMsg("");
   }
-  display_Update();
+  ui->flushOutput();
 }
 
 // Delay between write operations based on status register
@@ -2002,19 +1979,18 @@ void busyCheck16_29LV640(unsigned long myAddress, word myData) {
   dataOut16();
 }
 
-void writeFlash16_29LV640() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void writeFlash16_29LV640(const String &inputFilePath) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Set data pins to output
   dataOut16();
@@ -2146,8 +2122,8 @@ word readWord_Eprom(unsigned long myAddress) {
 }
 
 void blankcheck_Eprom() {
-  println_Msg(F("Please wait..."));
-  display_Update();
+  ui->printlnMsg(F("Please wait..."));
+  ui->flushOutput();
 
   blank = 1;
   for (unsigned long currWord = 0; currWord < flashSize / 2; currWord++) {
@@ -2157,36 +2133,19 @@ void blankcheck_Eprom() {
     }
   }
   if (blank) {
-    println_Msg(F("Flashrom is empty."));
-    display_Update();
+    ui->printlnMsg(F("Flashrom is empty."));
+    ui->flushOutput();
   }
   else {
-    print_Warning(F("Error: Not blank"));
+    ui->printError(F("Error: Not blank"));
   }
 }
 
 void read_Eprom() {
-  // Reset to root directory
-  chdir("/");
-
-  // Get name, add extension and convert to char array for sd lib
-  foldern = loadFolderNumber();
-  mkdir("FLASH", true);
-  chdir("FLASH");
-  sprintf(fileName, "FL%d", foldern);
-  strcat(fileName, ".bin");
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
-
-  display_Clear();
-  print_Msg(F("Saving as "));
-  print_Msg(fileName);
-  println_Msg(F("..."));
-  display_Update();
+  String outputFilePath = getNextFlashOutputPathAndPrintMessage();
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
   word d = 0;
   for (unsigned long currWord = 0; currWord < flashSize / 2; currWord += 256) {
     for (word c = 0; c < 256; c++) {
@@ -2204,23 +2163,22 @@ void read_Eprom() {
 
   // Close the file:
   outputFile.close();
-  println_Msg(F("Finished reading."));
-  display_Update();
+  ui->printlnMsg(F("Finished reading."));
+  ui->flushOutput();
 }
 
-void write_Eprom() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Flashing file "));
-  println_Msg(filePath);
-  display_Update();
+void write_Eprom(const String& inputFilePath) {
+  ui->printlnMsg(F("Flashing file "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
-  if (fileSize > flashSize)
-    print_Error(F("File size exceeds flash size."));
+  if (fileSize > flashSize) {
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+  }
 
   // Switch VPP/OE(PH5) to HIGH
   PORTH |= (1 << 5);
@@ -2249,13 +2207,13 @@ void write_Eprom() {
         checkWord = writeWord_Eprom(currWord + c, myWord);
         // Check for fail
         if (n == 25) {
-          print_Msg(F("Program Error 0x"));
-          println_Msg(currWord + c, HEX);
-          print_Msg(F("0x"));
-          print_Msg(readWord_Eprom(currWord + c), HEX);
-          print_Msg(F(" != 0x"));
-          println_Msg(myWord, HEX);
-          print_Error(F("Press button to reset"));
+          ui->printMsg(F("Program Error 0x"));
+          ui->printlnMsg(currWord + c, HEX);
+          ui->printMsg(F("0x"));
+          ui->printMsg(readWord_Eprom(currWord + c), HEX);
+          ui->printMsg(F(" != 0x"));
+          ui->printlnMsg(myWord, HEX);
+          ui->printErrorAndAbort(F("Press button to reset"), false);
         }
         n++;
       }
@@ -2267,16 +2225,16 @@ void write_Eprom() {
   inputFile.close();
 }
 
-void verify_Eprom() {
-  println_Msg(F("Verifying..."));
-  display_Update();
+void verify_Eprom(const String &inputFilePath) {
+  ui->printlnMsg(F("Verifying..."));
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
   if (fileSize > flashSize) {
-    print_Error(F("File size exceeds flash size."));
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
   }
 
   blank = 0;
@@ -2295,14 +2253,14 @@ void verify_Eprom() {
     d = 0;
   }
   if (blank == 0) {
-    println_Msg(F("Eprom verified OK"));
-    display_Update();
+    ui->printlnMsg(F("Eprom verified OK"));
+    ui->flushOutput();
   }
   else {
-    println_Msg(F("Verification ERROR!"));
-    print_Msg(blank);
-    print_Warning(F(" words did not verify."));
-    display_Update();
+    ui->printlnMsg(F("Verification ERROR!"));
+    ui->printMsg(blank);
+    ui->printError(F(" words did not verify."));
+    ui->flushOutput();
   }
   // Close the file:
   inputFile.close();
@@ -2323,21 +2281,21 @@ void print_Eprom(int numBytes) {
 
       sprintf (buf, "%x", left_byte);
       for (size_t i = 0; i < 2 - strlen(buf); i++) {
-        print_Msg("0");
+        ui->printMsg("0");
       }
       // Now print the significant bits
-      print_Msg(buf);
+      ui->printMsg(buf);
 
       sprintf (buf, "%x", right_byte);
       for (size_t i = 0; i < 2 - strlen(buf); i++) {
-        print_Msg("0");
+        ui->printMsg("0");
       }
       // Now print the significant bits
-      print_Msg(buf);
+      ui->printMsg(buf);
     }
-    println_Msg("");
+    ui->printlnMsg("");
   }
-  display_Update();
+  ui->flushOutput();
 }
 
 //******************************************

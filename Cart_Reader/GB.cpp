@@ -8,7 +8,7 @@
 #include "GBA.h"
 #include "NP.h"
 #include "GBSmart.h"
-#include "menu.h"
+#include "ui.h"
 #include "globals.h"
 #include "utils.h"
 #include "SD.h"
@@ -24,153 +24,154 @@ uint16_t sramEndAddress = 0;
 /******************************************
    Function prototypes
  *****************************************/
+String getNextGBRomOutputPathAndPrintMessage(const String &gameName);
+String getNextGBSaveOutputPath(const String &gameName);
 void setup_GB();
 void writeFlash_GB(byte MBC);
 
-/******************************************
-   Menu
- *****************************************/
-// GBx start menu
-static const char gbxMenuItem1[] PROGMEM = "Game Boy (Color)";
-static const char gbxMenuItem2[] PROGMEM = "Game Boy Advance";
-static const char gbxMenuItem3[] PROGMEM = "NPower GB Memory";
-static const char gbxMenuItem4[] PROGMEM = "GB Smart";
-static const char* const menuOptionsGBx[] PROGMEM = {gbxMenuItem1, gbxMenuItem2, gbxMenuItem3, gbxMenuItem4};
-
-// GB menu items
-static const char GBMenuItem1[] PROGMEM = "Read Rom";
-static const char GBMenuItem2[] PROGMEM = "Read Save";
-static const char GBMenuItem3[] PROGMEM = "Write Save";
-static const char GBMenuItem4[] PROGMEM = "Flash MBC3 cart";
-static const char GBMenuItem5[] PROGMEM = "Flash MBC5 cart";
-static const char GBMenuItem6[] PROGMEM = "Reset";
-static const char* const menuOptionsGB[] PROGMEM = {GBMenuItem1, GBMenuItem2, GBMenuItem3, GBMenuItem4, GBMenuItem5, GBMenuItem6};
-
 // Start menu for both GB and GBA
 void gbxMenu() {
-  // create menu with title and 3 options to choose from
-  unsigned char gbType;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsGBx, 4);
-  gbType = question_box(F("Select Game Boy"), menuOptions, 4, 0);
+  while (true) {
+    const __FlashStringHelper *item_GB = F("Game Boy (Color)");
+    const __FlashStringHelper *item_GBA = F("Game Boy Advance");
+    const __FlashStringHelper *item_NPower = F("NPower GB Memory");
+    const __FlashStringHelper *item_GBSmart = F("GB Smart");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_GB,
+      item_GBA,
+      item_NPower,
+      item_GBSmart,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (gbType)
-  {
-    case 0:
-      display_Clear();
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Select Game Boy"), menu, ARRAY_LENGTH(menu), item_GB);
+
+    if (answer == item_GB) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_GB();
-      mode =  mode_GB;
-      break;
-
-    case 1:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::GB;
+      gbMenu();
+    }
+    else if (answer == item_GBA) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_GBA();
-      mode =  mode_GBA;
-      break;
-
-    case 2:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::GBA;
+      gbaMenu();
+    }
+    else if (answer == item_NPower) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_GBM();
-      mode =  mode_GBM;
-      break;
-
-    case 3:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::GBM;
+      gbmMenu();
+    }
+    else if (answer == item_GBSmart) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_GBSmart();
-      mode = mode_GB_GBSmart;
+      mode = CartReaderMode::GBSmart;
+      gbSmartMenu();
+    }
+    else if (answer == item_Back) {
       break;
+    }
   }
 }
 
 void gbMenu() {
-  // create menu with title and 6 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsGB, 6);
-  mainMenu = question_box(F("GB Cart Reader"), menuOptions, 6, 0);
+  while (true) {
+    const __FlashStringHelper *item_ReadROM = F("Read Rom");
+    const __FlashStringHelper *item_ReadSave = F("Read Save");
+    const __FlashStringHelper *item_WriteSave = F("Write Save");
+    const __FlashStringHelper *item_FlashMBC3 = F("Flash MBC3 cart");
+    const __FlashStringHelper *item_FlashMBC5 = F("Flash MBC5 cart");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadROM,
+      item_ReadSave,
+      item_WriteSave,
+      item_FlashMBC3,
+      item_FlashMBC5,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      display_Clear();
-      // Change working dir to root
-      chdir("/");
-      readROM_GB();
-      compare_checksum_GB();
-      break;
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("GB Cart Reader"), menu, ARRAY_LENGTH(menu), item_ReadROM);
 
-    case 1:
-      display_Clear();
+    if (answer == item_ReadROM) {
+      ui->clearOutput();
+      String outputFilePath = getNextGBRomOutputPathAndPrintMessage(romName);
+      readROM_GB(outputFilePath);
+      compare_checksum_GB(outputFilePath);
+    }
+    else if (answer == item_ReadSave) {
+      ui->clearOutput();
       // Does cartridge have SRAM
       if (sramEndAddress > 0) {
         // Change working dir to root
-        chdir("/");
         readSRAM_GB();
       }
       else {
-        print_Warning(F("Cart has no Sram"));
+        ui->printError(F("Cart has no Sram"));
       }
-      break;
-
-    case 2:
-      display_Clear();
+    }
+    else if (answer == item_WriteSave) {
+      ui->clearOutput();
       // Does cartridge have SRAM
       if (sramEndAddress > 0) {
-        // Change working dir to root
-        chdir("/");
-        writeSRAM_GB();
-        unsigned long wrErrors;
-        wrErrors = verifySRAM_GB();
-        if (wrErrors == 0) {
-          println_Msg(F("Verified OK"));
-          display_Update();
+        String inputFilePath = fileBrowser(F("Select sav file"));
+        writeSRAM_GB(inputFilePath);
+        uint32_t writeErrors = verifySRAM_GB(inputFilePath);
+        if (writeErrors == 0) {
+          ui->printlnMsg(F("Verified OK"));
+          ui->flushOutput();
         }
         else {
-          print_Msg(F("Error: "));
-          print_Msg(wrErrors);
-          println_Msg(F(" bytes "));
-          print_Warning(F("did not verify."));
+          ui->printMsg(F("Error: "));
+          ui->printMsg(writeErrors);
+          ui->printlnMsg(F(" bytes "));
+          ui->printError(F("did not verify."));
         }
       }
       else {
-        print_Warning(F("Cart has no Sram"));
+        ui->printError(F("Cart has no Sram"));
       }
-      break;
-
-    case 3:
-      // Change working dir to root
-      chdir("/");
+    }
+    else if (answer == item_FlashMBC3) {
       //MBC3
       writeFlash_GB(3);
       // Reset
-      wait();
+      ui->waitForUserInput();
       resetArduino();
-      break;
-
-    case 4:
-      // Change working dir to root
-      chdir("/");
+    }
+    else if (answer == item_FlashMBC5) {
       //MBC5
       writeFlash_GB(5);
       // Reset
-      wait();
+      ui->waitForUserInput();
       resetArduino();
+    }
+    else if (answer == item_Back) {
       break;
+    }
 
-    case 5:
-      resetArduino();
-      break;
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
+}
+
+String getNextGBRomOutputPathAndPrintMessage(const String &gameName) {
+  return getNextOutputPathAndPrintMessage(F("GB"), F("ROM"), gameName, F(".GB"));
+}
+
+String getNextGBSaveOutputPath(const String &gameName) {
+  return getNextOutputPath(F("GB"), F("SAVE"), gameName, F(".sav"));
 }
 
 /******************************************
@@ -206,89 +207,89 @@ void setup_GB() {
 }
 
 void showCartInfo_GB() {
-  display_Clear();
+  ui->clearOutput();
   if (strcmp(checksumStr, "00") != 0) {
-    println_Msg(F("GB Cart Info"));
-    print_Msg(F("Name: "));
-    println_Msg(romName);
-    print_Msg(F("Rom Type: "));
+    ui->printlnMsg(F("GB Cart Info"));
+    ui->printMsg(F("Name: "));
+    ui->printlnMsg(romName);
+    ui->printMsg(F("Rom Type: "));
     switch (romType) {
-      case 0: print_Msg(F("ROM ONLY")); break;
-      case 1: print_Msg(F("MBC1")); break;
-      case 2: print_Msg(F("MBC1+RAM")); break;
-      case 3: print_Msg(F("MBC1+RAM")); break;
-      case 5: print_Msg(F("MBC2")); break;
-      case 6: print_Msg(F("MBC2")); break;
-      case 8: print_Msg(F("ROM+RAM")); break;
-      case 9: print_Msg(F("ROM ONLY")); break;
-      case 11: print_Msg(F("MMM01")); break;
-      case 12: print_Msg(F("MMM01+RAM")); break;
-      case 13: print_Msg(F("MMM01+RAM")); break;
-      case 15: print_Msg(F("MBC3+TIMER")); break;
-      case 16: print_Msg(F("MBC3+TIMER+RAM")); break;
-      case 17: print_Msg(F("MBC3")); break;
-      case 18: print_Msg(F("MBC3+RAM")); break;
-      case 19: print_Msg(F("MBC3+RAM")); break;
-      case 21: print_Msg(F("MBC4")); break;
-      case 22: print_Msg(F("MBC4+RAM")); break;
-      case 23: print_Msg(F("MBC4+RAM")); break;
-      case 25: print_Msg(F("MBC5")); break;
-      case 26: print_Msg(F("MBC5+RAM")); break;
-      case 27: print_Msg(F("MBC5+RAM")); break;
-      case 28: print_Msg(F("MBC5+RUMBLE")); break;
-      case 29: print_Msg(F("MBC5+RUMBLE+RAM")); break;
-      case 30: print_Msg(F("MBC5+RUMBLE+RAM")); break;
-      case 252: print_Msg(F("Gameboy Camera")); break;
-      default: print_Msg(F("Not found"));
+      case 0: ui->printMsg(F("ROM ONLY")); break;
+      case 1: ui->printMsg(F("MBC1")); break;
+      case 2: ui->printMsg(F("MBC1+RAM")); break;
+      case 3: ui->printMsg(F("MBC1+RAM")); break;
+      case 5: ui->printMsg(F("MBC2")); break;
+      case 6: ui->printMsg(F("MBC2")); break;
+      case 8: ui->printMsg(F("ROM+RAM")); break;
+      case 9: ui->printMsg(F("ROM ONLY")); break;
+      case 11: ui->printMsg(F("MMM01")); break;
+      case 12: ui->printMsg(F("MMM01+RAM")); break;
+      case 13: ui->printMsg(F("MMM01+RAM")); break;
+      case 15: ui->printMsg(F("MBC3+TIMER")); break;
+      case 16: ui->printMsg(F("MBC3+TIMER+RAM")); break;
+      case 17: ui->printMsg(F("MBC3")); break;
+      case 18: ui->printMsg(F("MBC3+RAM")); break;
+      case 19: ui->printMsg(F("MBC3+RAM")); break;
+      case 21: ui->printMsg(F("MBC4")); break;
+      case 22: ui->printMsg(F("MBC4+RAM")); break;
+      case 23: ui->printMsg(F("MBC4+RAM")); break;
+      case 25: ui->printMsg(F("MBC5")); break;
+      case 26: ui->printMsg(F("MBC5+RAM")); break;
+      case 27: ui->printMsg(F("MBC5+RAM")); break;
+      case 28: ui->printMsg(F("MBC5+RUMBLE")); break;
+      case 29: ui->printMsg(F("MBC5+RUMBLE+RAM")); break;
+      case 30: ui->printMsg(F("MBC5+RUMBLE+RAM")); break;
+      case 252: ui->printMsg(F("Gameboy Camera")); break;
+      default: ui->printMsg(F("Not found"));
     }
-    println_Msg(F(" "));
-    print_Msg(F("Rom Size: "));
+    ui->printlnMsg(F(" "));
+    ui->printMsg(F("Rom Size: "));
     switch (romSize) {
-      case 0: print_Msg(F("32KB")); break;
-      case 1: print_Msg(F("64KB")); break;
-      case 2: print_Msg(F("128KB")); break;
-      case 3: print_Msg(F("256KB")); break;
-      case 4: print_Msg(F("512KB")); break;
-      case 5: print_Msg(F("1MB")); break;
-      case 6: print_Msg(F("2MB")); break;
-      case 7: print_Msg(F("4MB")); break;
-      case 82: print_Msg(F("1.1MB")); break;
-      case 83: print_Msg(F("1.2MB")); break;
-      case 84: print_Msg(F("1.5MB)")); break;
-      default: print_Msg(F("Not found"));
+      case 0: ui->printMsg(F("32KB")); break;
+      case 1: ui->printMsg(F("64KB")); break;
+      case 2: ui->printMsg(F("128KB")); break;
+      case 3: ui->printMsg(F("256KB")); break;
+      case 4: ui->printMsg(F("512KB")); break;
+      case 5: ui->printMsg(F("1MB")); break;
+      case 6: ui->printMsg(F("2MB")); break;
+      case 7: ui->printMsg(F("4MB")); break;
+      case 82: ui->printMsg(F("1.1MB")); break;
+      case 83: ui->printMsg(F("1.2MB")); break;
+      case 84: ui->printMsg(F("1.5MB)")); break;
+      default: ui->printMsg(F("Not found"));
     }
-    println_Msg(F(""));
-    print_Msg(F("Banks: "));
-    println_Msg(romBanks);
+    ui->printlnMsg(F(""));
+    ui->printMsg(F("Banks: "));
+    ui->printlnMsg(romBanks);
 
-    print_Msg(F("Sram Size: "));
+    ui->printMsg(F("Sram Size: "));
     switch (sramSize) {
       case 0:
         if (romType == 6) {
-          print_Msg(F("512B"));
+          ui->printMsg(F("512B"));
         }
         else {
-          print_Msg(F("None"));
+          ui->printMsg(F("None"));
         }
         break;
-      case 1: print_Msg(F("2KB")); break;
-      case 2: print_Msg(F("8KB")); break;
-      case 3: print_Msg(F("32KB")); break;
-      case 4: print_Msg(F("128KB")); break;
-      default: print_Msg(F("Not found"));
+      case 1: ui->printMsg(F("2KB")); break;
+      case 2: ui->printMsg(F("8KB")); break;
+      case 3: ui->printMsg(F("32KB")); break;
+      case 4: ui->printMsg(F("128KB")); break;
+      default: ui->printMsg(F("Not found"));
     }
-    println_Msg(F(""));
-    print_Msg(F("Checksum: "));
-    println_Msg(checksumStr);
-    display_Update();
+    ui->printlnMsg(F(""));
+    ui->printMsg(F("Checksum: "));
+    ui->printlnMsg(checksumStr);
+    ui->flushOutput();
 
     // Wait for user input
-    println_Msg(F("Press Button..."));
-    display_Update();
-    wait();
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
   else {
-    print_Error(F("GAMEPAK ERROR"));
+    ui->printErrorAndAbort(F("GAMEPAK ERROR"), true);
   }
 }
 
@@ -412,29 +413,9 @@ void getCartInfo_GB() {
 }
 
 // Dump ROM
-void readROM_GB() {
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".GB");
-
-  // create a new folder for the rom file
-  foldern = loadFolderNumber();
-  sprintf(folder, "GB/ROM/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  display_Clear();
-  print_Msg(F("Saving to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
-
+void readROM_GB(const String &outputFilePath) {
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   uint16_t romAddress = 0;
 
@@ -474,16 +455,13 @@ void readROM_GB() {
   outputFile.close();
 }
 
-unsigned int calc_checksum_GB (char* fileName, char* folder) {
+unsigned int calc_checksum_GB(const String &filePath) {
   unsigned int calcChecksum = 0;
   //  int calcFilesize = 0; // unused
   unsigned long i = 0;
   int c = 0;
 
-  if (strcmp(folder, "root") != 0)
-    chdir(folder);
-
-  SafeSDFile inputFile = SafeSDFile::openForReading(fileName);
+  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
   //calcFilesize = myFile.fileSize() * 8 / 1024 / 1024; // unused
   for (i = 0; i < (inputFile.fileSize() / 512); i++) {
     inputFile.read(sdBuffer, 512);
@@ -492,7 +470,6 @@ unsigned int calc_checksum_GB (char* fileName, char* folder) {
     }
   }
   inputFile.close();
-  chdirToRoot();
   // Subtract checksum bytes
   calcChecksum -= readByte_GB(0x014E);
   calcChecksum -= readByte_GB(0x014F);
@@ -501,32 +478,24 @@ unsigned int calc_checksum_GB (char* fileName, char* folder) {
   return (calcChecksum);
 }
 
-boolean compare_checksum_GB() {
-
-  println_Msg(F("Calculating Checksum"));
-  display_Update();
-
-  strcpy(fileName, romName);
-  strcat(fileName, ".GB");
-
-  // last used rom folder
-  foldern = loadFolderNumber();
-  sprintf(folder, "GB/ROM/%s/%d", romName, foldern - 1);
+boolean compare_checksum_GB(const String &filePath) {
+  ui->printlnMsg(F("Calculating Checksum"));
+  ui->flushOutput();
 
   char calcsumStr[5];
-  sprintf(calcsumStr, "%04X", calc_checksum_GB(fileName, folder));
+  sprintf(calcsumStr, "%04X", calc_checksum_GB(filePath));
 
   if (strcmp(calcsumStr, checksumStr) == 0) {
-    print_Msg(F("Result: "));
-    println_Msg(calcsumStr);
-    println_Msg(F("Checksum matches"));
-    display_Update();
+    ui->printMsg(F("Result: "));
+    ui->printlnMsg(calcsumStr);
+    ui->printlnMsg(F("Checksum matches"));
+    ui->flushOutput();
     return 1;
   }
   else {
-    print_Msg(F("Result: "));
-    println_Msg(calcsumStr);
-    print_Warning(F("Checksum Error"));
+    ui->printMsg(F("Result: "));
+    ui->printlnMsg(calcsumStr);
+    ui->printError(F("Checksum Error"));
     return 0;
   }
 }
@@ -535,23 +504,10 @@ boolean compare_checksum_GB() {
 void readSRAM_GB() {
   // Does cartridge have RAM
   if (sramEndAddress > 0) {
-
-    // Get name, add extension and convert to char array for sd lib
-    strcpy(fileName, romName);
-    strcat(fileName, ".sav");
-
-    // create a new folder for the save file
-    foldern = loadFolderNumber();
-    sprintf(folder, "GB/SAVE/%s/%d", romName, foldern);
-    mkdir(folder, true);
-    chdir(folder);
-
-    // write new folder number back to eeprom
-    foldern = foldern + 1;
-    saveFolderNumber(foldern);
+    String outputFilePath = getNextGBSaveOutputPath(romName);
 
     //open file on sd card
-    SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+    SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
     dataIn_GB();
 
@@ -591,29 +547,21 @@ void readSRAM_GB() {
     outputFile.close();
 
     // Signal end of process
-    print_Msg(F("Saved to "));
-    print_Msg(folder);
-    println_Msg(F("/"));
-    display_Update();
+    ui->printMsg(F("Saved to "));
+    ui->printlnMsg(outputFilePath);
+    ui->flushOutput();
   }
   else {
-    print_Warning(F("Cart has no SRAM"));
+    ui->printError(F("Cart has no SRAM"));
   }
 }
 
 // Write RAM
-void writeSRAM_GB() {
+void writeSRAM_GB(const String& inputFilePath) {
   // Does cartridge have SRAM
   if (sramEndAddress > 0) {
-
-    filePath[0] = '\0';
-    chdir("/");
-    fileBrowser(F("Select sav file"));
-    // Create filepath
-    sprintf(filePath, "%s/%s", filePath, fileName);
-
     //open file on sd card
-    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
     // Set pins to input
     dataIn_GB();
@@ -656,18 +604,17 @@ void writeSRAM_GB() {
 
     // Close the file:
     inputFile.close();
-    display_Clear();
-    println_Msg(F("SRAM writing finished"));
-    display_Update();
+    ui->clearOutput();
+    ui->printlnMsg(F("SRAM writing finished"));
+    ui->flushOutput();
   }
   else {
-    print_Warning(F("Cart has no SRAM"));
+    ui->printError(F("Cart has no SRAM"));
   }
 }
 
 // Check if the SRAM was written without any error
-unsigned long verifySRAM_GB() {
-
+unsigned long verifySRAM_GB(const String &filePath) {
   //open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
@@ -721,16 +668,11 @@ unsigned long verifySRAM_GB() {
 // A14-A21 connected to MBC5
 void writeFlash_GB(byte MBC) {
   // Launch filebrowser
-  filePath[0] = '\0';
-  chdir("/");
-  fileBrowser(F("Select file"));
-  display_Clear();
-
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
+  String inputFilePath = fileBrowser(F("Select file"));
+  ui->clearOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   inputFile.seekCur(0x147);
   romType = inputFile.readByteOrDie(F("Failed reading ROM type from file!"));
@@ -768,45 +710,45 @@ void writeFlash_GB(byte MBC) {
   sprintf(flashid, "%02X%02X", readByte_GB(0), readByte_GB(1));
 
   if (strcmp(flashid, "04D4") == 0) {
-    println_Msg(F("MBM29F033C"));
-    print_Msg(F("Banks: "));
-    print_Msg(romBanks);
-    println_Msg(F("/256"));
-    display_Update();
+    ui->printlnMsg(F("MBM29F033C"));
+    ui->printMsg(F("Banks: "));
+    ui->printMsg(romBanks);
+    ui->printlnMsg(F("/256"));
+    ui->flushOutput();
   }
   else if (strcmp(flashid, "0141") == 0) {
-    println_Msg(F("AM29F032B"));
-    print_Msg(F("Banks: "));
-    print_Msg(romBanks);
-    println_Msg(F("/256"));
-    display_Update();
+    ui->printlnMsg(F("AM29F032B"));
+    ui->printMsg(F("Banks: "));
+    ui->printMsg(romBanks);
+    ui->printlnMsg(F("/256"));
+    ui->flushOutput();
   }
   else if (strcmp(flashid, "01AD") == 0) {
-    println_Msg(F("AM29F016B"));
-    print_Msg(F("Banks: "));
-    print_Msg(romBanks);
-    println_Msg(F("/128"));
-    display_Update();
+    ui->printlnMsg(F("AM29F016B"));
+    ui->printMsg(F("Banks: "));
+    ui->printMsg(romBanks);
+    ui->printlnMsg(F("/128"));
+    ui->flushOutput();
   }
   else if (strcmp(flashid, "04AD") == 0) {
-    println_Msg(F("AM29F016D"));
-    print_Msg(F("Banks: "));
-    print_Msg(romBanks);
-    println_Msg(F("/128"));
-    display_Update();
+    ui->printlnMsg(F("AM29F016D"));
+    ui->printMsg(F("Banks: "));
+    ui->printMsg(romBanks);
+    ui->printlnMsg(F("/128"));
+    ui->flushOutput();
   }
   else if (strcmp(flashid, "01D5") == 0) {
-    println_Msg(F("AM29F080B"));
-    print_Msg(F("Banks: "));
-    print_Msg(romBanks);
-    println_Msg(F("/64"));
-    display_Update();
+    ui->printlnMsg(F("AM29F080B"));
+    ui->printMsg(F("Banks: "));
+    ui->printMsg(romBanks);
+    ui->printlnMsg(F("/64"));
+    ui->flushOutput();
   }
   else {
-    print_Msg(F("Flash ID: "));
-    println_Msg(flashid);
-    display_Update();
-    print_Error(F("Unknown flashrom"));
+    ui->printMsg(F("Flash ID: "));
+    ui->printlnMsg(flashid);
+    ui->flushOutput();
+    ui->printErrorAndAbort(F("Unknown flashrom"), false);
   }
   dataOut();
 
@@ -814,8 +756,8 @@ void writeFlash_GB(byte MBC) {
   writeByte_GB(0x555, 0xf0);
 
   delay(100);
-  println_Msg(F("Erasing flash"));
-  display_Update();
+  ui->printlnMsg(F("Erasing flash"));
+  ui->flushOutput();
 
   // Erase flash
   writeByte_GB(0x555, 0xaa);
@@ -840,8 +782,8 @@ void writeFlash_GB(byte MBC) {
   }
 
   // Blankcheck
-  println_Msg(F("Blankcheck"));
-  display_Update();
+  ui->printlnMsg(F("Blankcheck"));
+  ui->flushOutput();
 
   // Read x number of banks
   for (unsigned int currBank = 0; currBank < romBanks; currBank++) {
@@ -861,16 +803,16 @@ void writeFlash_GB(byte MBC) {
       }
       for (int j = 0; j < 512; j++) {
         if (readData[j] != 0xFF) {
-          println_Msg(F("Not empty"));
-          print_Error(F("Erase failed"));
+          ui->printlnMsg(F("Not empty"));
+          ui->printErrorAndAbort(F("Erase failed"), false);
         }
       }
     }
   }
 
   if (MBC == 3) {
-    println_Msg(F("Writing flash MBC3"));
-    display_Update();
+    ui->printlnMsg(F("Writing flash MBC3"));
+    ui->flushOutput();
 
     // Write flash
     dataOut();
@@ -923,8 +865,8 @@ void writeFlash_GB(byte MBC) {
   }
 
   else if (MBC == 5) {
-    println_Msg(F("Writing flash MBC5"));
-    display_Update();
+    ui->printlnMsg(F("Writing flash MBC5"));
+    ui->flushOutput();
 
     // Write flash
     dataOut();
@@ -972,8 +914,8 @@ void writeFlash_GB(byte MBC) {
   // Set data pins to input again
   dataIn_GB();
 
-  println_Msg(F("Verifying"));
-  display_Update();
+  ui->printlnMsg(F("Verifying"));
+  ui->flushOutput();
 
   // Go back to file beginning
   inputFile.seekSet(0);
@@ -1023,14 +965,14 @@ void writeFlash_GB(byte MBC) {
   inputFile.close();
 
   if (writeErrors == 0) {
-    println_Msg(F("OK"));
-    display_Update();
+    ui->printlnMsg(F("OK"));
+    ui->flushOutput();
   }
   else {
-    print_Msg(F("Error: "));
-    print_Msg(writeErrors);
-    println_Msg(F(" bytes "));
-    print_Warning(F("did not verify."));
+    ui->printMsg(F("Error: "));
+    ui->printMsg(writeErrors);
+    ui->printlnMsg(F(" bytes "));
+    ui->printError(F("did not verify."));
   }
 }
 

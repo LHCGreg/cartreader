@@ -173,9 +173,6 @@ void setup() {
   //PORTD |= (1 << 7);
   PORTG |= (1 << 2);
 
-  // Read current folder number out of eeprom
-  foldern = loadFolderNumber();
-
   ui->initialize();
 
   initializeSD(sdChipSelectPin, sdSpeed);

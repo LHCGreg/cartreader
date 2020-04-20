@@ -560,6 +560,8 @@ uint8_t OLEDUserInterface::askMultipleChoiceQuestion(const String &question, con
 
   rgb.setColor(0, 0, 0);
   m_display.setTextWrap(true);
+  m_display.clearDisplay();
+  m_display.display();
   return currentChoice;
 }
 
