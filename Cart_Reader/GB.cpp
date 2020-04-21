@@ -24,7 +24,6 @@ uint16_t sramEndAddress = 0;
 /******************************************
    Function prototypes
  *****************************************/
-String getNextGBRomOutputPathAndPrintMessage(const String &gameName);
 String getNextGBSaveOutputPath(const String &gameName);
 void setup_GB();
 void writeFlash_GB(byte MBC);

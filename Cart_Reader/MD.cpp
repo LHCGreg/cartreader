@@ -7,7 +7,7 @@
 #include "MD.h"
 #include "filebrowser.h"
 #include "FLASH.h"
-#include "menu.h"
+#include "ui.h"
 #include "globals.h"
 #include "utils.h"
 #include "options.h"
@@ -117,67 +117,44 @@ void readBram_MD();
 void writeBram_MD();
 void readRealtec_MD();
 
-/******************************************
-   Menu
- *****************************************/
-// MD menu items
-static const char MDMenuItem1[] PROGMEM = "Game Cartridge";
-static const char MDMenuItem2[] PROGMEM = "SegaCD RamCart";
-static const char MDMenuItem3[] PROGMEM = "Flash Repro";
-static const char MDMenuItem4[] PROGMEM = "Reset";
-static const char* const menuOptionsMD[] PROGMEM = {MDMenuItem1, MDMenuItem2, MDMenuItem3, MDMenuItem4};
-
-// Cart menu items
-static const char MDCartMenuItem1[] PROGMEM = "Read Rom";
-static const char MDCartMenuItem2[] PROGMEM = "Read Sram";
-static const char MDCartMenuItem3[] PROGMEM = "Write Sram";
-static const char MDCartMenuItem4[] PROGMEM = "Read EEPROM";
-static const char MDCartMenuItem5[] PROGMEM = "Write EEPROM";
-static const char MDCartMenuItem6[] PROGMEM = "Cycle cart";
-static const char MDCartMenuItem7[] PROGMEM = "Reset";
-static const char* const menuOptionsMDCart[] PROGMEM = {MDCartMenuItem1, MDCartMenuItem2, MDCartMenuItem3, MDCartMenuItem4, MDCartMenuItem5, MDCartMenuItem6, MDCartMenuItem7};
-
-// Sega CD Ram Backup Cartridge menu items
-static const char SCDMenuItem1[] PROGMEM = "Read Backup RAM";
-static const char SCDMenuItem2[] PROGMEM = "Write Backup RAM";
-static const char SCDMenuItem3[] PROGMEM = "Reset";
-static const char* const menuOptionsSCD[] PROGMEM = {SCDMenuItem1, SCDMenuItem2, SCDMenuItem3};
-
 // Sega start menu
 void mdMenu() {
-  // create menu with title and 4 options to choose from
-  unsigned char mdDev;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsMD, 4);
-  mdDev = question_box(F("Select MD device"), menuOptions, 4, 0);
+  while (true) {
+    const __FlashStringHelper *item_Game = F("Game Cartridge");
+    const __FlashStringHelper *item_RamCart = F("SegaCD RamCart");
+    const __FlashStringHelper *item_FlashRepro = F("Flash Repro");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_Game,
+      item_RamCart,
+      item_FlashRepro,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mdDev)
-  {
-    case 0:
-      display_Clear();
-      display_Update();
-      setup_MD();
-      mode = mode_MD_Cart;
-      break;
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Select MD device"), menu, ARRAY_LENGTH(menu), item_Game);
 
-    case 1:
-      display_Clear();
-      display_Update();
+    if (answer == item_Game) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_MD();
-      mode =  mode_SEGA_CD;
-      break;
-
-    case 2:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::MDCart;
+      mdCartMenu();
+    }
+    else if (answer == item_RamCart) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_MD();
-      mode =  mode_MD_Cart;
-      // Change working dir to root
-      filePath[0] = '\0';
-      chdir("/");
-      fileBrowser(F("Select file"));
-      display_Clear();
+      mode = CartReaderMode::SegaCD;
+      segaCDMenu();
+    }
+    else if (answer == item_FlashRepro) {
+      ui->clearOutput();
+      ui->flushOutput();
+      setup_MD();
+      mode = CartReaderMode::MDCart;
+      String inputFilePath = fileBrowser(F("Select file"));
+      ui->clearOutput();
       // Setting CS(PH3) LOW
       PORTH &= ~(1 << 3);
 
@@ -185,16 +162,16 @@ void mdMenu() {
       resetFlash_MD();
       idFlash_MD();
       resetFlash_MD();
-      print_Msg(F("Flash ID: "));
-      println_Msg(flashid);
+      ui->printMsg(F("Flash ID: "));
+      ui->printlnMsg(flashid);
       if (strcmp(flashid, "C2F1") == 0) {
-        println_Msg(F("MX29F1610 detected"));
+        ui->printlnMsg(F("MX29F1610 detected"));
         flashSize = 2097152;
       }
       else {
-        print_Error(F("Error: Unknown flashrom"));
+        ui->printErrorAndAbort(F("Error: Unknown flashrom"), false);
       }
-      display_Update();
+      ui->flushOutput();
 
       eraseFlash_MD();
       resetFlash_MD();
@@ -207,36 +184,45 @@ void mdMenu() {
       verifyFlash_MD();
       // Set CS(PH3) HIGH
       PORTH |= (1 << 3);
-      println_Msg(F(""));
-      println_Msg(F("Press Button..."));
-      display_Update();
-      wait();
+      ui->printlnMsg(F(""));
+      ui->printlnMsg(F("Press Button..."));
+      ui->flushOutput();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_Back) {
       break;
-
-    case 3:
-      resetArduino();
-      break;
+    }
   }
 }
 
 void mdCartMenu() {
-  // create menu with title and 6 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsMDCart, 7);
-  mainMenu = question_box(F("MEGA DRIVE Reader"), menuOptions, 7, 0);
+  while (true) {
+    const __FlashStringHelper *item_ReadROM = F("Read Rom");
+    const __FlashStringHelper *item_ReadSRAM = F("Read Sram");
+    const __FlashStringHelper *item_WriteSRAM = F("Write Sram");
+    const __FlashStringHelper *item_ReadEEPROM = F("Read EEPROM");
+    const __FlashStringHelper *item_WriteEEPROM = F("Write EEPROM");
+    const __FlashStringHelper *item_CycleCart = F("Cycle cart");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadROM,
+      item_ReadSRAM,
+      item_WriteSRAM,
+      item_ReadEEPROM,
+      item_WriteEEPROM,
+      item_CycleCart,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      display_Clear();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("MEGA DRIVE Reader"), menu, ARRAY_LENGTH(menu), item_ReadROM);
+
+    if (answer == item_ReadROM) {
+      ui->clearOutput();
 
       // common ROM read fail state: no cart inserted - tends to report impossibly large cartSize
       // largest known game so far is supposedly "Paprium" at 10MB, so cap sanity check at 16MB
       if (cartSize != 0 && cartSize <= 16777216) {
-        // Change working dir to root
-        chdir("/");
         if (realtec)
           readRealtec_MD();
         else
@@ -244,144 +230,136 @@ void mdCartMenu() {
         //compare_checksum_MD();
       }
       else {
-        print_Warning(F("Cart has no ROM"));
+        ui->printError(F("Cart has no ROM"));
       }
-      break;
-
-    case 1:
-      display_Clear();
+    }
+    else if (answer == item_ReadSRAM) {
+      ui->clearOutput();
       // Does cartridge have SRAM
       if ((saveType == 1) || (saveType == 2) || (saveType == 3)) {
-        // Change working dir to root
-        chdir("/");
-        println_Msg(F("Reading Sram..."));
-        display_Update();
+        ui->printlnMsg(F("Reading Sram..."));
+        ui->flushOutput();
         enableSram_MD(1);
         readSram_MD();
         enableSram_MD(0);
       }
       else {
-        print_Warning(F("Cart has no Sram"));
+        ui->printError(F("Cart has no Sram"));
       }
-      break;
-
-    case 2:
-      display_Clear();
+    }
+    else if (answer == item_WriteSRAM) {
+      ui->clearOutput();
       // Does cartridge have SRAM
       if ((saveType == 1) || (saveType == 2) || (saveType == 3)) {
-        // Change working dir to root
-        chdir("/");
         // Launch file browser
-        fileBrowser(F("Select srm file"));
-        display_Clear();
+        String inputFilePath = fileBrowser(F("Select srm file"));
+        ui->clearOutput();
         enableSram_MD(1);
         writeSram_MD();
-        writeErrors = verifySram_MD();
+        uint32_t writeErrors = verifySram_MD();
         enableSram_MD(0);
         if (writeErrors == 0) {
-          println_Msg(F("Sram verified OK"));
-          display_Update();
+          ui->printlnMsg(F("Sram verified OK"));
+          ui->flushOutput();
         }
         else {
-          print_Msg(F("Error: "));
-          print_Msg(writeErrors);
-          println_Msg(F(" bytes "));
-          print_Warning(F("did not verify."));
+          ui->printMsg(F("Error: "));
+          ui->printMsg(writeErrors);
+          ui->printlnMsg(F(" bytes "));
+          ui->printError(F("did not verify."));
         }
       }
       else {
-        print_Warning(F("Cart has no Sram"));
+        ui->printError(F("Cart has no Sram"));
       }
-      break;
-
-    case 3:
-      display_Clear();
+    }
+    else if (answer == item_ReadEEPROM) {
+      ui->clearOutput();
       if (saveType == 4)
         readEEP_MD();
       else {
-        print_Warning(F("Cart has no EEPROM"));
+        ui->printError(F("Cart has no EEPROM"));
       }
-      break;
-
-    case 4:
-      display_Clear();
+    }
+    else if (answer == item_WriteEEPROM) {
+      ui->clearOutput();
       if (saveType == 4) {
         // Launch file browser
-        fileBrowser(F("Select eep file"));
-        display_Clear();
+        String inputFilePath = fileBrowser(F("Select eep file"));
+        ui->clearOutput();
         writeEEP_MD();
       }
       else {
-        print_Warning(F("Cart has no EEPROM"));
+        ui->printError(F("Cart has no EEPROM"));
       }
-      break;
-
-    case 5:
+    }
+    else if (answer == item_CycleCart) {
       // For multi-game carts
       // Set reset pin to output (PH0)
       DDRH |= (1 << 0);
       // Switch RST(PH0) to LOW
       PORTH &= ~(1 << 0);
 
-      display_Clear();
-      print_Msg(F("Resetting..."));
-      display_Update();
-      delay(3000);  // wait 3 secs to switch to next game
+      ui->clearOutput();
+      ui->printMsg(F("Resetting..."));
+      ui->flushOutput();
+      delay(3000); // wait 3 secs to switch to next game
       resetArduino();
+    }
+    else if (answer == item_Back) {
       break;
+    }
 
-    case 6:
-      // Reset
-      resetArduino();
-      break;
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
 }
 
 void segaCDMenu() {
-  // create menu with title and 3 options to choose from
-  unsigned char scdMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsSCD, 3);
-  scdMenu = question_box(F("SEGA CD RAM"), menuOptions, 3, 0);
+  while (true) {
+    const __FlashStringHelper *item_Read = F("Read Backup RAM");
+    const __FlashStringHelper *item_Write = F("Write Backup RAM");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_Read,
+      item_Write,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (scdMenu)
-  {
-    case 0:
-      display_Clear();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("SEGA CD RAM"), menu, ARRAY_LENGTH(menu), item_Read);
+
+    if (answer == item_Read) {
+      ui->clearOutput();
       if (bramSize > 0)
         readBram_MD();
       else {
-        print_Warning(F("Not CD Backup RAM Cart"));
+        ui->printError(F("Not CD Backup RAM Cart"));
       }
-      break;
-
-    case 1:
-      display_Clear();
+    }
+    else if (answer == item_Write) {
+      ui->clearOutput();
       if (bramSize > 0) {
         // Launch file browser
-        fileBrowser(F("Select brm file"));
-        display_Clear();
+        String inputFilePath = fileBrowser(F("Select brm file"));
+        ui->clearOutput();
         writeBram_MD();
       }
       else {
-        print_Warning(F("Not CD Backup RAM Cart"));
+        ui->printError(F("Not CD Backup RAM Cart"));
       }
+    }
+    else if (answer == item_Back) {
       break;
+    }
 
-    case 2:
-      // Reset
-      asm volatile ("  jmp 0");
-      break;
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
 }
 
 /******************************************
@@ -641,7 +619,7 @@ void getCartInfo_MD() {
           sramBase = sramBase / 2;
         }
         else
-          print_Error(F("Unknown Sram Base"));
+          ui->printErrorAndAbort(F("Unknown Sram Base"), false);
       }
       else if (sramType == 0xE020) { // SRAM BOTH BYTES
         // Get sram start and end
@@ -659,7 +637,7 @@ void getCartInfo_MD() {
           sramBase = sramBase >> 1;
         }
         else
-          print_Error(F("Unknown Sram Base"));
+          ui->printErrorAndAbort(F("Unknown Sram Base"), false);
       }
     }
     else {
@@ -743,40 +721,37 @@ void getCartInfo_MD() {
     cartSize = 0x80000;
   }
 
-  display_Clear();
-  println_Msg(F("Cart Info"));
-  println_Msg(F(" "));
-  print_Msg(F("Name: "));
-  println_Msg(romName);
-  print_Msg(F("Size: "));
-  print_Msg(cartSize * 8 / 1024 / 1024 );
-  println_Msg(F(" MBit"));
-  print_Msg(F("ChkS: "));
-  print_Msg((chksum >> 8), HEX);
-  print_Msg((chksum & 0x00ff), HEX);
-  println_Msg(F(""));
+  ui->clearOutput();
+  ui->printlnMsg(F("Cart Info"));
+  ui->printlnMsg(F(" "));
+  ui->printMsg(F("Name: "));
+  ui->printlnMsg(romName);
+  ui->printMsg(F("Size: "));
+  ui->printMsg(cartSize * 8 / 1024 / 1024 );
+  ui->printlnMsg(F(" MBit"));
+  ui->printMsg(F("ChkS: "));
+  ui->printMsg((chksum >> 8), HEX);
+  ui->printMsg((chksum & 0x00ff), HEX);
+  ui->printlnMsg(F(""));
   if (saveType == 4) {
-    print_Msg(F("Serial EEPROM: "));
-    print_Msg(eepSize * 8 / 1024);
-    println_Msg(F(" KBit"));
+    ui->printMsg(F("Serial EEPROM: "));
+    ui->printMsg(eepSize * 8 / 1024);
+    ui->printlnMsg(F(" KBit"));
   }
   else {
-    print_Msg(F("Sram: "));
+    ui->printMsg(F("Sram: "));
     if (sramSize > 0) {
-      print_Msg(sramSize * 8 / 1024);
-      println_Msg(F(" KBit"));
+      ui->printMsg(sramSize * 8 / 1024);
+      ui->printlnMsg(F(" KBit"));
     }
     else
-      println_Msg(F("None"));
+      ui->printlnMsg(F("None"));
   }
-  println_Msg(F(" "));
+  ui->printlnMsg(F(" "));
 
-  // Wait for user input
-#ifdef enable_OLED
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
-#endif
+  ui->printlnMsg(F("Press Button..."));
+  ui->flushOutput();
+  ui->waitForUserInput();
 }
 
 void writeSSF2Map(unsigned long myAddress, word myData) {
@@ -831,11 +806,11 @@ void readROM_MD() {
   mkdir(folder, true);
   chdir(folder);
 
-  display_Clear();
-  print_Msg(F("Saving to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
+  ui->clearOutput();
+  ui->printMsg(F("Saving to "));
+  ui->printMsg(folder);
+  ui->printlnMsg(F("/..."));
+  ui->flushOutput();
 
   // write new folder number back to eeprom
   foldern = foldern + 1;
@@ -924,23 +899,23 @@ void readROM_MD() {
   }
 
   // print elapsed time
-  print_Msg(F("Time elapsed: "));
-  print_Msg((millis() - startTime) / 1000);
-  println_Msg(F("s"));
-  display_Update();
+  ui->printMsg(F("Time elapsed: "));
+  ui->printMsg((millis() - startTime) / 1000);
+  ui->printlnMsg(F("s"));
+  ui->flushOutput();
 
   // print Checksum
   if (chksum == calcCKS) {
-    println_Msg(F("Checksum OK"));
-    display_Update();
+    ui->printlnMsg(F("Checksum OK"));
+    ui->flushOutput();
   }
   else {
-    print_Msg(F("Checksum Error: "));
+    ui->printMsg(F("Checksum Error: "));
     char calcsumStr[5];
     sprintf(calcsumStr, "%04X", calcCKS);
-    println_Msg(calcsumStr);
+    ui->printlnMsg(calcsumStr);
     print_Warning(F(""));
-    display_Update();
+    ui->flushOutput();
   }
 }
 
@@ -970,9 +945,9 @@ void writeSram_MD() {
 
   // Create filepath
   sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Writing..."));
-  println_Msg(filePath);
-  display_Update();
+  ui->printlnMsg(F("Writing..."));
+  ui->printlnMsg(filePath);
+  ui->flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
@@ -993,8 +968,8 @@ void writeSram_MD() {
 
   // Close the file:
   inputFile.close();
-  println_Msg(F("Done"));
-  display_Update();
+  ui->printlnMsg(F("Done"));
+  ui->flushOutput();
   dataIn_MD();
 }
 
@@ -1043,10 +1018,10 @@ void readSram_MD() {
   }
   // Close the file:
   outputFile.close();
-  print_Msg(F("Saved to "));
-  print_Msg(folder);
-  println_Msg(F("/"));
-  display_Update();
+  ui->printMsg(F("Saved to "));
+  ui->printMsg(folder);
+  ui->printlnMsg(F("/"));
+  ui->flushOutput();
 }
 
 unsigned long verifySram_MD() {
@@ -1101,10 +1076,10 @@ void resetFlash_MD() {
 void write29F1610_MD() {
   // Create filepath
   sprintf(filePath, "%s/%s", filePath, fileName);
-  print_Msg(F("Flashing file "));
-  print_Msg(filePath);
-  println_Msg(F("..."));
-  display_Update();
+  ui->printMsg(F("Flashing file "));
+  ui->printMsg(filePath);
+  ui->printlnMsg(F("..."));
+  ui->flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
@@ -1246,13 +1221,13 @@ void verifyFlash_MD() {
     d = 0;
   }
   if (blank == 0) {
-    println_Msg(F("Flashrom verified OK"));
-    display_Update();
+    ui->printlnMsg(F("Flashrom verified OK"));
+    ui->flushOutput();
   }
   else {
-    print_Msg(F("Error: "));
-    print_Msg(blank);
-    println_Msg(F(" bytes "));
+    ui->printMsg(F("Error: "));
+    ui->printMsg(blank);
+    ui->printlnMsg(F(" bytes "));
     print_Warning(F("did not verify."));
   }
   // Close the file:
@@ -1782,15 +1757,15 @@ void readEEP_MD() {
   foldern = foldern + 1;
   saveFolderNumber(foldern);
 
-  println_Msg(F("Reading..."));
-  display_Update();
+  ui->printlnMsg(F("Reading..."));
+  ui->flushOutput();
 
   // Open file on sd card
   SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
   if (eepSize > 0x100) { // 24C04+
     for (word currByte = 0; currByte < eepSize; currByte += 256) {
-      print_Msg(F("*"));
-      display_Update();
+      ui->printMsg(F("*"));
+      ui->flushOutput();
       for (int i = 0; i < 256; i++) {
         readEepromByte(currByte + i);
       }
@@ -1800,8 +1775,8 @@ void readEEP_MD() {
   else { // 24C01/24C02
     for (word currByte = 0; currByte < eepSize; currByte++) {
       if ((currByte != 0) && ((currByte + 1) % 16 == 0)) {
-        print_Msg(F("*"));
-        display_Update();
+        ui->printMsg(F("*"));
+        ui->flushOutput();
       }
       readEepromByte(currByte);
     }
@@ -1809,12 +1784,12 @@ void readEEP_MD() {
   }
   // Close the file:
   outputFile.close();
-  println_Msg(F(""));
-  display_Clear();
-  print_Msg(F("Saved to "));
-  print_Msg(folder);
+  ui->printlnMsg(F(""));
+  ui->clearOutput();
+  ui->printMsg(F("Saved to "));
+  ui->printMsg(folder);
 
-  display_Update();
+  ui->flushOutput();
 }
 
 void writeEEP_MD() {
@@ -1822,9 +1797,9 @@ void writeEEP_MD() {
 
   // Create filepath
   sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Writing..."));
-  println_Msg(filePath);
-  display_Update();
+  ui->printlnMsg(F("Writing..."));
+  ui->printlnMsg(filePath);
+  ui->flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
@@ -1836,26 +1811,26 @@ void writeEEP_MD() {
         writeEepromByte(currByte + i);
         delay(50); // DELAY NEEDED
       }
-      print_Msg(F("."));
-      display_Update();
+      ui->printMsg(F("."));
+      ui->flushOutput();
     }
   }
   else { // 24C01/24C02
     inputFile.read(sdBuffer, eepSize);
     for (word currByte = 0; currByte < eepSize; currByte++) {
       writeEepromByte(currByte);
-      print_Msg(F("."));
+      ui->printMsg(F("."));
       if ((currByte != 0) && ((currByte + 1) % 64 == 0))
-        println_Msg(F(""));
-      display_Update(); // ON SERIAL = delay(100)
+        ui->printlnMsg(F(""));
+      ui->flushOutput(); // ON SERIAL = delay(100)
     }
   }
   // Close the file:
   inputFile.close();
-  println_Msg(F(""));
-  display_Clear();
-  println_Msg(F("Done"));
-  display_Update();
+  ui->printlnMsg(F(""));
+  ui->clearOutput();
+  ui->printlnMsg(F("Done"));
+  ui->flushOutput();
 
   dataIn_MD();
 }
@@ -1880,8 +1855,8 @@ void readBram_MD() {
   foldern = foldern + 1;
   saveFolderNumber(foldern);
 
-  println_Msg(F("Reading..."));
-  display_Update();
+  ui->printlnMsg(F("Reading..."));
+  ui->flushOutput();
 
   // Open file on sd card
   SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
@@ -1895,12 +1870,12 @@ void readBram_MD() {
 
   // Close the file:
   outputFile.close();
-  println_Msg(F(""));
-  display_Clear();
-  print_Msg(F("Saved to "));
-  print_Msg(folder);
+  ui->printlnMsg(F(""));
+  ui->clearOutput();
+  ui->printMsg(F("Saved to "));
+  ui->printMsg(folder);
 
-  display_Update();
+  ui->flushOutput();
 }
 
 void writeBram_MD() {
@@ -1908,9 +1883,9 @@ void writeBram_MD() {
 
   // Create filepath
   sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Writing..."));
-  println_Msg(filePath);
-  display_Update();
+  ui->printlnMsg(F("Writing..."));
+  ui->printlnMsg(filePath);
+  ui->flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
@@ -1927,10 +1902,10 @@ void writeBram_MD() {
   writeWord_MD(0x380000, 0); // Disable BRAM Writes
   // Close the file:
   inputFile.close();
-  println_Msg(F(""));
-  display_Clear();
-  println_Msg(F("Done"));
-  display_Update();
+  ui->printlnMsg(F(""));
+  ui->clearOutput();
+  ui->printlnMsg(F("Done"));
+  ui->flushOutput();
   dataIn_MD();
 }
 
@@ -1966,11 +1941,11 @@ void readRealtec_MD() {
   mkdir(folder, true);
   chdir(folder);
 
-  display_Clear();
-  print_Msg(F("Saving to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
+  ui->clearOutput();
+  ui->printMsg(F("Saving to "));
+  ui->printMsg(folder);
+  ui->printlnMsg(F("/..."));
+  ui->flushOutput();
 
   // write new folder number back to eeprom
   foldern = foldern + 1;

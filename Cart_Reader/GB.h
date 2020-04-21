@@ -8,6 +8,7 @@ void getCartInfo_GB();
 void showCartInfo_GB();
 byte readByte_GB(word myAddress);
 void writeByte_GB(int myAddress, uint8_t myData);
+String getNextGBRomOutputPathAndPrintMessage(const String &gameName);
 void readROM_GB(const String &outputFilePath);
 boolean compare_checksum_GB(const String &filePath);
 void readSRAM_GB();

@@ -440,7 +440,6 @@ void epromMenu() {
 }
 
 String getNextFlashOutputPathAndPrintMessage() {
-  // Get name and add extension
   int16_t folderNumber = loadFolderNumber();
   String folder = F("/FLASH");
 

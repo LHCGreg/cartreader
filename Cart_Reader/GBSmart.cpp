@@ -18,39 +18,19 @@
    Function prototypes
  *****************************************/
 void gbSmartGameMenu();
+String getNextGbSmartFlashOutputPathAndPrintMessage();
 void gbSmartGetGames();
-void gbSmartReadFlash();
-void gbSmartWriteFlash();
-void gbSmartWriteFlash(uint32_t start_bank);
+void gbSmartReadFlash(const String &outputFilePath);
+void gbSmartWriteFlash(const String &inputFilePath);
+void gbSmartWriteFlash(const String &inputFilePath, uint32_t start_bank);
 void gbSmartWriteFlashFromMyFile(SafeSDFile &inputFile, uint32_t addr);
-uint32_t gbSmartVerifyFlash();
+uint32_t gbSmartVerifyFlash(const String &filePath);
 byte gbSmartBlankCheckingFlash(uint8_t flash_start_bank);
 void gbSmartResetFlash(uint8_t flash_start_bank);
 void gbSmartEraseFlash(uint8_t flash_start_bank);
 void gbSmartWriteFlashByte(uint32_t myAddress, uint8_t myData);
 void gbSmartRemapStartBank(uint8_t rom_start_bank, uint8_t rom_size, uint8_t sram_size);
 uint8_t gbSmartGetResizeParam(uint8_t rom_size, uint8_t sram_size);
-
-/******************************************
-   Menu
- *****************************************/
-// GB Smart menu items
-static const char gbSmartMenuItem1[] PROGMEM = "Game Menu";
-static const char gbSmartMenuItem2[] PROGMEM = "Flash Menu";
-static const char gbSmartMenuItem3[] PROGMEM = "Reset";
-static const char* const menuOptionsGBSmart[] PROGMEM = {gbSmartMenuItem1, gbSmartMenuItem2, gbSmartMenuItem3};
-
-static const char gbSmartFlashMenuItem1[] PROGMEM = "Read Flash";
-static const char gbSmartFlashMenuItem2[] PROGMEM = "Write Flash";
-static const char gbSmartFlashMenuItem3[] PROGMEM = "Back";
-static const char* const menuOptionsGBSmartFlash[] PROGMEM = {gbSmartFlashMenuItem1, gbSmartFlashMenuItem2, gbSmartFlashMenuItem3};
-
-static const char gbSmartGameMenuItem1[] PROGMEM = "Read Game";
-static const char gbSmartGameMenuItem2[] PROGMEM = "Read SRAM";
-static const char gbSmartGameMenuItem3[] PROGMEM = "Write SRAM";
-static const char gbSmartGameMenuItem4[] PROGMEM = "Switch Game";
-static const char gbSmartGameMenuItem5[] PROGMEM = "Reset";
-static const char* const menuOptionsGBSmartGame[] PROGMEM = {gbSmartGameMenuItem1, gbSmartGameMenuItem2, gbSmartGameMenuItem3, gbSmartGameMenuItem4, gbSmartGameMenuItem5};
 
 typedef struct
 {
@@ -115,107 +95,100 @@ void setup_GBSmart()
   hasMenu = true;
   numGames = 0;
 
-  display_Clear();
-  display_Update();
+  ui->clearOutput();
+  ui->flushOutput();
 }
 
-void gbSmartMenu()
-{
-  uint8_t mainMenu;
+void gbSmartMenu() {
+  while (true) {
+    const __FlashStringHelper *item_GameMenu = F("Game Menu");
+    const __FlashStringHelper *item_FlashMenu = F("Flash Menu");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_GameMenu,
+      item_FlashMenu,
+      item_Back,
+    };
 
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsGBSmart, 3);
-  mainMenu = question_box(F("GB Smart"), menuOptions, 3, 0);
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("GB Smart"), menu, ARRAY_LENGTH(menu), item_GameMenu);
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      {
-        gbSmartGameMenu();
-        break;
-      }
-    case 1:
-      {
-        mode = mode_GB_GBSmart_Flash;
-        break;
-      }
-    default:
-      {
-        asm volatile ("  jmp 0");
-        break;
-      }
+    if (answer == item_GameMenu) {
+      gbSmartGameMenu();
+      gbSmartGameOptions();
+    }
+    else if (answer == item_FlashMenu) {
+      mode = CartReaderMode::GBSmartFlash;
+      gbSmartFlashMenu();
+    }
+    else if (answer == item_Back) {
+      break;
+    }
   }
 }
 
-void gbSmartGameOptions()
-{
-  uint8_t gameSubMenu;
+void gbSmartGameOptions() {
+  while (true) {
+    const __FlashStringHelper *item_ReadGame = F("Read Game");
+    const __FlashStringHelper *item_ReadSRAM = F("Read SRAM");
+    const __FlashStringHelper *item_WriteSRAM = F("Write SRAM");
+    const __FlashStringHelper *item_SwitchGame = F("Switch Game");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadGame,
+      item_ReadSRAM,
+      item_WriteSRAM,
+      item_SwitchGame,
+      item_Back,
+    };
 
-  convertPgm(menuOptionsGBSmartGame, 5);
-  gameSubMenu = question_box(F("GB Smart Game Menu"), menuOptions, 5, 0);
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("GB Smart Game Menu"), menu, ARRAY_LENGTH(menu), item_ReadGame);
 
-  switch (gameSubMenu)
-  {
-    case 0: // Read Game
-      {
-        display_Clear();
-        chdir("/");
-        readROM_GB();
-        compare_checksum_GB();
-        break;
+    if (answer == item_ReadGame) {
+      ui->clearOutput();
+      String outputFilePath = getNextGBRomOutputPathAndPrintMessage(romName);
+      readROM_GB(outputFilePath);
+      compare_checksum_GB(outputFilePath);
+    }
+    else if (answer == item_ReadSRAM) {
+      ui->clearOutput();
+      readSRAM_GB();
+    }
+    else if (answer == item_WriteSRAM) {
+      ui->clearOutput();
+      String inputFilePath = fileBrowser(F("Select sav file"));
+      writeSRAM_GB(inputFilePath);
+      uint32_t writeErrors = verifySRAM_GB(inputFilePath);
+      if (writeErrors == 0) {
+        ui->printlnMsg(F("Verified OK"));
+        ui->flushOutput();
       }
-    case 1: // Read SRAM
-      {
-        display_Clear();
-        chdir("/");
-        readSRAM_GB();
-        break;
+      else {
+        ui->printMsg(F("Error: "));
+        ui->printMsg(writeErrors);
+        ui->printlnMsg(F(" bytes"));
+        ui->printError(F("did not verify."));
       }
-    case 2: // Write SRAM
-      {
-        display_Clear();
-        chdir("/");
-        writeSRAM_GB();
-        uint32_t wrErrors = verifySRAM_GB();
-        if (wrErrors == 0)
-        {
-          println_Msg(F("Verified OK"));
-          display_Update();
-        }
-        else
-        {
-          print_Msg(F("Error: "));
-          print_Msg(wrErrors);
-          println_Msg(F(" bytes"));
-          print_Warning(F("did not verify."));
-        }
-        break;
-      }
-    case 3: // Switch Game
-      {
-        gameMenuStartBank = 0x02;
-        gbSmartGameMenu();
-        break;
-      }
-    default:
-      {
-        asm volatile ("  jmp 0");
-        break;
-      }
-  }
+    }
+    else if (answer == item_SwitchGame) {
+      gameMenuStartBank = 0x02;
+      gbSmartGameMenu();
+    }
+    else if (answer == item_Back) {
+      break;
+    }
 
-  if (gameSubMenu != 3)
-  {
-    println_Msg(F(""));
-    println_Msg(F("Press Button..."));
-    display_Update();
-    wait();
+    if (answer != item_SwitchGame) {
+      ui->printlnMsg(F(""));
+      ui->printlnMsg(F("Press Button..."));
+      ui->flushOutput();
+      ui->waitForUserInput();
+    }
   }
 }
 
-void gbSmartGameMenu()
-{
+void gbSmartGameMenu() {
   uint8_t gameSubMenu = 0;
 gb_smart_load_more_games:
   if (gameMenuStartBank > 0xfe)
@@ -223,21 +196,23 @@ gb_smart_load_more_games:
 
   gbSmartGetGames();
 
-  if (hasMenu)
-  {
-    char menuOptionsGBSmartGames[7][20];
+  if (hasMenu) {
+    String menuOptionsGBSmartGames[7];
     int i = 0;
-    for (; i < numGames; i++)
-      strncpy(menuOptionsGBSmartGames[i], gbSmartGames[i].title, 16);
+    char gameTitleTemp[17];
+    gameTitleTemp[16] = '\0';
+    for (; i < numGames; i++) {
+      strncpy(gameTitleTemp, gbSmartGames[i].title, 16);
+      menuOptionsGBSmartGames[i] = gameTitleTemp;
+    }
+    menuOptionsGBSmartGames[i] = F("...");
 
-    strncpy(menuOptionsGBSmartGames[i], "...", 16);
-    gameSubMenu = question_box(F("Select Game"), menuOptionsGBSmartGames, i + 1, 0);
+    gameSubMenu = ui->askMultipleChoiceQuestion(F("Select Game"), menuOptionsGBSmartGames, i + 1, 0);
 
     if (gameSubMenu >= i)
       goto gb_smart_load_more_games;
   }
-  else
-  {
+  else {
     gameSubMenu = 0;
   }
 
@@ -249,68 +224,74 @@ gb_smart_load_more_games:
   getCartInfo_GB();
   showCartInfo_GB();
 
-  mode = mode_GB_GBSmart_Game;
+  mode = CartReaderMode::GBSmartGame;
 }
 
-void gbSmartFlashMenu()
-{
-  uint8_t flashSubMenu;
+void gbSmartFlashMenu() {
+  while (true) {
+    const __FlashStringHelper *item_ReadFlash = F("Read Flash");
+    const __FlashStringHelper *item_WriteFlash = F("Write Flash");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadFlash,
+      item_WriteFlash,
+      item_Back,
+    };
 
-  convertPgm(menuOptionsGBSmartFlash, 3);
-  flashSubMenu = question_box(F("GB Smart Flash Menu"), menuOptions, 3, 0);
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("GB Smart Flash Menu"), menu, ARRAY_LENGTH(menu), item_ReadFlash);
 
-  switch (flashSubMenu)
-  {
-    case 0:
-      {
-        // read flash
-        display_Clear();
-        chdir("/");
+    if (answer == item_ReadFlash) {
+      // read flash
+      ui->clearOutput();
+      String outputFilePath = getNextGbSmartFlashOutputPathAndPrintMessage();
+      gbSmartReadFlash(outputFilePath);
+    }
+    else if (answer == item_WriteFlash) {
+      ui->clearOutput();
 
-        foldern = loadFolderNumber();
-        sprintf(fileName, "GBS%d.bin", foldern);
-        mkdir("GB/GBS", true);
-        chdir("GB/GBS");
-        foldern = foldern + 1;
-        saveFolderNumber(foldern);
+      ui->printlnMsg(F("Attention"));
+      ui->printlnMsg(F("This will erase your"));
+      ui->printlnMsg(F("GB Smart Cartridge."));
+      ui->printlnMsg(F(""));
+      ui->printlnMsg(F("Press Button"));
+      ui->printlnMsg(F("to continue"));
+      ui->flushOutput();
+      ui->waitForUserInput();
 
-        gbSmartReadFlash();
-        break;
-      }
-    case 1:
-      {
-        // write flash
-        display_Clear();
+      ui->clearOutput();
+      String inputFilePath = fileBrowser(F("Select 4MB file"));
+      gbSmartWriteFlash(inputFilePath);
+    }
+    else if (answer == item_Back) {
+      break;
+    }
 
-        println_Msg(F("Attention"));
-        println_Msg(F("This will erase your"));
-        println_Msg(F("GB Smart Cartridge."));
-        println_Msg(F(""));
-        println_Msg(F("Press Button"));
-        println_Msg(F("to continue"));
-        display_Update();
-        wait();
-
-        display_Clear();
-        filePath[0] = '\0';
-        chdir("/");
-        fileBrowser(F("Select 4MB file"));
-
-        sprintf(filePath, "%s/%s", filePath, fileName);
-        gbSmartWriteFlash();
-        break;
-      }
-    default:
-      {
-        mode = mode_GB_GBSmart;
-        return;
-      }
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
+}
 
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
+String getNextGbSmartFlashOutputPathAndPrintMessage() {
+  int16_t folderNumber = loadFolderNumber();
+  String folder = F("/GB/GBS");
+
+  String fileName = F("GBS");
+  fileName.concat(folderNumber);
+  fileName.concat(F(".bin"));
+
+  String outputFilePath = pathJoin(folder, fileName);
+
+  // write new folder number back to eeprom
+  saveFolderNumber(folderNumber + 1);
+
+  ui->clearOutput();
+  ui->printMsg(F("Saving as "));
+  ui->printMsg(outputFilePath);
+  ui->printlnMsg(F("..."));
+  ui->flushOutput();
 }
 
 void gbSmartGetGames()
@@ -402,14 +383,9 @@ gb_smart_get_game_loop_end:;
   }
 }
 
-void gbSmartReadFlash()
+void gbSmartReadFlash(const String &outputFilePath)
 {
-  print_Msg(F("Saving as GB/GBS/"));
-  print_Msg(fileName);
-  println_Msg(F("..."));
-  display_Update();
-
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   // reset flash to read array state
   for (unsigned int i = 0x00; i < gbSmartBanks; i += gbSmartBanksPerFlashChip)
@@ -448,71 +424,71 @@ void gbSmartReadFlash()
   writeByte_GB(0x2100, 0x01);
 
   outputFile.close();
-  println_Msg("");
-  println_Msg(F("Finished reading"));
-  display_Update();
+  ui->printlnMsg("");
+  ui->printlnMsg(F("Finished reading"));
+  ui->flushOutput();
 }
 
-void gbSmartWriteFlash()
+void gbSmartWriteFlash(const String &inputFilePath)
 {
   for (unsigned int bank = 0x00; bank < gbSmartBanks; bank += gbSmartBanksPerFlashChip)
   {
-    display_Clear();
+    ui->clearOutput();
 
-    print_Msg(F("Erasing..."));
-    display_Update();
+    ui->printMsg(F("Erasing..."));
+    ui->flushOutput();
 
     gbSmartEraseFlash(bank);
     gbSmartResetFlash(bank);
 
-    println_Msg(F("Done"));
-    print_Msg(F("Blankcheck..."));
-    display_Update();
+    ui->printlnMsg(F("Done"));
+    ui->printMsg(F("Blankcheck..."));
+    ui->flushOutput();
 
     if (!gbSmartBlankCheckingFlash(bank))
-      print_Error(F("Could not erase flash"));
+      ui->printErrorAndAbort(F("Could not erase flash"), false);
 
-    println_Msg(F("Passed"));
-    display_Update();
+    ui->printlnMsg(F("Passed"));
+    ui->flushOutput();
 
     // write full chip
-    gbSmartWriteFlash(bank);
+    gbSmartWriteFlash(inputFilePath, bank);
 
     // reset chip
     gbSmartWriteFlashByte(0x0000, 0xff);
   }
 
-  print_Msg(F("Verifying..."));
-  display_Update();
+  ui->printMsg(F("Verifying..."));
+  ui->flushOutput();
 
-  writeErrors = gbSmartVerifyFlash();
+  writeErrors = gbSmartVerifyFlash(inputFilePath);
   if (writeErrors == 0)
   {
-    println_Msg(F("OK"));
-    display_Update();
+    ui->printlnMsg(F("OK"));
+    ui->flushOutput();
   }
   else
   {
-    print_Msg(F("Error: "));
-    print_Msg(writeErrors);
-    println_Msg(F(" bytes "));
-    print_Error(F("did not verify."));
+    ui->printMsg(F("Error: "));
+    ui->printMsg(writeErrors);
+    ui->printlnMsg(F(" bytes "));
+    ui->printErrorAndAbort(F("did not verify."), false);
   }
 }
 
-void gbSmartWriteFlash(uint32_t start_bank)
+void gbSmartWriteFlash(const String &inputFilePath, uint32_t start_bank)
 {
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   // switch to flash base bank
   gbSmartRemapStartBank(start_bank, gbSmartFlashSizeGB, gbSmartSramSizeGB);
 
   inputFile.seekCur((start_bank << 14));
 
-  print_Msg(F("Writing Bank 0x"));
-  print_Msg(start_bank, HEX);
-  print_Msg(F("..."));
-  display_Update();
+  ui->printMsg(F("Writing Bank 0x"));
+  ui->printMsg(start_bank, HEX);
+  ui->printMsg(F("..."));
+  ui->flushOutput();
 
   // handle bank 0x00 on 0x0000
   gbSmartWriteFlashFromMyFile(inputFile, 0x0000);
@@ -527,7 +503,7 @@ void gbSmartWriteFlash(uint32_t start_bank)
   }
 
   inputFile.close();
-  println_Msg("");
+  ui->printlnMsg("");
 }
 
 void gbSmartWriteFlashFromMyFile(SafeSDFile &inputFile, uint32_t addr)
@@ -560,7 +536,7 @@ void gbSmartWriteFlashFromMyFile(SafeSDFile &inputFile, uint32_t addr)
   PORTB ^= (1 << 4);
 }
 
-uint32_t gbSmartVerifyFlash()
+uint32_t gbSmartVerifyFlash(const String &filePath)
 {
   uint32_t verified = 0;
 
