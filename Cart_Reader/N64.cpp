@@ -6,7 +6,7 @@
 #include "N64.h"
 #include "filebrowser.h"
 #include "RGB_LED.h"
-#include "menu.h"
+#include "ui.h"
 #include "globals.h"
 #include "utils.h"
 #include "SD.h"

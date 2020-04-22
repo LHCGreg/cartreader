@@ -97,24 +97,29 @@ boolean realtec = 0;
 /******************************************
    Function prototypes
  *****************************************/
+String getNextMDRomOutputPathAndPrintMessage(const String &gameName);
+String getNextMDSramOutputPathAndPrintMessage(const String &gameName);
+String getNextMDEepromOutputPathAndPrintMessage(const String &gameName);
+String getNextMDBramOutputPathAndPrintMessage();
+String getNextMDRealtecOutputPathAndPrintMessage(const String &gameName);
 void setup_MD();
 void getCartInfo_MD();
 void readROM_MD();
 void enableSram_MD(boolean enableSram);
-void writeSram_MD();
+void writeSram_MD(const String &inputFilePath);
 void readSram_MD();
-unsigned long verifySram_MD();
+unsigned long verifySram_MD(const String &filePath);
 void resetFlash_MD();
-void write29F1610_MD();
+void write29F1610_MD(const String &inputFilePath);
 void idFlash_MD();
 void eraseFlash_MD();
 void blankcheck_MD();
-void verifyFlash_MD();
+void verifyFlash_MD(const String &filePath);
 void busyCheck_MD();
 void readEEP_MD();
-void writeEEP_MD();
+void writeEEP_MD(const String &inputFilePath);
 void readBram_MD();
-void writeBram_MD();
+void writeBram_MD(const String &inputFilePath);
 void readRealtec_MD();
 
 // Sega start menu
@@ -176,12 +181,12 @@ void mdMenu() {
       eraseFlash_MD();
       resetFlash_MD();
       blankcheck_MD();
-      write29F1610_MD();
+      write29F1610_MD(inputFilePath);
       resetFlash_MD();
       delay(1000);
       resetFlash_MD();
       delay(1000);
-      verifyFlash_MD();
+      verifyFlash_MD(inputFilePath);
       // Set CS(PH3) HIGH
       PORTH |= (1 << 3);
       ui->printlnMsg(F(""));
@@ -255,8 +260,8 @@ void mdCartMenu() {
         String inputFilePath = fileBrowser(F("Select srm file"));
         ui->clearOutput();
         enableSram_MD(1);
-        writeSram_MD();
-        uint32_t writeErrors = verifySram_MD();
+        writeSram_MD(inputFilePath);
+        uint32_t writeErrors = verifySram_MD(inputFilePath);
         enableSram_MD(0);
         if (writeErrors == 0) {
           ui->printlnMsg(F("Sram verified OK"));
@@ -287,7 +292,7 @@ void mdCartMenu() {
         // Launch file browser
         String inputFilePath = fileBrowser(F("Select eep file"));
         ui->clearOutput();
-        writeEEP_MD();
+        writeEEP_MD(inputFilePath);
       }
       else {
         ui->printError(F("Cart has no EEPROM"));
@@ -345,7 +350,7 @@ void segaCDMenu() {
         // Launch file browser
         String inputFilePath = fileBrowser(F("Select brm file"));
         ui->clearOutput();
-        writeBram_MD();
+        writeBram_MD(inputFilePath);
       }
       else {
         ui->printError(F("Not CD Backup RAM Cart"));
@@ -360,6 +365,39 @@ void segaCDMenu() {
     ui->flushOutput();
     ui->waitForUserInput();
   }
+}
+
+String getNextMDRomOutputPathAndPrintMessage(const String &gameName) {
+  return getNextOutputPathAndPrintMessage(F("MD"), F("ROM"), gameName, F(".BIN"));
+}
+
+String getNextMDSramOutputPathAndPrintMessage(const String &gameName) {
+  return getNextOutputPathAndPrintMessage(F("MD"), F("SAVE"), gameName, F(".srm"));
+}
+
+String getNextMDEepromOutputPathAndPrintMessage(const String &gameName) {
+  return getNextOutputPathAndPrintMessage(F("MD"), F("SAVE"), gameName, F(".eep"));
+}
+
+String getNextMDBramOutputPathAndPrintMessage() {
+  int16_t folderNumber = loadFolderNumber();
+
+  String outputFilePath = F("/MD/RAM");
+  pathJoinInPlace(outputFilePath, String(folderNumber));
+  pathJoinInPlace(outputFilePath, String(F("Cart.brm")));
+
+  // write new folder number back to eeprom
+  saveFolderNumber(folderNumber + 1);
+
+  ui->clearOutput();
+  ui->printMsg(F("Saving as "));
+  ui->printMsg(outputFilePath);
+  ui->printlnMsg(F("..."));
+  ui->flushOutput();
+}
+
+String getNextMDRealtecOutputPathAndPrintMessage(const String &gameName) {
+  return getNextOutputPathAndPrintMessage(F("MD"), F("ROM"), gameName, F(".MD"));
 }
 
 /******************************************
@@ -796,28 +834,10 @@ void readROM_MD() {
   // Set control
   dataIn_MD();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".BIN");
-
-  // create a new folder
-  foldern = loadFolderNumber();
-  sprintf(folder, "MD/ROM/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  ui->clearOutput();
-  ui->printMsg(F("Saving to "));
-  ui->printMsg(folder);
-  ui->printlnMsg(F("/..."));
-  ui->flushOutput();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextMDRomOutputPathAndPrintMessage(romName);
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   byte buffer[1024] = { 0 };
 
@@ -835,7 +855,7 @@ void readROM_MD() {
   //Initialize progress bar
   uint32_t processedProgressBar = 0;
   uint32_t totalProgressBar = (uint32_t)(cartSize);
-  draw_progressbar(0, totalProgressBar);
+  ui->drawProgressBar(0, totalProgressBar);
 
   for (unsigned long currBuffer = 0; currBuffer < cartSize / 2; currBuffer += 512) {
     // Blink led
@@ -887,7 +907,7 @@ void readROM_MD() {
 
     // update progress bar
     processedProgressBar += 1024;
-    draw_progressbar(processedProgressBar, totalProgressBar);
+    ui->drawProgressBar(processedProgressBar, totalProgressBar);
   }
   // Close the file:
   outputFile.close();
@@ -914,7 +934,7 @@ void readROM_MD() {
     char calcsumStr[5];
     sprintf(calcsumStr, "%04X", calcCKS);
     ui->printlnMsg(calcsumStr);
-    print_Warning(F(""));
+    ui->printError(F(""));
     ui->flushOutput();
   }
 }
@@ -940,17 +960,15 @@ void enableSram_MD(boolean enableSram) {
 }
 
 // Write sram to cartridge
-void writeSram_MD() {
+void writeSram_MD(const String &inputFilePath) {
   dataOut_MD();
 
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
   ui->printlnMsg(F("Writing..."));
-  ui->printlnMsg(filePath);
+  ui->printlnMsg(inputFilePath);
   ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Write to the lower byte
   if (saveType == 1) {
     for (unsigned long currByte = sramBase; currByte < sramBase + sramSize; currByte++) {
@@ -964,7 +982,7 @@ void writeSram_MD() {
     }
   }
   else
-    print_Warning(F("Unknown save type"));
+    ui->printError(F("Unknown save type"));
 
   // Close the file:
   inputFile.close();
@@ -977,22 +995,10 @@ void writeSram_MD() {
 void readSram_MD() {
   dataIn_MD();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".srm");
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "MD/SAVE/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextMDSramOutputPathAndPrintMessage(romName);
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   for (unsigned long currBuffer = sramBase; currBuffer < sramBase + sramSize; currBuffer += 256) {
     for (int currWord = 0; currWord < 256; currWord++) {
@@ -1019,12 +1025,11 @@ void readSram_MD() {
   // Close the file:
   outputFile.close();
   ui->printMsg(F("Saved to "));
-  ui->printMsg(folder);
-  ui->printlnMsg(F("/"));
+  ui->printlnMsg(outputFilePath);
   ui->flushOutput();
 }
 
-unsigned long verifySram_MD() {
+unsigned long verifySram_MD(const String &filePath) {
   dataIn_MD();
   writeErrors = 0;
 
@@ -1073,20 +1078,18 @@ void resetFlash_MD() {
   dataIn_MD();
 }
 
-void write29F1610_MD() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
+void write29F1610_MD(const String &inputFilePath) {
   ui->printMsg(F("Flashing file "));
-  ui->printMsg(filePath);
+  ui->printMsg(inputFilePath);
   ui->printlnMsg(F("..."));
   ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
   if (fileSize > flashSize) {
-    print_Error(F("File size exceeds flash size."));
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
   }
   // Set data pins to output
   dataOut_MD();
@@ -1189,17 +1192,17 @@ void blankcheck_MD() {
     }
   }
   if (!blank) {
-    print_Warning(F("Error: Not blank"));
+    ui->printError(F("Error: Not blank"));
   }
 }
 
-void verifyFlash_MD() {
+void verifyFlash_MD(const String &filePath) {
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
   if (fileSize > flashSize) {
-    print_Error(F("File size exceeds flash size."));
+    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
   }
 
   blank = 0;
@@ -1228,7 +1231,7 @@ void verifyFlash_MD() {
     ui->printMsg(F("Error: "));
     ui->printMsg(blank);
     ui->printlnMsg(F(" bytes "));
-    print_Warning(F("did not verify."));
+    ui->printError(F("did not verify."));
   }
   // Close the file:
   inputFile.close();
@@ -1742,26 +1745,10 @@ void writeEepromByte(word address) {
 void readEEP_MD() {
   dataIn_MD();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".eep");
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  chdirToRoot();
-  sprintf(folder, "MD/SAVE/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
-
-  ui->printlnMsg(F("Reading..."));
-  ui->flushOutput();
+  String outputFilePath = getNextMDEepromOutputPathAndPrintMessage(romName);
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
   if (eepSize > 0x100) { // 24C04+
     for (word currByte = 0; currByte < eepSize; currByte += 256) {
       ui->printMsg(F("*"));
@@ -1787,22 +1774,20 @@ void readEEP_MD() {
   ui->printlnMsg(F(""));
   ui->clearOutput();
   ui->printMsg(F("Saved to "));
-  ui->printMsg(folder);
+  ui->printMsg(outputFilePath);
 
   ui->flushOutput();
 }
 
-void writeEEP_MD() {
+void writeEEP_MD(const String &inputFilePath) {
   dataOut_MD();
 
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
   ui->printlnMsg(F("Writing..."));
-  ui->printlnMsg(filePath);
+  ui->printlnMsg(inputFilePath);
   ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   if (eepSize > 0x100) { // 24C04+
     for (word currByte = 0; currByte < eepSize; currByte += 256) {
@@ -1841,25 +1826,10 @@ void writeEEP_MD() {
 void readBram_MD() {
   dataIn_MD();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, "Cart.brm");
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  chdirToRoot();
-  sprintf(folder, "MD/RAM/%d", foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
-
-  ui->printlnMsg(F("Reading..."));
-  ui->flushOutput();
+  String outputFilePath = getNextMDBramOutputPathAndPrintMessage();
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   for (unsigned long currByte = 0; currByte < bramSize; currByte += 512) {
     for (int i = 0; i < 512; i++) {
@@ -1873,22 +1843,20 @@ void readBram_MD() {
   ui->printlnMsg(F(""));
   ui->clearOutput();
   ui->printMsg(F("Saved to "));
-  ui->printMsg(folder);
+  ui->printMsg(outputFilePath);
 
   ui->flushOutput();
 }
 
-void writeBram_MD() {
+void writeBram_MD(const String &inputFilePath) {
   dataOut_MD();
 
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
   ui->printlnMsg(F("Writing..."));
-  ui->printlnMsg(filePath);
+  ui->printlnMsg(inputFilePath);
   ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   // 0x700000-0x7FFFFF: Writes by /LWR latch D0; 1=RAM write enabled, 0=disabled
   writeWord_MD(0x380000, 1); // Enable BRAM Writes
@@ -1931,28 +1899,10 @@ void readRealtec_MD() {
   // Set control
   dataIn_MD();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".MD");
-
-  // create a new folder
-  foldern = loadFolderNumber();
-  sprintf(folder, "MD/ROM/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  ui->clearOutput();
-  ui->printMsg(F("Saving to "));
-  ui->printMsg(folder);
-  ui->printlnMsg(F("/..."));
-  ui->flushOutput();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextMDRealtecOutputPathAndPrintMessage(romName);
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   // Realtec Registers
   writeWord_MD(0x201000, 4); // Number of 128K Blocks 0x402000 (0x201000)
