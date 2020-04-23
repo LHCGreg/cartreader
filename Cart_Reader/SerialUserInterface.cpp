@@ -65,6 +65,28 @@ void SerialUserInterface::displaySDInfo(uint32_t capacityGB, uint8_t FATType) {
   Serial.println(FATType);
 }
 
+void SerialUserInterface::updateN64ButtonTest(const String &currentButton, char stickX, char stickY) {
+  unsigned long currentMillis = millis();
+  if (currentMillis - m_lastN64UpdateMillis > N64_UPDATE_FREQUENCY_MILLIS) {
+    // TODO: Make this nicer with alignment?
+    Serial.print(F("Button: "));
+    if (currentButton.length() == 0) {
+      Serial.print(F("(none)"));
+    }
+    else {
+      Serial.print(currentButton);
+    }
+
+    Serial.print(F(", X: "));
+    Serial.print(static_cast<uint16_t>(stickX));
+    Serial.print(F(", Y: "));
+    Serial.print(static_cast<uint16_t>(stickY));
+    Serial.println(F(" (Continue with START)"));
+  }
+
+  m_lastN64UpdateMillis = currentMillis;
+}
+
 uint32_t SerialUserInterface::readNumber(uint8_t numDigits, uint32_t defaultValue, uint32_t maxValue, const String &prompt, const __FlashStringHelper *outOfRangeMessage) {
   while (true) {
     Serial.println(prompt);

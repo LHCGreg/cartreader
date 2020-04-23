@@ -17,6 +17,7 @@ class SerialUserInterface : public UserInterface {
   void displayAbout(const String &aboutMessage);
   bool supportsSDInfoDisplay() override;
   void displaySDInfo(uint32_t capacityGB, uint8_t FATType) override;
+  void updateN64ButtonTest(const String &currentButton, char stickX, char stickY) override;
   uint8_t askMultipleChoiceQuestion(const String &question, const String *answers, uint8_t numAnswers, uint8_t defaultChoice) override;
   String askQuestionWithPagedAnswers(const String &question, PagedAnswerSource &answerSource) override;
 
@@ -35,6 +36,9 @@ class SerialUserInterface : public UserInterface {
   [[noreturn]] void forceReset() override;
 
   private:
+  static const unsigned long N64_UPDATE_FREQUENCY_MILLIS = 500;
+  unsigned long m_lastN64UpdateMillis = 0;
+
   byte readByte();
   String readCommand();
 };

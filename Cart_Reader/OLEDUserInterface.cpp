@@ -354,6 +354,52 @@ void OLEDUserInterface::displaySDInfo(uint32_t capacityGB, uint8_t FATType) {
   ;
 }
 
+void OLEDUserInterface::updateN64ButtonTest(const String &currentButton, char stickX, char stickY) {
+  m_display.clearDisplay();
+  printAtPosition(F("Button Test"), CENTER, 0);
+  m_display.drawLine(22 + 0, 10, 22 + 84, 10, WHITE);
+
+  // Print Button
+  String buttonLine = String(F("       "));
+  
+  if (currentButton.length() == 0) {
+    buttonLine.concat(F("Press a button"));
+  }
+  else {
+    buttonLine.concat(currentButton);
+  }
+
+  buttonLine.concat(F("       "));
+
+  printAtPosition(buttonLine, CENTER, 20);
+
+  // Print Stick X Value
+  String stickXString = F("X: ");
+  stickXString.concat(static_cast<int16_t>(stickX));
+  stickXString.concat(F("   "));
+  printAtPosition(stickXString, 22 + 0, 38);
+
+  // Print Stick Y Value
+  String stickYString = F("Y: ");
+  stickYString.concat(static_cast<int16_t>(stickY));
+  stickYString.concat(F("   "));
+  printAtPosition(stickYString, 22 + 60, 38);
+
+  printAtPosition(F("(Continue with START)"), 0, 55);
+
+  //Update LCD
+  m_display.display();
+}
+
+void OLEDUserInterface::printAtPosition(const String &str, int x, int y) {
+  if (x == CENTER) {
+    x = 64 - (str.length() / 2) * 6;
+  }
+
+  m_display.setCursor(x, y);
+  m_display.print(str);
+}
+
 void OLEDUserInterface::displayMessage(const __FlashStringHelper *message) {
   m_display.println(message);
   m_display.display();

@@ -49,6 +49,7 @@ class OLEDUserInterface : public UserInterface {
   void displayAbout(const String &aboutMessage) override;
   bool supportsSDInfoDisplay() override;
   void displaySDInfo(uint32_t capacityGB, uint8_t FATType) override;
+  void updateN64ButtonTest(const String &currentButton, char stickX, char stickY) override;
 
   uint8_t askMultipleChoiceQuestion(const String &question, const String *answers, uint8_t numAnswers, uint8_t defaultChoice) override;
   uint8_t askMultipleChoiceQuestion(const String &question, const String *answers, uint8_t numAnswers, uint8_t defaultChoice, bool wrapSelectionMovement);
@@ -78,6 +79,7 @@ class OLEDUserInterface : public UserInterface {
   static const uint8_t ANSWERS_AFTER_CURRENT_WHEN_IN_MIDDLE = 3;
   static const uint8_t ANSWER_NEXT_PAGE = UINT8_MAX;
   static const uint8_t ANSWER_GO_BACK = UINT8_MAX - 1;
+  static const int16_t CENTER = 64;
 
   MenuWindow getMenuWindow(uint8_t currentChoice, uint8_t numAnswers);
   void drawOrClearMoreIndicators(bool drawMoreAboveIndicator, bool drawMoreBelowIndicator);
@@ -90,6 +92,8 @@ class OLEDUserInterface : public UserInterface {
   ButtonEvent checkButton(uint8_t button);
   ButtonEvent checkButton1();
   ButtonEvent checkButton2();
+
+  void printAtPosition(const String &str, int x, int y);
 };
 #endif // #if defined(enable_OLED) && !defined(UNIT_TEST)
 

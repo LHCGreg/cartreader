@@ -103,310 +103,270 @@ unsigned long verifyGameshark_N64();
 /******************************************
   Menu
 *****************************************/
-// N64 start menu
-static const char n64MenuItem1[] PROGMEM = "Game Cartridge";
-static const char n64MenuItem2[] PROGMEM = "Controller";
-static const char n64MenuItem3[] PROGMEM = "Flash Repro";
-static const char n64MenuItem4[] PROGMEM = "Flash Gameshark";
-static const char n64MenuItem5[] PROGMEM = "Reset";
-static const char* const menuOptionsN64[] PROGMEM = {n64MenuItem1, n64MenuItem2, n64MenuItem3, n64MenuItem4, n64MenuItem5};
-
-// N64 controller menu items
-static const char N64ContMenuItem1[] PROGMEM = "Test Controller";
-static const char N64ContMenuItem2[] PROGMEM = "Read ControllerPak";
-static const char N64ContMenuItem3[] PROGMEM = "Write ControllerPak";
-static const char N64ContMenuItem4[] PROGMEM = "Reset";
-static const char* const menuOptionsN64Controller[] PROGMEM = {N64ContMenuItem1, N64ContMenuItem2, N64ContMenuItem3, N64ContMenuItem4};
-
-// N64 cart menu items
-static const char N64CartMenuItem1[] PROGMEM = "Read Rom";
-static const char N64CartMenuItem2[] PROGMEM = "Read Save";
-static const char N64CartMenuItem3[] PROGMEM = "Write Save";
-static const char N64CartMenuItem4[] PROGMEM = "Force Savetype";
-static const char N64CartMenuItem5[] PROGMEM = "Reset";
-static const char* const menuOptionsN64Cart[] PROGMEM = {N64CartMenuItem1, N64CartMenuItem2, N64CartMenuItem3, N64CartMenuItem4, N64CartMenuItem5};
-
-// N64 CRC32 error menu items
-static const char N64CRCMenuItem1[] PROGMEM = "Redump";
-static const char N64CRCMenuItem2[] PROGMEM = "Ignore";
-static const char N64CRCMenuItem3[] PROGMEM = "Reset";
-static const char* const menuOptionsN64CRC[] PROGMEM = {N64CRCMenuItem1, N64CRCMenuItem2, N64CRCMenuItem3};
-
-// Rom menu
-static const char N64RomItem1[] PROGMEM = "4MB";
-static const char N64RomItem2[] PROGMEM = "8MB";
-static const char N64RomItem3[] PROGMEM = "12MB";
-static const char N64RomItem4[] PROGMEM = "16MB";
-static const char N64RomItem5[] PROGMEM = "32MB";
-static const char N64RomItem6[] PROGMEM = "64MB";
-static const char* const romOptionsN64[] PROGMEM = {N64RomItem1, N64RomItem2, N64RomItem3, N64RomItem4, N64RomItem5, N64RomItem6};
-
-// Save menu
-static const char N64SaveItem1[] PROGMEM = "None";
-static const char N64SaveItem2[] PROGMEM = "4K EEPROM";
-static const char N64SaveItem3[] PROGMEM = "16K EEPROM";
-static const char N64SaveItem4[] PROGMEM = "SRAM";
-static const char N64SaveItem5[] PROGMEM = "FLASHRAM";
-static const char* const saveOptionsN64[] PROGMEM = {N64SaveItem1, N64SaveItem2, N64SaveItem3, N64SaveItem4, N64SaveItem5};
 
 // N64 start menu
 void n64Menu() {
-  // create menu with title and 3 options to choose from
-  unsigned char n64Dev;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsN64, 4);
-  n64Dev = question_box(F("Select N64 device"), menuOptions, 4, 0);
+  while (true) {
+    const __FlashStringHelper *item_Cart = F("Game Cartridge");
+    const __FlashStringHelper *item_Controller = F("Controller");
+    const __FlashStringHelper *item_FlashRepro = F("Flash Repro");
+    const __FlashStringHelper *item_FlashGameshark = F("Flash Gameshark");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_Cart,
+      item_Controller,
+      item_FlashRepro,
+      item_FlashGameshark,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (n64Dev)
-  {
-    case 0:
-      display_Clear();
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Select N64 device"), menu, ARRAY_LENGTH(menu), item_Cart);
+
+    if (answer == item_Cart) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_N64_Cart();
       printCartInfo_N64();
-      mode = mode_N64_Cart;
-      break;
-
-    case 1:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::N64Cart;
+      n64CartMenu();
+    }
+    else if (answer == item_Controller) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_N64_Controller();
-      mode = mode_N64_Controller;
-      break;
-
-    case 2:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::N64Controller;
+      n64ControllerMenu();
+    }
+    else if (answer == item_FlashRepro) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_N64_Cart();
       flashRepro_N64();
       printCartInfo_N64();
-      mode = mode_N64_Cart;
-      break;
-
-    case 3:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::N64Cart;
+      n64CartMenu();
+    }
+    else if (answer == item_FlashGameshark) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_N64_Cart();
       flashGameshark_N64();
       printCartInfo_N64();
-      mode = mode_N64_Cart;
+      mode = CartReaderMode::N64Cart;
+      n64CartMenu();
+    }
+    else if (answer == item_Back) {
       break;
-
-    case 4:
-      resetArduino();
-      break;
+    }
   }
 }
 
 // N64 Controller Menu
 void n64ControllerMenu() {
-  // create menu with title and 4 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsN64Controller, 4);
-  mainMenu = question_box(F("N64 Controller"), menuOptions, 4, 0);
+  while (true) {
+    const __FlashStringHelper *item_TestController = F("Test Controller");
+    const __FlashStringHelper *item_ReadControllerPak = F("Read ControllerPak");
+    const __FlashStringHelper *item_WriteControllerPak = F("Write ControllerPak");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_TestController,
+      item_ReadControllerPak,
+      item_WriteControllerPak,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      display_Clear();
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("N64 Controller"), menu, ARRAY_LENGTH(menu), item_TestController);
+
+    if (answer == item_TestController) {
+      ui->clearOutput();
+      ui->flushOutput();
       controllerTest();
       quit = 1;
-      break;
-
-    case 1:
-      display_Clear();
-      display_Update();
+    }
+    else if (answer == item_ReadControllerPak) {
+      ui->clearOutput();
+      ui->flushOutput();
       readMPK();
-      println_Msg(F(""));
-      println_Msg(F("Press Button."));
-      display_Update();
-      wait();
-      break;
-
-    case 2:
-      display_Clear();
-      display_Update();
-      // Change to root
-      filePath[0] = '\0';
-      chdir("/");
+      ui->printlnMsg(F(""));
+      ui->printlnMsg(F("Press Button."));
+      ui->flushOutput();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_WriteControllerPak) {
+      ui->clearOutput();
+      ui->flushOutput();
       // Launch file browser
-      fileBrowser(F("Select mpk file"));
-      display_Clear();
-      display_Update();
+      String inputFilePath = fileBrowser(F("Select mpk file"));
+      ui->clearOutput();
+      ui->flushOutput();
       writeMPK();
       verifyMPK();
-      println_Msg(F(""));
-      println_Msg(F("Press Button."));
-      display_Update();
-      wait();
+      ui->printlnMsg(F(""));
+      ui->printlnMsg(F("Press Button."));
+      ui->flushOutput();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_Back) {
       break;
-
-    case 3:
-      resetArduino();
-      break;
+    }
   }
 }
 
 // N64 Cartridge Menu
 void n64CartMenu() {
-  // create menu with title and 4 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsN64Cart, 5);
-  mainMenu = question_box(F("N64 Cart Reader"), menuOptions, 5, 0);
+  while (true) {
+    const __FlashStringHelper *item_ReadROM = F("Read Rom");
+    const __FlashStringHelper *item_ReadSave = F("Read Save");
+    const __FlashStringHelper *item_WriteSave = F("Write Save");
+    const __FlashStringHelper *item_ForceSaveType = F("Force Savetype");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadROM,
+      item_ReadSave,
+      item_WriteSave,
+      item_ForceSaveType,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      chdir("/");
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("N64 Cart Reader"), menu, ARRAY_LENGTH(menu), item_ReadROM);
+
+    if (answer == item_ReadROM) {
       readRom_N64();
-      break;
-
-    case 1:
-      chdir("/");
-      display_Clear();
+    }
+    else if (answer == item_ReadSave) {
+      ui->clearOutput();
 
       if (saveType == 1) {
-        println_Msg(F("Reading Sram..."));
-        display_Update();
+        ui->printlnMsg(F("Reading Sram..."));
+        ui->flushOutput();
         readSram(32768, 1);
       }
-      else  if (saveType == 4) {
+      else if (saveType == 4) {
         getFramType();
-        println_Msg(F("Reading Flashram..."));
-        display_Update();
+        ui->printlnMsg(F("Reading Flashram..."));
+        ui->flushOutput();
         readFram(flashramType);
       }
       else if ((saveType == 5) || (saveType == 6)) {
-        println_Msg(F("Reading Eep..."));
-        display_Update();
+        ui->printlnMsg(F("Reading Eep..."));
+        ui->flushOutput();
         readEeprom();
       }
       else {
-        print_Warning(F("Savetype Error"));
+        ui->printError(F("Savetype Error"));
       }
-      println_Msg(F(""));
-      println_Msg(F("Press Button..."));
-      display_Update();
-      wait();
-      break;
-
-    case 2:
-      filePath[0] = '\0';
-      chdir("/");
+      ui->printlnMsg(F(""));
+      ui->printlnMsg(F("Press Button..."));
+      ui->flushOutput();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_WriteSave) {
       if (saveType == 1) {
         // Launch file browser
-        fileBrowser(F("Select sra file"));
-        display_Clear();
+        String inputFilePath = fileBrowser(F("Select sra file"));
+        ui->clearOutput();
 
         writeSram(32768);
-        writeErrors = verifySram(32768, 1);
+        uint32_t writeErrors = verifySram(32768, 1);
         if (writeErrors == 0) {
-          println_Msg(F("Sram verified OK"));
-          display_Update();
+          ui->printlnMsg(F("Sram verified OK"));
+          ui->flushOutput();
         }
         else {
-          print_Msg(F("Error: "));
-          print_Msg(writeErrors);
-          println_Msg(F(" bytes "));
-          print_Warning(F("did not verify."));
+          ui->printMsg(F("Error: "));
+          ui->printMsg(writeErrors);
+          ui->printlnMsg(F(" bytes "));
+          ui->printError(F("did not verify."));
         }
       }
       else if (saveType == 4) {
         // Launch file browser
-        fileBrowser(F("Select fla file"));
-        display_Clear();
+        String inputFilePath = fileBrowser(F("Select fla file"));
+        ui->clearOutput();
         getFramType();
         writeFram(flashramType);
-        print_Msg(F("Verifying..."));
-        display_Update();
-        writeErrors = verifyFram(flashramType);
+        ui->printMsg(F("Verifying..."));
+        ui->flushOutput();
+        uint32_t writeErrors = verifyFram(flashramType);
         if (writeErrors == 0) {
-          println_Msg(F("OK"));
-          display_Update();
+          ui->printlnMsg(F("OK"));
+          ui->flushOutput();
         }
         else {
-          println_Msg("");
-          print_Msg(F("Error: "));
-          print_Msg(writeErrors);
-          println_Msg(F(" bytes "));
-          print_Warning(F("did not verify."));
+          ui->printlnMsg("");
+          ui->printMsg(F("Error: "));
+          ui->printMsg(writeErrors);
+          ui->printlnMsg(F(" bytes "));
+          ui->printError(F("did not verify."));
         }
       }
       else if ((saveType == 5) || (saveType == 6)) {
         // Launch file browser
-        fileBrowser(F("Select eep file"));
-        display_Clear();
+        String inputFilePath = fileBrowser(F("Select eep file"));
+        ui->clearOutput();
 
         writeEeprom();
-        writeErrors = verifyEeprom();
+        uint32_t writeErrors = verifyEeprom();
         if (writeErrors == 0) {
-          println_Msg(F("Eeprom verified OK"));
-          display_Update();
+          ui->printlnMsg(F("Eeprom verified OK"));
+          ui->flushOutput();
         }
         else {
-          print_Msg(F("Error: "));
-          print_Msg(writeErrors);
-          println_Msg(F(" bytes "));
-          print_Warning(F("did not verify."));
+          ui->printMsg(F("Error: "));
+          ui->printMsg(writeErrors);
+          ui->printlnMsg(F(" bytes "));
+          ui->printError(F("did not verify."));
         }
       }
       else {
-        display_Clear();
-        print_Warning(F("Savetype Error"));
+        ui->clearOutput();
+        ui->printError(F("Savetype Error"));
       }
-      println_Msg(F("Press Button..."));
-      display_Update();
-      wait();
-      break;
+      ui->printlnMsg(F("Press Button..."));
+      ui->flushOutput();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_ForceSaveType) {
+      const __FlashStringHelper *saveItem_None = F("None");
+      const __FlashStringHelper *saveItem_4KEEPROM = F("4K EEPROM");
+      const __FlashStringHelper *saveItem_16KEEPROM = F("16K EEPROM");
+      const __FlashStringHelper *saveItem_SRAM = F("SRAM");
+      const __FlashStringHelper *saveItem_Flash = F("FLASHRAM");
+      const __FlashStringHelper *saveMenu[] = {
+        saveItem_None,
+        saveItem_4KEEPROM,
+        saveItem_16KEEPROM,
+        saveItem_SRAM,
+        saveItem_Flash,
+      };
 
-    case 3:
-      // create submenu with title and 6 options to choose from
-      unsigned char N64SaveMenu;
-      // Copy menuOptions out of progmem
-      convertPgm(saveOptionsN64, 5);
-      N64SaveMenu = question_box(F("Select save type"), menuOptions, 5, 0);
+      const __FlashStringHelper *saveAnswer = ui->askMultipleChoiceQuestion(
+        F("Select save type"), saveMenu, ARRAY_LENGTH(saveMenu), saveItem_None);
 
-      // wait for user choice to come back from the question box menu
-      switch (N64SaveMenu)
-      {
-        case 0:
-          // None
-          saveType = 0;
-          break;
-
-        case 1:
-          // 4K EEPROM
-          saveType = 5;
-          eepPages = 64;
-          break;
-
-        case 2:
-          // 16K EEPROM
-          saveType = 6;
-          eepPages = 256;
-          break;
-
-        case 3:
-          // SRAM
-          saveType = 1;
-          break;
-
-        case 4:
-          // FLASHRAM
-          saveType = 4;
-          break;
+      if (saveAnswer == saveItem_None) {
+        saveType = 0;
       }
+      else if (saveAnswer == saveItem_4KEEPROM) {
+        saveType = 5;
+        eepPages = 64;
+      }
+      else if (saveAnswer == saveItem_16KEEPROM) {
+        saveType = 6;
+        eepPages = 256;
+      }
+      else if (saveAnswer == saveItem_SRAM) {
+        saveType = 1;
+      }
+      else if (saveAnswer == saveItem_Flash) {
+        saveType = 4;
+      }
+    }
+    else if (answer == item_Back) {
       break;
-
-    case 4:
-      resetArduino();
-      break;
+    }
   }
 }
 
@@ -817,7 +777,7 @@ void get_button()
   // Buttons (A,B,Z,S,DU,DD,DL,DR,0,0,L,R,CU,CD,CL,CR)
   if (rawStr.substring(0, 16) == "0000000000000000") {
     lastbutton = button;
-    button = F("Press a button");
+    button = String();
   }
   else
   {
@@ -975,32 +935,15 @@ void controllerTest() {
     {
       case 1:
         {
-          display.clearDisplay();
-          oledPrint("Button Test", CENTER, 0);
-          display.drawLine(22 + 0, 10, 22 + 84, 10, WHITE);
-
-          // Print Button
-          printSTR("       " + button + "       ", CENTER, 20);
-
-          // Print Stick X Value
-          String stickx = String("X: " + String(N64_status.stick_x, DEC) + "   ");
-          printSTR(stickx, 22 + 0, 38);
-
-          // Print Stick Y Value
-          String sticky = String("Y: " + String(N64_status.stick_y, DEC) + "   ");
-          printSTR(sticky, 22 + 60, 38);
-
-          printSTR("(Continue with START)", 0, 55);
-          //Update LCD
-          display.display();
+          ui->updateN64ButtonTest(button, N64_status.stick_x, N64_status.stick_y);
 
           // go to next screen
-          if (button == "Press a button" && lastbutton == "START")
+          if (button.length() == 0 && lastbutton == F("START"))
           {
             // reset button
-            lastbutton = "N/A";
+            lastbutton = F("N/A");
 
-            display.clearDisplay();
+            ui->clearOutput();
             if (startscreen != 4)
               startscreen = startscreen + 1;
             else
@@ -1009,7 +952,7 @@ void controllerTest() {
               test = 1;
             }
           }
-          else if (button == "Press a button" && lastbutton == "Z" && startscreen == 4)
+          else if (button.length() == 0 && lastbutton == "Z" && startscreen == 4)
           {
             // Quit
             quit = 0;
@@ -1058,7 +1001,7 @@ void controllerTest() {
           }
 
           // switch mode
-          if (button == "Press a button" && lastbutton == "Z")
+          if (button.length() == 0 && lastbutton == "Z")
           {
             if (mode == 0)
             {
@@ -1072,7 +1015,7 @@ void controllerTest() {
             }
           }
           // go to next screen
-          if (button == "Press a button" && lastbutton == "START")
+          if (button.length() == 0 && lastbutton == "START")
           {
             // reset button
             lastbutton = "N/A";
@@ -1086,7 +1029,7 @@ void controllerTest() {
               test = 1;
             }
           }
-          else if (button == "Press a button" && lastbutton == "Z" && startscreen == 4)
+          else if (button.length() == 0 && lastbutton == "Z" && startscreen == 4)
           {
             // Quit
             quit = 0;
@@ -1110,7 +1053,7 @@ void controllerTest() {
           //Update LCD
           display.display();
 
-          if (button == "Press a button" && lastbutton == "Z")
+          if (button.length() == 0 && lastbutton == "Z")
           {
             // reset button
             lastbutton = "N/A";
@@ -1118,7 +1061,7 @@ void controllerTest() {
             display.clearDisplay();
           }
           // go to next screen
-          if (button == "Press a button" && lastbutton == "START")
+          if (button.length() == 0 && lastbutton == "START")
           {
             // reset button
             lastbutton = "N/A";
@@ -1132,7 +1075,7 @@ void controllerTest() {
               test = 1;
             }
           }
-          else if (button == "Press a button" && lastbutton == "Z" && startscreen == 4)
+          else if (button.length() == 0 && lastbutton == "Z" && startscreen == 4)
           {
             // Quit
             quit = 0;
@@ -1167,7 +1110,7 @@ void controllerTest() {
                       upleftx = bupleftx;
                       uplefty = buplefty;
 
-                      if (button == "Press a button" && lastbutton == "A")
+                      if (button.length() == 0 && lastbutton == "A")
                       {
                         // reset button
                         lastbutton = "N/A";
@@ -1196,7 +1139,7 @@ void controllerTest() {
                       upleftx = -68;
                       uplefty = 68;
 
-                      if (button == "Press a button" && lastbutton == "A")
+                      if (button.length() == 0 && lastbutton == "A")
                       {
                         // reset button
                         lastbutton = "N/A";
@@ -1242,7 +1185,7 @@ void controllerTest() {
                 oledPrint("then press A", CENTER, 28);
                 //myOLED.drawBitmap(110, 60, ana1);
 
-                if (button == "Press a button" && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == "A")
                 {
                   bupx = N64_status.stick_x;
                   bupy = N64_status.stick_y;
@@ -1260,7 +1203,7 @@ void controllerTest() {
                 oledPrint("Up-Right", CENTER, 22 );
                 //myOLED.drawBitmap(110, 60, ana2);
 
-                if (button == "Press a button" && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == "A")
                 {
                   buprightx = N64_status.stick_x;
                   buprighty = N64_status.stick_y;
@@ -1278,7 +1221,7 @@ void controllerTest() {
                 oledPrint("Right", CENTER, 22 );
                 //myOLED.drawBitmap(110, 60, ana3);
 
-                if (button == "Press a button" && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == "A")
                 {
                   brightx = N64_status.stick_x;
                   brighty = N64_status.stick_y;
@@ -1296,7 +1239,7 @@ void controllerTest() {
                 oledPrint("Down-Right", CENTER, 22 );
                 //myOLED.drawBitmap(110, 60, ana4);
 
-                if (button == "Press a button" && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == "A")
                 {
                   bdownrightx = N64_status.stick_x;
                   bdownrighty = N64_status.stick_y;
@@ -1314,7 +1257,7 @@ void controllerTest() {
                 oledPrint("Down", CENTER, 22 );
                 //myOLED.drawBitmap(110, 60, ana5);
 
-                if (button == "Press a button" && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == "A")
                 {
                   bdownx = N64_status.stick_x;
                   bdowny = N64_status.stick_y;
@@ -1332,7 +1275,7 @@ void controllerTest() {
                 oledPrint("Down-Left", CENTER, 22 );
                 //myOLED.drawBitmap(110, 60, ana6);
 
-                if (button == "Press a button" && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == "A")
                 {
                   bdownleftx = N64_status.stick_x;
                   bdownlefty = N64_status.stick_y;
@@ -1350,7 +1293,7 @@ void controllerTest() {
                 oledPrint("Left", CENTER, 22 );
                 //myOLED.drawBitmap(110, 60, ana7);
 
-                if (button == "Press a button" && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == "A")
                 {
                   bleftx = N64_status.stick_x;
                   blefty = N64_status.stick_y;
@@ -1368,7 +1311,7 @@ void controllerTest() {
                 oledPrint("Up-Left", CENTER, 22);
                 //myOLED.drawBitmap(110, 60, ana8);
 
-                if (button == "Press a button" && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == "A")
                 {
                   bupleftx = N64_status.stick_x;
                   buplefty = N64_status.stick_y;
@@ -1389,7 +1332,7 @@ void controllerTest() {
           }
           display.display();
           // go to next screen
-          if (button == "Press a button" && lastbutton == "START")
+          if (button.length() == 0 && lastbutton == "START")
           {
             // reset button
             lastbutton = "N/A";
@@ -1403,7 +1346,7 @@ void controllerTest() {
               test = 1;
             }
           }
-          else if (button == "Press a button" && lastbutton == "Z" && startscreen == 4)
+          else if (button.length() == 0 && lastbutton == "Z" && startscreen == 4)
           {
             // Quit
             quit = 0;
