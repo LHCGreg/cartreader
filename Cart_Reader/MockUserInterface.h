@@ -17,6 +17,16 @@ class MockUserInterface : public UserInterface {
   void displayAbout(const String &aboutMessage) override;
   bool supportsSDInfoDisplay() override;
   void displaySDInfo(uint32_t capacityGB, uint8_t FATType) override;
+  void updateN64ButtonTest(const String &currentButton, char stickX, char stickY) override;
+  bool supportsN64RangeTest() override;
+  void updateN64RangeTest(int8_t stickX, int8_t stickY, int8_t mode) override;
+  bool supportsN64SkippingTest() override;
+  void updateN64SkippingTest(int8_t prevStickX, int8_t stickX) override;
+  void printN64BenchmarkPrompt(uint8_t testNumber) override;
+  void printN64BenchmarkResults(const String &anastick, int8_t upX, int8_t upY, int8_t upRightX, int8_t upRightY,
+                                int8_t rightX, int8_t rightY, int8_t downRightX, int8_t downRightY,
+                                int8_t downX, int8_t downY, int8_t downLeftX, int8_t downLeftY,
+                                int8_t leftX, int8_t leftY, int8_t upLeftX, int8_t upLeftY) override;
 
   uint8_t askMultipleChoiceQuestion(const String &question, const String *answers, uint8_t numAnswers, uint8_t defaultChoice) override;
   uint8_t askMultipleChoiceQuestion(const String &question, const String *answers, uint8_t numAnswers, uint8_t defaultChoice, bool wrapSelectionMovement);

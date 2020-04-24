@@ -65,7 +65,7 @@ void SerialUserInterface::displaySDInfo(uint32_t capacityGB, uint8_t FATType) {
   Serial.println(FATType);
 }
 
-void SerialUserInterface::updateN64ButtonTest(const String &currentButton, char stickX, char stickY) {
+void SerialUserInterface::updateN64ButtonTest(const String &currentButton, int8_t stickX, int8_t stickY) {
   unsigned long currentMillis = millis();
   if (currentMillis - m_lastN64UpdateMillis > N64_UPDATE_FREQUENCY_MILLIS) {
     // TODO: Make this nicer with alignment?
@@ -78,16 +78,43 @@ void SerialUserInterface::updateN64ButtonTest(const String &currentButton, char 
     }
 
     Serial.print(F(", X: "));
-    Serial.print(static_cast<uint16_t>(stickX));
+    Serial.print(stickX);
     Serial.print(F(", Y: "));
-    Serial.print(static_cast<uint16_t>(stickY));
+    Serial.print(stickY);
     Serial.println(F(" (Continue with START)"));
   }
 
   m_lastN64UpdateMillis = currentMillis;
 }
 
-uint32_t SerialUserInterface::readNumber(uint8_t numDigits, uint32_t defaultValue, uint32_t maxValue, const String &prompt, const __FlashStringHelper *outOfRangeMessage) {
+bool SerialUserInterface::supportsN64RangeTest() {
+  return false;
+}
+
+void SerialUserInterface::updateN64RangeTest(int8_t stickX, int8_t stickY, int8_t mode) {
+  ;
+}
+
+bool SerialUserInterface::supportsN64SkippingTest() {
+  return false;
+}
+
+void SerialUserInterface::updateN64SkippingTest(int8_t prevStickX, int8_t stickX) {
+  ;
+}
+
+void SerialUserInterface::printN64BenchmarkPrompt(uint8_t testNumber) {
+  // TODO
+}
+
+void SerialUserInterface::printN64BenchmarkResults(const String &anastick, int8_t upX, int8_t upY, int8_t upRightX, int8_t upRightY,
+                              int8_t rightX, int8_t rightY, int8_t downRightX, int8_t downRightY,
+                              int8_t downX, int8_t downY, int8_t downLeftX, int8_t downLeftY,
+                              int8_t leftX, int8_t leftY, int8_t upLeftX, int8_t upLeftY) {
+  // TODO
+}
+
+  uint32_t SerialUserInterface::readNumber(uint8_t numDigits, uint32_t defaultValue, uint32_t maxValue, const String &prompt, const __FlashStringHelper *outOfRangeMessage) {
   while (true) {
     Serial.println(prompt);
     String numberString = readCommand();

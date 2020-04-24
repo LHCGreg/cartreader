@@ -18,7 +18,16 @@ class UserInterface {
   virtual void displayAbout(const String &aboutMessage) = 0;
   virtual bool supportsSDInfoDisplay() = 0;
   virtual void displaySDInfo(uint32_t capacityGB, uint8_t FATType) = 0;
-  virtual void updateN64ButtonTest(const String &currentButton, char stickX, char stickY);
+  virtual void updateN64ButtonTest(const String &currentButton, int8_t stickX, int8_t stickY) = 0;
+  virtual bool supportsN64RangeTest() = 0;
+  virtual void updateN64RangeTest(int8_t stickX, int8_t stickY, int8_t mode) = 0;
+  virtual bool supportsN64SkippingTest() = 0;
+  virtual void updateN64SkippingTest(int8_t prevStickX, int8_t stickX) = 0;
+  virtual void printN64BenchmarkPrompt(uint8_t testNumber) = 0;
+  virtual void printN64BenchmarkResults(const String &anastick, int8_t upX, int8_t upY, int8_t upRightX, int8_t upRightY,
+                                        int8_t rightX, int8_t rightY, int8_t downRightX, int8_t downRightY,
+                                        int8_t downX, int8_t downY, int8_t downLeftX, int8_t downLeftY,
+                                        int8_t leftX, int8_t leftY, int8_t upLeftX, int8_t upLeftY) = 0;
 
   virtual uint8_t askMultipleChoiceQuestion(const String &question, const String *answers, uint8_t numAnswers, uint8_t defaultChoice) = 0;
   const __FlashStringHelper *askMultipleChoiceQuestion(const String &question, const __FlashStringHelper **answers, uint8_t numAnswers, const __FlashStringHelper *defaultChoice);

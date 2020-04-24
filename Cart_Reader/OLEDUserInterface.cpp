@@ -63,7 +63,7 @@ void OLEDUserInterface::initialize() {
   delay(100);
 
   // Draw line
-  display.drawLine(0, 32, 127, 32, WHITE);
+  m_display.drawLine(0, 32, 127, 32, WHITE);
   flushOutput();
   delay(100);
 
@@ -76,10 +76,10 @@ void OLEDUserInterface::initialize() {
   delay(25);
 
   // Draw the Logo
-  display.drawBitmap(28, 0, icon, 72, 64, 1);
+  m_display.drawBitmap(28, 0, icon, 72, 64, 1);
   for (int s = 1; s < 64; s += 2) {
     // Draw Scanlines
-    display.drawLine(0, s, 127, s, BLACK);
+    m_display.drawLine(0, s, 127, s, BLACK);
   }
   flushOutput();
   delay(50);
@@ -90,13 +90,13 @@ void OLEDUserInterface::initialize() {
   delay(25);
 
   // Draw the Logo
-  display.drawBitmap(28, 0, icon, 72, 64, 1);
+  m_display.drawBitmap(28, 0, icon, 72, 64, 1);
   for (int s = 1; s < 64; s += 2) {
     // Draw Scanlines
-    display.drawLine(0, s, 127, s, BLACK);
+    m_display.drawLine(0, s, 127, s, BLACK);
   }
-  display.setCursor(100, 55);
-  display.println(ver);
+  m_display.setCursor(100, 55);
+  m_display.println(ver);
   flushOutput();
   delay(200);
 #endif
@@ -354,7 +354,16 @@ void OLEDUserInterface::displaySDInfo(uint32_t capacityGB, uint8_t FATType) {
   ;
 }
 
-void OLEDUserInterface::updateN64ButtonTest(const String &currentButton, char stickX, char stickY) {
+void OLEDUserInterface::printAtPosition(const String &str, int x, int y) {
+  if (x == CENTER) {
+    x = 64 - (str.length() / 2) * 6;
+  }
+
+  m_display.setCursor(x, y);
+  m_display.print(str);
+}
+
+void OLEDUserInterface::updateN64ButtonTest(const String &currentButton, int8_t stickX, int8_t stickY) {
   m_display.clearDisplay();
   printAtPosition(F("Button Test"), CENTER, 0);
   m_display.drawLine(22 + 0, 10, 22 + 84, 10, WHITE);
@@ -375,13 +384,13 @@ void OLEDUserInterface::updateN64ButtonTest(const String &currentButton, char st
 
   // Print Stick X Value
   String stickXString = F("X: ");
-  stickXString.concat(static_cast<int16_t>(stickX));
+  stickXString.concat(stickX);
   stickXString.concat(F("   "));
   printAtPosition(stickXString, 22 + 0, 38);
 
   // Print Stick Y Value
   String stickYString = F("Y: ");
-  stickYString.concat(static_cast<int16_t>(stickY));
+  stickYString.concat(stickY);
   stickYString.concat(F("   "));
   printAtPosition(stickYString, 22 + 60, 38);
 
@@ -391,13 +400,148 @@ void OLEDUserInterface::updateN64ButtonTest(const String &currentButton, char st
   m_display.display();
 }
 
-void OLEDUserInterface::printAtPosition(const String &str, int x, int y) {
-  if (x == CENTER) {
-    x = 64 - (str.length() / 2) * 6;
+bool OLEDUserInterface::supportsN64RangeTest() {
+  return true;
+}
+
+void OLEDUserInterface::updateN64RangeTest(int8_t stickX, int8_t stickY, int8_t mode) {
+  printAtPosition(F("Range Test"), CENTER, 55);
+  m_display.drawLine(22 + 0, 50, 22 + 84, 50, WHITE);
+
+  // Print Stick X Value
+  String stickXString = F("X:");
+  stickXString.concat(stickX);
+  stickXString.concat(F("   "));
+  printAtPosition(stickXString, 22 + 54, 8);
+
+  // Print Stick Y Value
+  String stickYString = F("Y:");
+  stickYString.concat(stickY);
+  stickYString.concat(F("   "));
+  printAtPosition(stickYString, 22 + 54, 18);
+
+  // Draw Axis
+  m_display.drawPixel(N64_GRAPH_CENTER_X, N64_GRAPH_CENTER_Y, WHITE);
+  m_display.drawPixel(N64_GRAPH_CENTER_X, N64_GRAPH_CENTER_Y - 80 / 4, WHITE);
+  m_display.drawPixel(N64_GRAPH_CENTER_X, N64_GRAPH_CENTER_Y + 80 / 4, WHITE);
+  m_display.drawPixel(N64_GRAPH_CENTER_X + 80 / 4, N64_GRAPH_CENTER_Y, WHITE);
+  m_display.drawPixel(N64_GRAPH_CENTER_X - 80 / 4, N64_GRAPH_CENTER_Y, WHITE);
+
+  // Draw corners
+  m_display.drawPixel(N64_GRAPH_CENTER_X - 68 / 4, N64_GRAPH_CENTER_Y - 68 / 4, WHITE);
+  m_display.drawPixel(N64_GRAPH_CENTER_X + 68 / 4, N64_GRAPH_CENTER_Y + 68 / 4, WHITE);
+  m_display.drawPixel(N64_GRAPH_CENTER_X + 68 / 4, N64_GRAPH_CENTER_Y - 68 / 4, WHITE);
+  m_display.drawPixel(N64_GRAPH_CENTER_X - 68 / 4, N64_GRAPH_CENTER_Y + 68 / 4, WHITE);
+
+  //Draw Analog Stick
+  if (mode == 1) {
+    m_display.drawPixel(N64_GRAPH_CENTER_X + stickX / 4, N64_GRAPH_CENTER_Y - stickY / 4, WHITE);
+    //Update LCD
+    m_display.display();
+  }
+  else {
+    m_display.drawCircle(N64_GRAPH_CENTER_X + stickX / 4, N64_GRAPH_CENTER_Y - stickY / 4, 2, WHITE);
+    //Update LCD
+    m_display.display();
+    m_display.clearDisplay();
+  }
+}
+
+void OLEDUserInterface::updateN64SkippingTest(int8_t prevStickX, int8_t stickX) {
+  m_display.drawPixel(22 + prevStickX, 40, BLACK);
+  printAtPosition(F("Skipping Test"), CENTER, 0);
+  m_display.drawLine(22 + 0, 10, 22 + 83, 10, WHITE);
+  m_display.drawRect(22 + 0, 15, 22 + 59, 21, WHITE);
+  if (stickX > 0) {
+    m_display.drawLine(22 + stickX, 15, 22 + stickX, 35, WHITE);
+    m_display.drawPixel(22 + stickX, 40, WHITE);
   }
 
-  m_display.setCursor(x, y);
-  m_display.print(str);
+  printAtPosition(F("Try to fill box by"), 0, 45);
+  printAtPosition(F("slowly moving right"), 0, 55);
+  //Update LCD
+  m_display.display();
+}
+
+bool OLEDUserInterface::supportsN64SkippingTest() {
+  return true;
+}
+
+void OLEDUserInterface::printN64BenchmarkPrompt(uint8_t testNumber) {
+  switch (testNumber) {
+    case 1:
+      printAtPosition(F("Hold Stick Up"), CENTER, 18);
+      printAtPosition(F("then press A"), CENTER, 28);
+      break;
+    case 2:
+      printAtPosition(F("Up-Right"), CENTER, 22);
+      break;
+    case 3:
+      printAtPosition(F("Right"), CENTER, 22);
+      break;
+    case 4:
+      printAtPosition(F("Down-Right"), CENTER, 22);
+      break;
+    case 5:
+      printAtPosition(F("Down"), CENTER, 22);
+      break;
+    case 6:
+      printAtPosition(F("Down-Left"), CENTER, 22);
+      break;
+    case 7:
+      printAtPosition(F("Left"), CENTER, 22);
+      break;
+    case 8:
+      printAtPosition(F("Up-Left"), CENTER, 22);
+      break;
+  }
+
+  printAtPosition(F("Benchmark"), CENTER, 0);
+  m_display.drawLine(22 + 0, 9, 22 + 83, 9, WHITE);
+  printAtPosition(F("(Quit with Z)"), 25, 55);
+
+  m_display.display();
+}
+
+void OLEDUserInterface::printN64BenchmarkResults(const String &anastick, int8_t upX, int8_t upY, int8_t upRightX, int8_t upRightY,
+                                                 int8_t rightX, int8_t rightY, int8_t downRightX, int8_t downRightY,
+                                                 int8_t downX, int8_t downY, int8_t downLeftX, int8_t downLeftY,
+                                                 int8_t leftX, int8_t leftY, int8_t upLeftX, int8_t upLeftY) {
+  m_display.clearDisplay();
+
+  printAtPosition(anastick, 22 + 50, 0);
+
+  printAtPosition(F("U:"), 22 + 50, 10);
+  printAtPosition(String(upY), 100, 10);
+  printAtPosition(F("D:"), 22 + 50, 20);
+  printAtPosition(String(downY), 100, 20);
+  printAtPosition(F("L:"), 22 + 50, 30);
+  printAtPosition(String(leftX), 100, 30);
+  printAtPosition(F("R:"), 22 + 50, 40);
+  printAtPosition(String(rightX), 100, 40);
+
+  m_display.drawLine(N64_GRAPH_CENTER_X + upX / 4, N64_GRAPH_CENTER_Y - upY / 4,
+                     N64_GRAPH_CENTER_X + upRightX / 4, N64_GRAPH_CENTER_Y - upRightY / 4, WHITE);
+  m_display.drawLine(N64_GRAPH_CENTER_X + upRightX / 4, N64_GRAPH_CENTER_Y - upRightY / 4,
+                     N64_GRAPH_CENTER_X + rightX / 4, N64_GRAPH_CENTER_Y - rightY / 4, WHITE);
+  m_display.drawLine(N64_GRAPH_CENTER_X + rightX / 4, N64_GRAPH_CENTER_Y - rightY / 4,
+                     N64_GRAPH_CENTER_X + downRightX / 4, N64_GRAPH_CENTER_Y - downRightY / 4, WHITE);
+  m_display.drawLine(N64_GRAPH_CENTER_X + downRightX / 4, N64_GRAPH_CENTER_Y - downRightY / 4,
+                     N64_GRAPH_CENTER_X + downX / 4, N64_GRAPH_CENTER_Y - downY / 4, WHITE);
+  m_display.drawLine(N64_GRAPH_CENTER_X + downX / 4, N64_GRAPH_CENTER_Y - downY / 4,
+                     N64_GRAPH_CENTER_X + downLeftX / 4, N64_GRAPH_CENTER_Y - downLeftY / 4, WHITE);
+  m_display.drawLine(N64_GRAPH_CENTER_X + downLeftX / 4, N64_GRAPH_CENTER_Y - downLeftY / 4,
+                     N64_GRAPH_CENTER_X + leftX / 4, N64_GRAPH_CENTER_Y - leftY / 4, WHITE);
+  m_display.drawLine(N64_GRAPH_CENTER_X + leftX / 4, N64_GRAPH_CENTER_Y - leftY / 4,
+                     N64_GRAPH_CENTER_X + upLeftX / 4, N64_GRAPH_CENTER_Y - upLeftY / 4, WHITE);
+  m_display.drawLine(N64_GRAPH_CENTER_X + upLeftX / 4, N64_GRAPH_CENTER_Y - upLeftY / 4,
+                     N64_GRAPH_CENTER_X + upX / 4, N64_GRAPH_CENTER_Y - upY / 4, WHITE);
+
+  m_display.drawPixel(N64_GRAPH_CENTER_X, N64_GRAPH_CENTER_Y, WHITE);
+
+  printAtPosition(F("(Quit with Z)"), 25, 55);
+  //Update LCD
+  m_display.display();
 }
 
 void OLEDUserInterface::displayMessage(const __FlashStringHelper *message) {

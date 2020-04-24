@@ -853,29 +853,6 @@ void get_button()
 /******************************************
   N64 Controller Test
  *****************************************/
-#define CENTER 64
-
-void oledPrint(const char string[], int x, int y) {
-
-  if (x == CENTER)
-    x = 64 - (strlen(string) / 2) * 6;
-  display.setCursor(x, y);
-  display.print(string);
-}
-
-void oledPrint(int number, int x, int y) {
-  display.setCursor(x, y);
-  display.print(number);
-}
-
-void printSTR(String st, int x, int y)
-{
-  char buf[st.length() + 1];
-
-  st.toCharArray(buf, st.length() + 1);
-  oledPrint(buf, x, y);
-}
-
 void controllerTest() {
   // on which screens do we start
   int startscreen = 1;
@@ -885,10 +862,6 @@ void controllerTest() {
   //name of the current displayed result
   String anastick = "";
   int prevStickX = 0;
-
-  // Graph
-  int xax = 22 + 24; // midpoint x
-  int yax = 24; // midpoint y
 
   // variables to display test data of different sticks
   int upx = 0;
@@ -944,142 +917,77 @@ void controllerTest() {
             lastbutton = F("N/A");
 
             ui->clearOutput();
-            if (startscreen != 4)
-              startscreen = startscreen + 1;
-            else
-            {
-              startscreen = 1;
-              test = 1;
+            if (ui->supportsN64RangeTest()) {
+              startscreen = 2;
+            }
+            else if (ui->supportsN64SkippingTest()) {
+              startscreen = 3;
+            }
+            else {
+              startscreen = 4;
             }
           }
-          else if (button.length() == 0 && lastbutton == "Z" && startscreen == 4)
-          {
-            // Quit
-            quit = 0;
-          }
+
           break;
         }
       case 2:
         {
-          oledPrint("Range Test", CENTER, 55);
-          display.drawLine(22 + 0, 50, 22 + 84, 50, WHITE);
-
-          // Print Stick X Value
-          String stickx = String("X:" + String(N64_status.stick_x, DEC) + "   ");
-          printSTR(stickx, 22 + 54, 8);
-
-          // Print Stick Y Value
-          String sticky = String("Y:" + String(N64_status.stick_y, DEC) + "   ");
-          printSTR(sticky, 22 + 54, 18);
-
-          // Draw Axis
-          display.drawPixel(xax, yax, WHITE);
-          display.drawPixel(xax, yax - 80 / 4, WHITE);
-          display.drawPixel(xax, yax + 80 / 4, WHITE);
-          display.drawPixel(xax + 80 / 4, yax, WHITE);
-          display.drawPixel(xax - 80 / 4, yax, WHITE);
-
-          // Draw corners
-          display.drawPixel(xax - 68 / 4, yax - 68 / 4, WHITE);
-          display.drawPixel(xax + 68 / 4, yax + 68 / 4, WHITE);
-          display.drawPixel(xax + 68 / 4, yax - 68 / 4, WHITE);
-          display.drawPixel(xax - 68 / 4, yax + 68 / 4, WHITE);
-
-          //Draw Analog Stick
-          if (mode == 1)
-          {
-            display.drawPixel(xax + N64_status.stick_x / 4, yax - N64_status.stick_y / 4, WHITE);
-            //Update LCD
-            display.display();
-          }
-          else
-          {
-            display.drawCircle(xax + N64_status.stick_x / 4, yax - N64_status.stick_y / 4, 2, WHITE);
-            //Update LCD
-            display.display();
-            display.clearDisplay();
-          }
+          ui->updateN64RangeTest(N64_status.stick_x, N64_status.stick_y, mode);
 
           // switch mode
-          if (button.length() == 0 && lastbutton == "Z")
+          if (button.length() == 0 && lastbutton == F("Z"))
           {
             if (mode == 0)
             {
               mode = 1;
-              display.clearDisplay();
+              ui->clearOutput();
             }
             else
             {
               mode = 0;
-              display.clearDisplay();
+              ui->clearOutput();
             }
           }
+
           // go to next screen
-          if (button.length() == 0 && lastbutton == "START")
+          if (button.length() == 0 && lastbutton == F("START"))
           {
             // reset button
-            lastbutton = "N/A";
+            lastbutton = F("N/A");
 
-            display.clearDisplay();
-            if (startscreen != 4)
-              startscreen = startscreen + 1;
-            else
-            {
-              startscreen = 1;
-              test = 1;
+            ui->clearOutput();
+            if (ui->supportsN64SkippingTest()) {
+              startscreen = 3;
+            }
+            else {
+              startscreen = 4;
             }
           }
-          else if (button.length() == 0 && lastbutton == "Z" && startscreen == 4)
-          {
-            // Quit
-            quit = 0;
-          }
+
           break;
         }
       case 3:
         {
-          display.drawPixel(22 + prevStickX, 40, BLACK);
-          oledPrint("Skipping Test", CENTER, 0);
-          display.drawLine(22 + 0, 10, 22 + 83, 10, WHITE);
-          display.drawRect(22 + 0, 15, 22 + 59, 21, WHITE);
+          ui->updateN64SkippingTest(prevStickX, N64_status.stick_x);
+
           if (N64_status.stick_x > 0) {
-            display.drawLine(22 + N64_status.stick_x, 15, 22 + N64_status.stick_x, 35, WHITE);
-            display.drawPixel(22 + N64_status.stick_x, 40, WHITE);
             prevStickX = N64_status.stick_x;
           }
 
-          printSTR("Try to fill box by", 0, 45);
-          printSTR("slowly moving right", 0, 55);
-          //Update LCD
-          display.display();
-
-          if (button.length() == 0 && lastbutton == "Z")
-          {
+          if (button.length() == 0 && lastbutton == F("Z")) {
             // reset button
-            lastbutton = "N/A";
+            lastbutton = F("N/A");
 
-            display.clearDisplay();
+            ui->clearOutput();
           }
           // go to next screen
-          if (button.length() == 0 && lastbutton == "START")
-          {
+          if (button.length() == 0 && lastbutton == F("START")) {
             // reset button
-            lastbutton = "N/A";
+            lastbutton = F("N/A");
 
-            display.clearDisplay();
-            if (startscreen != 4)
-              startscreen = startscreen + 1;
-            else
-            {
-              startscreen = 1;
-              test = 1;
-            }
+            ui->clearOutput();
           }
-          else if (button.length() == 0 && lastbutton == "Z" && startscreen == 4)
-          {
-            // Quit
-            quit = 0;
-          }
+
           break;
         }
       case 4:
@@ -1092,7 +1000,7 @@ void controllerTest() {
                 {
                   case 0:
                     {
-                      anastick = "YOURS";
+                      anastick = F("YOURS");
                       upx = bupx;
                       upy = bupy;
                       uprightx = buprightx;
@@ -1110,10 +1018,10 @@ void controllerTest() {
                       upleftx = bupleftx;
                       uplefty = buplefty;
 
-                      if (button.length() == 0 && lastbutton == "A")
+                      if (button.length() == 0 && lastbutton == F("A"))
                       {
                         // reset button
-                        lastbutton = "N/A";
+                        lastbutton = F("N/A");
                         results = 1;
                       }
 
@@ -1121,7 +1029,7 @@ void controllerTest() {
                     }
                   case 1:
                     {
-                      anastick = "ORIG";
+                      anastick = F("ORIG");
                       upx = 1;
                       upy = 84;
                       uprightx = 67;
@@ -1139,60 +1047,34 @@ void controllerTest() {
                       upleftx = -68;
                       uplefty = 68;
 
-                      if (button.length() == 0 && lastbutton == "A")
+                      if (button.length() == 0 && lastbutton == F("A"))
                       {
                         // reset button
-                        lastbutton = "N/A";
+                        lastbutton = F("N/A");
                         results = 0;
                       }
                       break;
                     }
 
                 } //results
-                display.clearDisplay();
-
-                printSTR(anastick, 22 + 50, 0);
-
-                oledPrint("U:", 22 + 50, 10);
-                oledPrint(upy, 100, 10);
-                oledPrint("D:", 22 + 50, 20);
-                oledPrint(downy, 100, 20);
-                oledPrint("L:", 22 + 50, 30);
-                oledPrint(leftx, 100, 30);
-                oledPrint("R:", 22 + 50, 40);
-                oledPrint(rightx, 100, 40);
-
-                display.drawLine(xax + upx / 4, yax - upy / 4, xax + uprightx / 4, yax - uprighty / 4, WHITE);
-                display.drawLine(xax + uprightx / 4, yax - uprighty / 4, xax + rightx / 4, yax - righty / 4, WHITE);
-                display.drawLine(xax + rightx / 4, yax - righty / 4, xax + downrightx / 4, yax - downrighty / 4, WHITE);
-                display.drawLine(xax + downrightx / 4, yax - downrighty / 4, xax + downx / 4, yax - downy / 4, WHITE);
-                display.drawLine(xax + downx / 4, yax - downy / 4, xax + downleftx / 4, yax - downlefty / 4, WHITE);
-                display.drawLine(xax + downleftx / 4, yax - downlefty / 4, xax + leftx / 4, yax - lefty / 4, WHITE);
-                display.drawLine(xax + leftx / 4, yax - lefty / 4, xax + upleftx / 4, yax - uplefty / 4, WHITE);
-                display.drawLine(xax + upleftx / 4, yax - uplefty / 4, xax + upx / 4, yax - upy / 4, WHITE);
-
-                display.drawPixel(xax, yax, WHITE);
-
-                printSTR("(Quit with Z)", 25, 55);
-                //Update LCD
-                display.display();
+                ui->printN64BenchmarkResults(anastick, upx, upy, uprightx, uprightx, rightx, righty, downrightx, downrighty,
+                                             downx, downy, downleftx, downlefty, leftx, lefty, upleftx, uplefty);
+                
                 break;
               } //display results
 
             case 1:// +y Up
               {
-                oledPrint("Hold Stick Up", CENTER, 18);
-                oledPrint("then press A", CENTER, 28);
-                //myOLED.drawBitmap(110, 60, ana1);
+                ui->printN64BenchmarkPrompt(test);
 
-                if (button.length() == 0 && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == F("A"))
                 {
                   bupx = N64_status.stick_x;
                   bupy = N64_status.stick_y;
                   // reset button
-                  lastbutton = "N/A";
+                  lastbutton = F("N/A");
 
-                  display.clearDisplay();
+                  ui->clearOutput();
                   test = 2;
                 }
                 break;
@@ -1200,153 +1082,136 @@ void controllerTest() {
 
             case 2:// +y+x Up-Right
               {
-                oledPrint("Up-Right", CENTER, 22 );
-                //myOLED.drawBitmap(110, 60, ana2);
+                ui->printN64BenchmarkPrompt(test);
 
-                if (button.length() == 0 && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == F("A"))
                 {
                   buprightx = N64_status.stick_x;
                   buprighty = N64_status.stick_y;
                   test = 3;
                   // reset button
-                  lastbutton = "N/A";
+                  lastbutton = F("N/A");
 
-                  display.clearDisplay();
+                  ui->clearOutput();
                 }
                 break;
               }
 
             case 3:// +x Right
               {
-                oledPrint("Right", CENTER, 22 );
-                //myOLED.drawBitmap(110, 60, ana3);
+                ui->printN64BenchmarkPrompt(test);
 
-                if (button.length() == 0 && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == F("A"))
                 {
                   brightx = N64_status.stick_x;
                   brighty = N64_status.stick_y;
                   test = 4;
                   // reset button
-                  lastbutton = "N/A";
+                  lastbutton = F("N/A");
 
-                  display.clearDisplay();
+                  ui->clearOutput();
                 }
                 break;
               }
 
             case 4:// -y+x Down-Right
               {
-                oledPrint("Down-Right", CENTER, 22 );
-                //myOLED.drawBitmap(110, 60, ana4);
+                ui->printN64BenchmarkPrompt(test);
 
-                if (button.length() == 0 && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == F("A"))
                 {
                   bdownrightx = N64_status.stick_x;
                   bdownrighty = N64_status.stick_y;
                   test = 5;
                   // reset button
-                  lastbutton = "N/A";
+                  lastbutton = F("N/A");
 
-                  display.clearDisplay();
+                  ui->clearOutput();
                 }
                 break;
               }
 
             case 5:// -y Down
               {
-                oledPrint("Down", CENTER, 22 );
-                //myOLED.drawBitmap(110, 60, ana5);
+                ui->printN64BenchmarkPrompt(test);
 
-                if (button.length() == 0 && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == F("A"))
                 {
                   bdownx = N64_status.stick_x;
                   bdowny = N64_status.stick_y;
                   test = 6;
                   // reset button
-                  lastbutton = "N/A";
+                  lastbutton = F("N/A");
 
-                  display.clearDisplay();
+                  ui->clearOutput();
                 }
                 break;
               }
 
             case 6:// -y-x Down-Left
               {
-                oledPrint("Down-Left", CENTER, 22 );
-                //myOLED.drawBitmap(110, 60, ana6);
+                ui->printN64BenchmarkPrompt(test);
 
-                if (button.length() == 0 && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == F("A"))
                 {
                   bdownleftx = N64_status.stick_x;
                   bdownlefty = N64_status.stick_y;
                   test = 7;
                   // reset button
-                  lastbutton = "N/A";
+                  lastbutton = F("N/A");
 
-                  display.clearDisplay();
+                  ui->clearOutput();
                 }
                 break;
               }
 
             case 7:// -x Left
               {
-                oledPrint("Left", CENTER, 22 );
-                //myOLED.drawBitmap(110, 60, ana7);
+                ui->printN64BenchmarkPrompt(test);
 
-                if (button.length() == 0 && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == F("A"))
                 {
                   bleftx = N64_status.stick_x;
                   blefty = N64_status.stick_y;
                   test = 8;
                   // reset button
-                  lastbutton = "N/A";
+                  lastbutton = F("N/A");
 
-                  display.clearDisplay();
+                  ui->clearOutput();
                 }
                 break;
               }
 
             case 8:// +y+x Up-Left
               {
-                oledPrint("Up-Left", CENTER, 22);
-                //myOLED.drawBitmap(110, 60, ana8);
+                ui->printN64BenchmarkPrompt(test);
 
-                if (button.length() == 0 && lastbutton == "A")
+                if (button.length() == 0 && lastbutton == F("A"))
                 {
                   bupleftx = N64_status.stick_x;
                   buplefty = N64_status.stick_y;
                   test = 0;
                   // reset button
-                  lastbutton = "N/A";
+                  lastbutton = F("N/A");
 
-                  display.clearDisplay();
+                  ui->clearOutput();
                 }
                 break;
               }
           }
-          if (test != 0)
-          {
-            oledPrint("Benchmark", CENTER, 0);
-            display.drawLine(22 + 0, 9, 22 + 83, 9, WHITE);
-            printSTR("(Quit with Z)", 25, 55);
-          }
-          display.display();
+          ui->flushOutput();
           // go to next screen
-          if (button.length() == 0 && lastbutton == "START")
+          if (button.length() == 0 && lastbutton == F("START"))
           {
             // reset button
-            lastbutton = "N/A";
+            lastbutton = F("N/A");
 
-            display.clearDisplay();
-            if (startscreen != 4)
-              startscreen = startscreen + 1;
-            else
-            {
-              startscreen = 1;
-              test = 1;
-            }
+            ui->clearOutput();
+
+            startscreen = 1;
+            test = 1;
           }
-          else if (button.length() == 0 && lastbutton == "Z" && startscreen == 4)
+          else if (button.length() == 0 && lastbutton == F("Z"))
           {
             // Quit
             quit = 0;
