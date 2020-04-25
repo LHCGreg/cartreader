@@ -426,10 +426,6 @@ uint8_t saveTypeMenu() {
   }
 }
 
-String getNextGBAOutputPathAndPrintMessage(const String &fileType, const String &gameName, const String &extension) {
-  return getNextOutputPathAndPrintMessage(F("GBA"), fileType, gameName, extension);
-}
-
 String getNextGBARomOutputPathAndPrintMessage(const String &gameName) {
   return getNextOutputPathAndPrintMessage(F("GBA"), F("ROM"), gameName, F(".gba"));
 }

@@ -61,21 +61,21 @@ void setup_N64_Controller();
 void setup_N64_Cart();
 void controllerTest();
 void readMPK();
-void writeMPK();
-void verifyMPK();
+void writeMPK(const String &inputFilePath);
+void verifyMPK(const String &filePath);
 void printCartInfo_N64();
 void getCartInfo_N64();
 void idCart();
-void writeEeprom();
+void writeEeprom(const String &inputFilePath);
 void readEeprom();
-unsigned long verifyEeprom();
-void writeSram(unsigned long sramSize);
+unsigned long verifyEeprom(const String &filePath);
+void writeSram(const String &inputFilePath, unsigned long sramSize);
 void readSram(unsigned long sramSize, byte flashramType);
-unsigned long verifySram(unsigned long sramSize, byte flashramType);
-void writeFram(byte flashramType);
+unsigned long verifySram(const String &FilePath, unsigned long sramSize, byte flashramType);
+void writeFram(const String &inputFilePath, byte flashramType);
 void eraseFram();
 void readFram(byte flashramType);
-unsigned long verifyFram(byte flashramType);
+unsigned long verifyFram(const String &filePath, byte flashramType);
 unsigned long blankcheck_N64(byte flashramType);
 byte waitForFram(byte flashramType);
 void getFramType();
@@ -91,14 +91,14 @@ void writeIntel4400_N64(SafeSDFile &inputFile);
 void writeMSP55LV100_N64(SafeSDFile &inputFile, unsigned long sectorSize);
 void writeFlashBuffer_N64(SafeSDFile &inputFile, unsigned long sectorSize, byte bufferSize);
 void writeFlashrom_N64(SafeSDFile &inputFile);
-unsigned long verifyFlashrom_N64();
+unsigned long verifyFlashrom_N64(const String &filePath);
 void flashGameshark_N64();
 void idGameshark_N64();
 void resetGameshark_N64();
 void backupGameshark_N64();
 void eraseGameshark_N64();
 void writeGameshark_N64(SafeSDFile &inputFile);
-unsigned long verifyGameshark_N64();
+unsigned long verifyGameshark_N64(const String &filePath);
 
 /******************************************
   Menu
@@ -201,8 +201,8 @@ void n64ControllerMenu() {
       String inputFilePath = fileBrowser(F("Select mpk file"));
       ui->clearOutput();
       ui->flushOutput();
-      writeMPK();
-      verifyMPK();
+      writeMPK(inputFilePath);
+      verifyMPK(inputFilePath);
       ui->printlnMsg(F(""));
       ui->printlnMsg(F("Press Button."));
       ui->flushOutput();
@@ -269,8 +269,8 @@ void n64CartMenu() {
         String inputFilePath = fileBrowser(F("Select sra file"));
         ui->clearOutput();
 
-        writeSram(32768);
-        uint32_t writeErrors = verifySram(32768, 1);
+        writeSram(inputFilePath, 32768);
+        uint32_t writeErrors = verifySram(inputFilePath, 32768, 1);
         if (writeErrors == 0) {
           ui->printlnMsg(F("Sram verified OK"));
           ui->flushOutput();
@@ -287,10 +287,10 @@ void n64CartMenu() {
         String inputFilePath = fileBrowser(F("Select fla file"));
         ui->clearOutput();
         getFramType();
-        writeFram(flashramType);
+        writeFram(inputFilePath, flashramType);
         ui->printMsg(F("Verifying..."));
         ui->flushOutput();
-        uint32_t writeErrors = verifyFram(flashramType);
+        uint32_t writeErrors = verifyFram(inputFilePath, flashramType);
         if (writeErrors == 0) {
           ui->printlnMsg(F("OK"));
           ui->flushOutput();
@@ -308,8 +308,8 @@ void n64CartMenu() {
         String inputFilePath = fileBrowser(F("Select eep file"));
         ui->clearOutput();
 
-        writeEeprom();
-        uint32_t writeErrors = verifyEeprom();
+        writeEeprom(inputFilePath);
+        uint32_t writeErrors = verifyEeprom(inputFilePath);
         if (writeErrors == 0) {
           ui->printlnMsg(F("Eeprom verified OK"));
           ui->flushOutput();
@@ -368,6 +368,64 @@ void n64CartMenu() {
       break;
     }
   }
+}
+
+String getNextN64MPKOutputPath() {
+  int16_t folderNumber = loadFolderNumber();
+
+  String fileName = String(folderNumber);
+  fileName.concat(F(".mpk"));
+
+  String outputFilePath = F("/N64/MPK/");
+  outputFilePath.concat(fileName);
+
+  saveFolderNumber(folderNumber + 1);
+
+  return outputFilePath;
+}
+
+String getNextN64EepomOutputPath(const String &gameName) {
+  return getNextOutputPath(F("N64"), F("SAVE"), gameName, F(".eep"));
+}
+
+String getNextN64SramOutputPath(const String &gameName, uint8_t saveType) {
+  const __FlashStringHelper *extension;
+  if (saveType == 4) {
+    extension = F(".fla");
+  }
+  else if (saveType == 1) {
+    extension = F(".sra");
+  }
+  else {
+    ui->printErrorAndAbort(F("Savetype Error"), true);
+  }
+
+  return getNextOutputPath(F("N64"), F("SAVE"), gameName, extension);
+}
+
+String getNextN64RomOutputPathAndPrintMessage(const String &gameName) {
+  return getNextOutputPathAndPrintMessage(F("N64"), F("ROM"), gameName, F(".Z64"));
+}
+
+String getNextN64GamesharkBackupOutputPathAndPrintMessage() {
+  int16_t folderNumber = loadFolderNumber();
+
+  String fileName = F("GS");
+  fileName.concat(folderNumber);
+  fileName.concat(F(".z64"));
+
+  String outputFilePath = F("/N64/ROM/Gameshark/");
+  outputFilePath.concat(fileName);
+
+  saveFolderNumber(folderNumber + 1);
+
+  ui->clearOutput();
+  ui->printMsg(F("Saving to "));
+  ui->printMsg(outputFilePath);
+  ui->printlnMsg(F("..."));
+  ui->flushOutput();
+
+  return outputFilePath;
 }
 
 /******************************************
@@ -1276,27 +1334,13 @@ void readBlock(word myAddress) {
 
 // reads the MPK file to the sd card
 void readMPK() {
-  // Change to root
-  chdir("/");
-  // Make MPK directory
-  mkdir("N64/MPK", true);
-  // Change to MPK directory
-  chdir("N64/MPK");
-
-  // Get name, add extension and convert to char array for sd lib
-  foldern = loadFolderNumber();
-  sprintf(fileName, "%d", foldern);
-  strcat(fileName, ".mpk");
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextN64MPKOutputPath();
 
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
-  println_Msg(F("Please wait..."));
-  display_Update();
+  ui->printlnMsg(F("Please wait..."));
+  ui->flushOutput();
 
   // Controller paks, which all have 32kB of space, are mapped between 0x0000 – 0x7FFF
   for (word i = 0x0000; i < 0x8000; i += 32) {
@@ -1307,21 +1351,18 @@ void readMPK() {
   }
   // Close the file:
   outputFile.close();
-  print_Msg(F("Saved as N64/MPK/"));
-  println_Msg(fileName);
-  display_Update();
+  ui->printMsg(F("Saved as "));
+  ui->printlnMsg(outputFilePath);
+  ui->flushOutput();
 }
 
-void writeMPK() {
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  println_Msg(F("Writing..."));
-  println_Msg(filePath);
-  display_Update();
+void writeMPK(const String &inputFilePath) {
+  ui->printlnMsg(F("Writing..."));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
   // Open file on sd card
-  //if (myFile.open(filePath, O_READ)) {
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   for (word myAddress = 0x0000; myAddress < 0x8000; myAddress += 32) {
     // Read 32 bytes into SD buffer
     inputFile.read(sdBuffer, 32);
@@ -1351,16 +1392,16 @@ void writeMPK() {
   }
   // Close the file:
   inputFile.close();
-  println_Msg(F("Done"));
-  display_Update();
+  ui->printlnMsg(F("Done"));
+  ui->flushOutput();
 }
 
 // verifies if write was successful
-void verifyMPK() {
+void verifyMPK(const String &filePath) {
   writeErrors = 0;
 
-  println_Msg(F("Verifying..."));
-  display_Update();
+  ui->printlnMsg(F("Verifying..."));
+  ui->flushOutput();
 
   //open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
@@ -1380,14 +1421,14 @@ void verifyMPK() {
   // Close the file:
   inputFile.close();
   if (writeErrors == 0) {
-    println_Msg(F("OK"));
-    display_Update();
+    ui->printlnMsg(F("OK"));
+    ui->flushOutput();
   }
   else {
-    print_Msg(F("Error: "));
-    print_Msg(writeErrors);
-    println_Msg(F(" bytes "));
-    print_Warning(F("did not verify."));
+    ui->printMsg(F("Error: "));
+    ui->printMsg(writeErrors);
+    ui->printlnMsg(F(" bytes "));
+    ui->printError(F("did not verify."));
   }
 }
 
@@ -1400,97 +1441,96 @@ void printCartInfo_N64() {
 
   // Print start page
   if (cartSize != 0) {
-    println_Msg(F("N64 Cartridge Info"));
-    println_Msg(F(""));
-    print_Msg(F("Name: "));
-    println_Msg(romName);
-    print_Msg(F("ID: "));
-    print_Msg(cartID);
-    print_Msg(F(" Size: "));
-    print_Msg(cartSize);
-    println_Msg(F("MB"));
-    print_Msg(F("Save: "));
+    ui->printlnMsg(F("N64 Cartridge Info"));
+    ui->printlnMsg(F(""));
+    ui->printMsg(F("Name: "));
+    ui->printlnMsg(romName);
+    ui->printMsg(F("ID: "));
+    ui->printMsg(cartID);
+    ui->printMsg(F(" Size: "));
+    ui->printMsg(cartSize);
+    ui->printlnMsg(F("MB"));
+    ui->printMsg(F("Save: "));
     switch (saveType) {
       case 1:
-        println_Msg(F("Sram"));
+        ui->printlnMsg(F("Sram"));
         break;
       case 4:
-        println_Msg(F("Flashram"));
+        ui->printlnMsg(F("Flashram"));
         break;
       case 5:
-        println_Msg(F("4K Eeprom"));
+        ui->printlnMsg(F("4K Eeprom"));
         eepPages = 64;
         break;
       case 6:
-        println_Msg(F("16K Eeprom"));
+        ui->printlnMsg(F("16K Eeprom"));
         eepPages = 256;
         break;
       default:
-        println_Msg(F("unknown"));
+        ui->printlnMsg(F("unknown"));
         break;
     }
-    print_Msg(F("Version: 1."));
-    println_Msg(romVersion);
+    ui->printMsg(F("Version: 1."));
+    ui->printlnMsg(romVersion);
 
     // Wait for user input
-    println_Msg(F(" "));
-    println_Msg(F("Press Button..."));
-    display_Update();
-    wait();
+    ui->printlnMsg(F(" "));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
   else {
     // Display error
-    println_Msg(F("GAMEPAK ERROR"));
-    println_Msg("");
-    print_Msg(F("Name: "));
-    println_Msg(romName);
-    print_Msg(F("ID: "));
-    println_Msg(cartID);
-    println_Msg("");
-    display_Update();
+    ui->printlnMsg(F("GAMEPAK ERROR"));
+    ui->printlnMsg("");
+    ui->printMsg(F("Name: "));
+    ui->printlnMsg(romName);
+    ui->printMsg(F("ID: "));
+    ui->printlnMsg(cartID);
+    ui->printlnMsg("");
+    ui->flushOutput();
 
     strcpy(romName, "GPERROR");
-    print_Warning(F("Cartridge unknown"));
-    wait();
+    ui->printError(F("Cartridge unknown"));
+    ui->waitForUserInput();
 
     // Set cartsize manually
-    unsigned char N64RomMenu;
-    // Copy menuOptions out of progmem
-    convertPgm(romOptionsN64, 6);
-    N64RomMenu = question_box(F("Select ROM size"), menuOptions, 6, 0);
+    // Set cartsize manually
+    const __FlashStringHelper *romItem_4MB = F("4MB");
+    const __FlashStringHelper *romItem_8MB = F("8MB");
+    const __FlashStringHelper *romItem_12MB = F("12MB");
+    const __FlashStringHelper *romItem_16MB = F("16MB");
+    const __FlashStringHelper *romItem_32MB = F("32MB");
+    const __FlashStringHelper *romItem_64MB = F("64MB");
+    const __FlashStringHelper *romMenu[] = {
+      romItem_4MB,
+      romItem_8MB,
+      romItem_12MB,
+      romItem_16MB,
+      romItem_32MB,
+      romItem_64MB,
+    };
 
-    // wait for user choice to come back from the question box menu
-    switch (N64RomMenu)
-    {
-      case 0:
-        // 4MB
-        cartSize = 4;
-        break;
+    const __FlashStringHelper *romAnswer = ui->askMultipleChoiceQuestion(
+      F("Select ROM size"), romMenu, ARRAY_LENGTH(romMenu), romItem_4MB);
 
-      case 1:
-        // 8MB
-        cartSize = 8;
-        break;
-
-      case 2:
-        // 12MB
-        cartSize = 12;
-        break;
-
-      case 3:
-        // 16MB
-        cartSize = 16;
-        break;
-
-      case 4:
-        // 32MB
-        cartSize = 32;
-        break;
-
-      case 5:
-        // 64MB
-        cartSize = 64;
-        break;
+    if (romAnswer == romItem_4MB) {
+      cartSize = 4;
+    }
+    else if (romAnswer == romItem_8MB) {
+      cartSize = 8;
+    }
+    else if (romAnswer == romItem_12MB) {
+      cartSize = 12;
+    }
+    else if (romAnswer == romItem_16MB) {
+      cartSize = 16;
+    }
+    else if (romAnswer == romItem_32MB) {
+      cartSize = 32;
+    }
+    else if (romAnswer == romItem_64MB) {
+      cartSize = 64;
     }
   }
 }
@@ -1511,9 +1551,6 @@ boolean searchCRC(char crcStr[9]) {
   char tempStr2[2];
   char tempStr1[9];
   char tempStr[5];
-
-  // Change to root dir
-  chdir("/");
 
   SafeSDFile n64File = SafeSDFile::openForReading(F("/n64.txt"));
   // Loop through file
@@ -1703,17 +1740,14 @@ void readData() {
 }
 
 // Write Eeprom to cartridge
-void writeEeprom() {
+void writeEeprom(const String &inputFilePath) {
   if ((saveType == 5) || (saveType == 6)) {
-
-    // Create filepath
-    sprintf(filePath, "%s/%s", filePath, fileName);
-    println_Msg(F("Writing..."));
-    println_Msg(filePath);
-    display_Update();
+    ui->printlnMsg(F("Writing..."));
+    ui->printlnMsg(inputFilePath);
+    ui->flushOutput();
 
     // Open file on sd card
-    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
     for (byte i = 0; i < (eepPages / 64); i++) {
       inputFile.read(sdBuffer, 512);
@@ -1742,12 +1776,12 @@ void writeEeprom() {
 
     // Close the file:
     inputFile.close();
-    println_Msg(F("Done"));
-    display_Update();
+    ui->printlnMsg(F("Done"));
+    ui->flushOutput();
     delay(600);
   }
   else {
-    print_Error(F("Savetype Error"));
+    ui->printErrorAndAbort(F("Savetype Error"), false);
   }
 }
 
@@ -1758,22 +1792,10 @@ void readEeprom() {
     // Wait 50ms or eeprom might lock up
     pulseClock_N64(26000);
 
-    // Get name, add extension and convert to char array for sd lib
-    strcpy(fileName, romName);
-    strcat(fileName, ".eep");
-
-    // create a new folder for the save file
-    foldern = loadFolderNumber();
-    sprintf(folder, "N64/SAVE/%s/%d", romName, foldern);
-    mkdir(folder, true);
-    chdir(folder);
-
-    // write new folder number back to eeprom
-    foldern = foldern + 1;
-    saveFolderNumber(foldern);
+    String outputFilePath = getNextN64EepomOutputPath(romName);
 
     // Open file on sd card
-    SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+    SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
     for (byte i = 0; i < (eepPages / 64); i++) {
       // Disable interrupts for more uniform clock pulses
@@ -1809,29 +1831,28 @@ void readEeprom() {
     // Close the file:
     outputFile.close();
     //clear the screen
-    display_Clear();
-    print_Msg(F("Saved to "));
-    print_Msg(folder);
-    println_Msg(F("/"));
-    display_Update();
+    ui->clearOutput();
+    ui->printMsg(F("Saved to "));
+    ui->printlnMsg(outputFilePath);
+    ui->flushOutput();
   }
   else {
-    print_Error(F("Savetype Error"));
+    ui->printErrorAndAbort(F("Savetype Error"), false);
   }
 }
 
 // Check if a write succeeded, returns 0 if all is ok and number of errors if not
-unsigned long verifyEeprom() {
+unsigned long verifyEeprom(const String &filePath) {
   if ((saveType == 5) || (saveType == 6)) {
     writeErrors = 0;
 
     // Wait 50ms or eeprom might lock up
     pulseClock_N64(26000);
 
-    display_Clear();
-    print_Msg(F("Verifying against "));
-    println_Msg(filePath);
-    display_Update();
+    ui->clearOutput();
+    ui->printMsg(F("Verifying against "));
+    ui->printlnMsg(filePath);
+    ui->flushOutput();
 
     // Open file on sd card
     SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
@@ -1878,8 +1899,7 @@ unsigned long verifyEeprom() {
     return writeErrors;
   }
   else {
-    print_Error(F("Savetype Error"));
-    return 0;
+    ui->printErrorAndAbort(F("Savetype Error"), false);
   }
 }
 
@@ -1887,16 +1907,14 @@ unsigned long verifyEeprom() {
   SRAM functions
 *****************************************/
 // Write sram to cartridge
-void writeSram(unsigned long sramSize) {
+void writeSram(const String &inputFilePath, unsigned long sramSize) {
   if (saveType == 1) {
-    // Create filepath
-    sprintf(filePath, "%s/%s", filePath, fileName);
-    println_Msg(F("Writing..."));
-    println_Msg(filePath);
-    display_Update();
+    ui->printlnMsg(F("Writing..."));
+    ui->printlnMsg(inputFilePath);
+    ui->flushOutput();
 
     // Open file on sd card
-    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
     for (unsigned long currByte = sramBase; currByte < (sramBase + sramSize); currByte += 512) {
 
       // Read save from SD into buffer
@@ -1915,12 +1933,12 @@ void writeSram(unsigned long sramSize) {
     }
     // Close the file:
     inputFile.close();
-    println_Msg(F("Done"));
-    display_Update();
+    ui->printlnMsg(F("Done"));
+    ui->flushOutput();
 
   }
   else {
-    print_Error(F("Savetype Error"));
+    ui->printErrorAndAbort(F("Savetype Error"), false);
   }
 }
 
@@ -1933,31 +1951,10 @@ void readSram(unsigned long sramSize, byte flashramType) {
     bufferSize = 128;
   }
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-
-  if (saveType == 4) {
-    strcat(fileName, ".fla");
-  }
-  else if (saveType == 1) {
-    strcat(fileName, ".sra");
-  }
-  else {
-    print_Error(F("Savetype Error"));
-  }
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "N64/SAVE/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextN64SramOutputPath(romName, saveType);
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   for (unsigned long currByte = sramBase; currByte < (sramBase + (sramSize / flashramType)); currByte += offset) {
     // Set the address
@@ -1977,13 +1974,12 @@ void readSram(unsigned long sramSize, byte flashramType) {
   }
   // Close the file:
   outputFile.close();
-  print_Msg(F("Saved to "));
-  print_Msg(folder);
-  println_Msg(F("/"));
-  display_Update();
+  ui->printMsg(F("Saved to "));
+  ui->printlnMsg(outputFilePath);
+  ui->flushOutput();
 }
 
-unsigned long verifySram(unsigned long sramSize, byte flashramType) {
+unsigned long verifySram(const String &filePath, unsigned long sramSize, byte flashramType) {
   writeErrors = 0;
 
   int offset = 512;
@@ -2052,133 +2048,128 @@ void initFram() {
   delay(10);
 }
 
-void writeFram(byte flashramType) {
-  if (saveType == 4) {
-    // Erase fram
-    eraseFram();
+void writeFram(const String &inputFilePath, byte flashramType) {
+  if (saveType != 4) {
+    ui->printErrorAndAbort(F("Savetype Error"), true);
+  }
+  
+  // Erase fram
+  eraseFram();
 
-    // Check if empty
-    if (blankcheck_N64(flashramType) == 0) {
-      println_Msg(F("OK"));
-      display_Update();
-    }
-    else {
-      println_Msg("FAIL");
-      display_Update();
-    }
-
-    // Create filepath
-    sprintf(filePath, "%s/%s", filePath, fileName);
-    print_Msg(F("Writing "));
-    println_Msg(filePath);
-    display_Update();
-
-    // Open file on sd card
-    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
-    
-    // Init fram
-    initFram();
-
-    // Write all 8 fram banks
-    print_Msg(F("Bank "));
-    for (byte bank = 0; bank < 8; bank++) {
-      print_Msg(bank);
-      print_Msg(F(" "));
-      display_Update();
-
-      // Write one bank of 128*128 bytes
-      for (byte offset = 0; offset < 128; offset++) {
-        // Read save from SD into buffer
-        inputFile.read(sdBuffer, 128);
-
-        // FRAM_WRITE_MODE_CMD
-        sendFramCmd(0xB4000000);
-        delay(1);
-
-        // Set the address for the next 128 bytes
-        setAddress_N64(0x08000000);
-
-        // Send 128 bytes, 64 words
-        for (byte c = 0; c < 128; c += 2) {
-          // Join two bytes into one word
-          word myWord = ( ( sdBuffer[c] & 0xFF ) << 8 ) | ( sdBuffer[c + 1] & 0xFF );
-          // Write word
-          writeWord_N64(myWord);
-        }
-        // Delay between each "DMA"
-        delay(1);
-
-        //FRAM_WRITE_OFFSET_CMD + offset
-        sendFramCmd((0xA5000000 | (((bank * 128) + offset) & 0xFFFF)));
-        delay(1);
-
-        // FRAM_EXECUTE_CMD
-        sendFramCmd(0xD2000000);
-        while (waitForFram(flashramType)) {
-          delay(1);
-        }
-      }
-      // Delay between banks
-      delay(20);
-    }
-    println_Msg("");
-    // Close the file:
-    inputFile.close();
+  // Check if empty
+  if (blankcheck_N64(flashramType) == 0) {
+    ui->printlnMsg(F("OK"));
+    ui->flushOutput();
   }
   else {
-    print_Error(F("Savetype Error"));
+    ui->printlnMsg("FAIL");
+    ui->flushOutput();
   }
-}
 
-// Delete all 8 flashram banks
-void eraseFram() {
-  if (saveType == 4) {
-    print_Msg(F("Erasing..."));
-    display_Update();
+  ui->printMsg(F("Writing "));
+  ui->printlnMsg(inputFilePath);
+  ui->flushOutput();
 
-    // Init fram
-    initFram();
+  // Open file on sd card
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
+  
+  // Init fram
+  initFram();
 
-    // Erase fram
-    // 0x4B00007F 0x4B0000FF 0x4B00017F 0x4B0001FF 0x4B00027F 0x4B0002FF 0x4B00037F 0x4B0003FF
-    for (unsigned long bank = 0x4B00007F; bank < 0x4B00047F; bank += 0x80) {
-      sendFramCmd(bank);
-      delay(10);
-      // FRAM_ERASE_MODE_CMD
-      sendFramCmd(0x78000000);
-      delay(10);
+  // Write all 8 fram banks
+  ui->printMsg(F("Bank "));
+  for (byte bank = 0; bank < 8; bank++) {
+    ui->printMsg(bank);
+    ui->printMsg(F(" "));
+    ui->flushOutput();
+
+    // Write one bank of 128*128 bytes
+    for (byte offset = 0; offset < 128; offset++) {
+      // Read save from SD into buffer
+      inputFile.read(sdBuffer, 128);
+
+      // FRAM_WRITE_MODE_CMD
+      sendFramCmd(0xB4000000);
+      delay(1);
+
+      // Set the address for the next 128 bytes
+      setAddress_N64(0x08000000);
+
+      // Send 128 bytes, 64 words
+      for (byte c = 0; c < 128; c += 2) {
+        // Join two bytes into one word
+        word myWord = ( ( sdBuffer[c] & 0xFF ) << 8 ) | ( sdBuffer[c + 1] & 0xFF );
+        // Write word
+        writeWord_N64(myWord);
+      }
+      // Delay between each "DMA"
+      delay(1);
+
+      //FRAM_WRITE_OFFSET_CMD + offset
+      sendFramCmd((0xA5000000 | (((bank * 128) + offset) & 0xFFFF)));
+      delay(1);
+
       // FRAM_EXECUTE_CMD
       sendFramCmd(0xD2000000);
       while (waitForFram(flashramType)) {
         delay(1);
       }
     }
+    // Delay between banks
+    delay(20);
   }
-  else {
-    print_Error(F("Savetype Error"));
+  ui->printlnMsg("");
+  // Close the file:
+  inputFile.close();
+}
+
+// Delete all 8 flashram banks
+void eraseFram() {
+  if (saveType != 4) {
+    ui->printErrorAndAbort(F("Savetype Error"), true);
+  }
+
+  ui->printMsg(F("Erasing..."));
+  ui->flushOutput();
+
+  // Init fram
+  initFram();
+
+  // Erase fram
+  // 0x4B00007F 0x4B0000FF 0x4B00017F 0x4B0001FF 0x4B00027F 0x4B0002FF 0x4B00037F 0x4B0003FF
+  for (unsigned long bank = 0x4B00007F; bank < 0x4B00047F; bank += 0x80) {
+    sendFramCmd(bank);
+    delay(10);
+    // FRAM_ERASE_MODE_CMD
+    sendFramCmd(0x78000000);
+    delay(10);
+    // FRAM_EXECUTE_CMD
+    sendFramCmd(0xD2000000);
+    while (waitForFram(flashramType)) {
+      delay(1);
+    }
   }
 }
 
 // Read flashram
 void readFram(byte flashramType) {
-  if (saveType == 4) {
-    // Put flashram into read mode
-    // FRAM_READ_MODE_CMD
-    sendFramCmd(0xF0000000);
-    // Read Flashram
-    readSram(131072, flashramType);
+  if (saveType != 4) {
+    ui->printErrorAndAbort(F("Savetype Error"), true);
   }
-  else {
-    print_Error(F("Savetype Error"));
-  }
-}
 
-// Verify flashram
-unsigned long verifyFram(byte flashramType) {
   // Put flashram into read mode
   // FRAM_READ_MODE_CMD
   sendFramCmd(0xF0000000);
-  writeErrors = verifySram(131072, flashramType);
+  // Read Flashram
+  readSram(131072, flashramType);
+}
+
+// Verify flashram
+unsigned long verifyFram(const String &filePath, byte flashramType) {
+  // Put flashram into read mode
+  // FRAM_READ_MODE_CMD
+  sendFramCmd(0xF0000000);
+  writeErrors = verifySram(filePath, 131072, flashramType);
   return writeErrors;
 }
 
@@ -2301,38 +2292,38 @@ void getFramType() {
   //MX29L1100
   if (sdBuffer[7] == 0x1e ) {
     flashramType = 2;
-    println_Msg(F("Type: MX29L1100"));
-    display_Update();
+    ui->printlnMsg(F("Type: MX29L1100"));
+    ui->flushOutput();
   }
   //MX29L1101
   else if (sdBuffer[7] == 0x1d )  {
     flashramType = 1;
     MN63F81MPN = false;
-    println_Msg(F("Type: MX29L1101"));
-    display_Update();
+    ui->printlnMsg(F("Type: MX29L1101"));
+    ui->flushOutput();
   }
   //MN63F81MPN
   else if (sdBuffer[7] == 0xf1 )  {
     flashramType = 1;
     MN63F81MPN = true;
-    println_Msg(F("Type: MN63F81MPN"));
-    display_Update();
+    ui->printlnMsg(F("Type: MN63F81MPN"));
+    ui->flushOutput();
   }
   // 29L1100KC-15B0 compat MX29L1101
   else if ((sdBuffer[7] == 0x8e ) || (sdBuffer[7] == 0x84 )) {
     flashramType = 1;
     MN63F81MPN = false;
-    println_Msg(F("Type: 29L1100KC-15B0"));
-    println_Msg(F("(compat. MX29L1101)"));
-    display_Update();
+    ui->printlnMsg(F("Type: 29L1100KC-15B0"));
+    ui->printlnMsg(F("(compat. MX29L1101)"));
+    ui->flushOutput();
   }
   // Type unknown
   else {
     for (byte c = 0; c < 8; c++) {
-      print_Msg(sdBuffer[c], HEX);
-      print_Msg(F(", "));
+      ui->printMsg(sdBuffer[c], HEX);
+      ui->printMsg(F(", "));
     }
-    print_Error(F("Flashram unknown"));
+    ui->printErrorAndAbort(F("Flashram unknown"), false);
   }
 }
 
@@ -2341,29 +2332,11 @@ void getFramType() {
 *****************************************/
 // Read rom and save to the SD card
 void readRom_N64() {
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".Z64");
-
-  // create a new folder
-  foldern = loadFolderNumber();
-  sprintf(folder, "N64/ROM/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  display_Clear();
-  print_Msg(F("Saving to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextN64RomOutputPathAndPrintMessage(romName);
 
 readn64rom:
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   byte buffer[1024] = { 0 };
 
@@ -2373,7 +2346,7 @@ readn64rom:
   //Initialize progress bar
   uint32_t processedProgressBar = 0;
   uint32_t totalProgressBar = (uint32_t)(cartSize) * 1024 * 1024;
-  draw_progressbar(0, totalProgressBar);
+  ui->drawProgressBar(0, totalProgressBar);
 
   // prepare crc32
   uint32_t oldcrc32 = 0xFFFFFFFF;
@@ -2442,7 +2415,7 @@ readn64rom:
     }
 
     processedProgressBar += 1024;
-    draw_progressbar(processedProgressBar, totalProgressBar);
+    ui->drawProgressBar(processedProgressBar, totalProgressBar);
     // write out 1024 bytes to file
     outputFile.write(buffer, 1024);
   }
@@ -2452,19 +2425,19 @@ readn64rom:
 
   unsigned long timeElapsed = (millis() - startTime) / 1000; // seconds
 
-  print_Msg(F("CRC: "));
-  display_Update();
+  ui->printMsg(F("CRC: "));
+  ui->flushOutput();
   // convert checksum to string
   char crcStr[9];
   sprintf(crcStr, "%08lx", ~oldcrc32);
   // Print checksum
-  println_Msg(crcStr);
-  display_Update();
+  ui->printlnMsg(crcStr);
+  ui->flushOutput();
 
   // Search n64.txt for crc
   if (searchCRC(crcStr)) {
     // Dump was a known good rom
-    println_Msg(F("Checksum matches"));
+    ui->printlnMsg(F("Checksum matches"));
   }
   else {
     // Dump was bad or unknown
@@ -2473,50 +2446,46 @@ readn64rom:
     // let bad crc show a short while
     delay(3000);
 
-    // N64 CRC32 error Menu
-    unsigned char CRCMenu;
-    // Copy menuOptions out of progmem
-    convertPgm(menuOptionsN64CRC, 3);
+    const __FlashStringHelper *crcItem_Redump = F("Redump");
+    const __FlashStringHelper *crcItem_Ignore = F("Ignore");
+    const __FlashStringHelper *crcItem_Reset = F("Reset");
+    const __FlashStringHelper *crcMenu[] = {
+      crcItem_Redump,
+      crcItem_Ignore,
+      crcItem_Reset,
+    };
 
-    CRCMenu = question_box(F("CRC ERROR "), menuOptions, 3, 0);
+    const __FlashStringHelper *crcAnswer = ui->askMultipleChoiceQuestion(
+      F("CRC ERROR"), crcMenu, ARRAY_LENGTH(crcMenu), crcItem_Redump);
 
-    // wait for user choice to come back from the question box menu
-    switch (CRCMenu)
-    {
-      case 0: {
-        // Change to last directory
-        chdir(folder);
-        // Delete old file
-        SafeSDFile oldFile = SafeSDFile::openForWriting(fileName);
-        oldFile.remove();
-        // Dump again
-        display_Clear();
-        println_Msg(F("Reading Rom..."));
-        display_Update();
-        rgb.setColor(0, 0, 0);
-        goto readn64rom;
-        break;
-      }
-
-      case 1:
-        // Return to N64 menu
-        break;
-
-      case 2:
-        // Reset
-        resetArduino();
-        break;
+    if (crcAnswer == crcItem_Redump) {
+      // Delete old file
+      SafeSDFile oldFile = SafeSDFile::openForWriting(outputFilePath);
+      oldFile.remove();
+      // Dump again
+      ui->clearOutput();
+      ui->printlnMsg(F("Reading Rom..."));
+      ui->flushOutput();
+      rgb.setColor(0, 0, 0);
+      goto readn64rom;
+    }
+    else if (crcAnswer == crcItem_Ignore) {
+      // Return to N64 menu
+      ;
+    }
+    else {
+      resetArduino();
     }
   }
-  display_Update();
+  ui->flushOutput();
 
-  print_Msg(F("Done ("));
-  print_Msg(timeElapsed); // include elapsed time
-  println_Msg(F("s)"));
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
+  ui->printMsg(F("Done ("));
+  ui->printMsg(timeElapsed); // include elapsed time
+  ui->printlnMsg(F("s)"));
+  ui->printlnMsg(F(""));
+  ui->printlnMsg(F("Press Button..."));
+  ui->flushOutput();
+  ui->waitForUserInput();
 }
 
 /******************************************
@@ -2530,68 +2499,63 @@ void flashRepro_N64() {
   if (cartSize != 0) {
     // Print flashrom name
     if ((strcmp(flashid, "227E") == 0)  && (strcmp(cartID, "2201") == 0)) {
-      print_Msg(F("Spansion S29GL256N"));
+      ui->printMsg(F("Spansion S29GL256N"));
       if (cartSize == 64)
-        println_Msg(F(" x2"));
+        ui->printlnMsg(F(" x2"));
       else
-        println_Msg("");
+        ui->printlnMsg("");
     }
     else if ((strcmp(flashid, "227E") == 0)  && (strcmp(cartID, "2101") == 0)) {
-      print_Msg(F("Spansion S29GL128N"));
+      ui->printMsg(F("Spansion S29GL128N"));
     }
     else if ((strcmp(flashid, "22C9") == 0) || (strcmp(flashid, "22CB") == 0)) {
-      print_Msg(F("Macronix MX29LV640"));
+      ui->printMsg(F("Macronix MX29LV640"));
       if (cartSize == 16)
-        println_Msg(F(" x2"));
+        ui->printlnMsg(F(" x2"));
       else
-        println_Msg("");
+        ui->printlnMsg("");
     }
     else if (strcmp(flashid, "8816") == 0)
-      println_Msg(F("Intel 4400L0ZDQ0"));
+      ui->printlnMsg(F("Intel 4400L0ZDQ0"));
     else if (strcmp(flashid, "7E7E") == 0)
-      println_Msg(F("Fujitsu MSP55LV100S"));
+      ui->printlnMsg(F("Fujitsu MSP55LV100S"));
     else if ((strcmp(flashid, "227E") == 0) && (strcmp(cartID, "2301") == 0))
-      println_Msg(F("Fujitsu MSP55LV512"));
+      ui->printlnMsg(F("Fujitsu MSP55LV512"));
     else if ((strcmp(flashid, "227E") == 0) && (strcmp(cartID, "3901") == 0))
-      println_Msg(F("Intel 512M29EW"));
+      ui->printlnMsg(F("Intel 512M29EW"));
 
     // Print info
-    print_Msg(F("ID: "));
-    print_Msg(flashid);
-    print_Msg(F(" Size: "));
-    print_Msg(cartSize);
-    println_Msg(F("MB"));
-    println_Msg("");
-    println_Msg(F("This will erase your"));
-    println_Msg(F("Repro Cartridge."));
-    println_Msg(F("Attention: Use 3.3V!"));
-    println_Msg("");
-    println_Msg(F("Press Button"));
-    display_Update();
-    wait();
+    ui->printMsg(F("ID: "));
+    ui->printMsg(flashid);
+    ui->printMsg(F(" Size: "));
+    ui->printMsg(cartSize);
+    ui->printlnMsg(F("MB"));
+    ui->printlnMsg("");
+    ui->printlnMsg(F("This will erase your"));
+    ui->printlnMsg(F("Repro Cartridge."));
+    ui->printlnMsg(F("Attention: Use 3.3V!"));
+    ui->printlnMsg("");
+    ui->printlnMsg(F("Press Button"));
+    ui->flushOutput();
+    ui->waitForUserInput();
 
     // Launch file browser
-    filePath[0] = '\0';
-    chdir("/");
-    fileBrowser(F("Select z64 file"));
-    display_Clear();
-    display_Update();
-
-    // Create filepath
-    sprintf(filePath, "%s/%s", filePath, fileName);
+    String inputFilePath = fileBrowser(F("Select z64 file"));
+    ui->clearOutput();
+    ui->flushOutput();
 
     // Open file on sd card
-    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
     // Get rom size from file
     fileSize = inputFile.fileSize();
-    print_Msg(F("File size: "));
-    print_Msg(fileSize / 1048576);
-    println_Msg(F("MB"));
-    display_Update();
+    ui->printMsg(F("File size: "));
+    ui->printMsg(fileSize / 1048576);
+    ui->printlnMsg(F("MB"));
+    ui->flushOutput();
 
     // Compare file size to flashrom size
     if ((fileSize / 1048576) > cartSize) {
-      print_Error(F("File too big"));
+      ui->printErrorAndAbort(F("File too big"), false);
     }
 
     // Erase needed sectors
@@ -2616,10 +2580,10 @@ void flashRepro_N64() {
     // Check if erase was successful
     if (blankcheckFlashrom_N64()) {
       // Write flashrom
-      println_Msg(F("OK"));
-      print_Msg(F("Writing "));
-      println_Msg(filePath);
-      display_Update();
+      ui->printlnMsg(F("OK"));
+      ui->printMsg(F("Writing "));
+      ui->printlnMsg(inputFilePath);
+      ui->flushOutput();
 
 
       if ((strcmp(cartID, "3901") == 0) && (strcmp(flashid, "227E") == 0)) {
@@ -2648,41 +2612,41 @@ void flashRepro_N64() {
       inputFile.close();
 
       // Verify
-      print_Msg(F("Verifying..."));
-      display_Update();
-      writeErrors = verifyFlashrom_N64();
+      ui->printMsg(F("Verifying..."));
+      ui->flushOutput();
+      writeErrors = verifyFlashrom_N64(inputFilePath);
       if (writeErrors == 0) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
       }
       else {
-        print_Msg(writeErrors);
-        print_Msg(F(" bytes "));
-        print_Warning(F("did not verify."));
+        ui->printMsg(writeErrors);
+        ui->printMsg(F(" bytes "));
+        ui->printError(F("did not verify."));
       }
     }
     else {
       // Close the file
       inputFile.close();
-      print_Warning(F("failed"));
+      ui->printError(F("failed"));
     }
   }
   // If the ID is unknown show error message
   else {
-    print_Msg(F("Vendor: "));
-    println_Msg(vendorID);
-    print_Msg(F("ID: "));
-    print_Msg(flashid);
-    print_Msg(F(" "));
-    println_Msg(cartID);
-    print_Warning(F("Unknown flashrom"));
+    ui->printMsg(F("Vendor: "));
+    ui->printlnMsg(vendorID);
+    ui->printMsg(F("ID: "));
+    ui->printMsg(flashid);
+    ui->printMsg(F(" "));
+    ui->printlnMsg(cartID);
+    ui->printError(F("Unknown flashrom"));
   }
 
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
-  display_Clear();
-  display_Update();
+  ui->printlnMsg(F("Press Button..."));
+  ui->flushOutput();
+  ui->waitForUserInput();
+  ui->clearOutput();
+  ui->flushOutput();
 }
 
 // Reset to read mode
@@ -2871,8 +2835,8 @@ void idFlashrom_N64() {
 void eraseIntel4400_N64() {
   unsigned long flashBase = romBase;
 
-  print_Msg(F("Erasing..."));
-  display_Update();
+  ui->printMsg(F("Erasing..."));
+  ui->flushOutput();
 
   // If the game is smaller than 32Mbit only erase the needed blocks
   unsigned long lastBlock = 0x1FFFFFF;
@@ -2985,8 +2949,8 @@ void eraseMSP55LV100_N64() {
   unsigned long flashBase = romBase;
   unsigned long sectorSize = 0x20000;
 
-  print_Msg(F("Erasing..."));
-  display_Update();
+  ui->printMsg(F("Erasing..."));
+  ui->flushOutput();
 
   for (unsigned long currSector = 0; currSector < fileSize; currSector += sectorSize) {
     // Blink led
@@ -3028,8 +2992,8 @@ void eraseMSP55LV100_N64() {
 void eraseFlashrom_N64(unsigned long sectorSize) {
   unsigned long flashBase = romBase;
 
-  print_Msg(F("Erasing..."));
-  display_Update();
+  ui->printMsg(F("Erasing..."));
+  ui->flushOutput();
 
   for (unsigned long currSector = 0; currSector < fileSize; currSector += sectorSize) {
     // Blink led
@@ -3302,7 +3266,7 @@ void writeFlashrom_N64(SafeSDFile &inputFile) {
   }
 }
 
-unsigned long verifyFlashrom_N64() {
+unsigned long verifyFlashrom_N64(const String &filePath) {
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
   writeErrors = 0;
@@ -3323,7 +3287,7 @@ unsigned long verifyFlashrom_N64() {
           writeErrors++;
           // Abord if too many errors
           if (writeErrors > 20) {
-            print_Msg(F("More than "));
+            ui->printMsg(F("More than "));
             // Close the file:
             inputFile.close();
             return writeErrors;
@@ -3347,79 +3311,74 @@ void flashGameshark_N64() {
   // Check for SST 29LE010
   if (strcmp(flashid, "0808") == 0) {
     backupGameshark_N64();
-    println_Msg("");
-    println_Msg(F("This will erase your"));
-    println_Msg(F("Gameshark cartridge"));
-    println_Msg(F("Attention: Use 3.3V!"));
-    println_Msg("");
-    println_Msg(F("Press Button"));
-    display_Update();
-    wait();
+    ui->printlnMsg("");
+    ui->printlnMsg(F("This will erase your"));
+    ui->printlnMsg(F("Gameshark cartridge"));
+    ui->printlnMsg(F("Attention: Use 3.3V!"));
+    ui->printlnMsg("");
+    ui->printlnMsg(F("Press Button"));
+    ui->flushOutput();
+    ui->waitForUserInput();
 
     // Launch file browser
-    filePath[0] = '\0';
-    chdir("/");
-    fileBrowser(F("Select z64 file"));
-    display_Clear();
-    display_Update();
-
-    // Create filepath
-    sprintf(filePath, "%s/%s", filePath, fileName);
+    String inputFilePath = fileBrowser(F("Select z64 file"));
+    ui->clearOutput();
+    ui->flushOutput();
 
     // Open file on sd card
-    SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+    SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
     // Get rom size from file
     fileSize = inputFile.fileSize();
-    print_Msg(F("File size: "));
-    print_Msg(fileSize / 1024);
-    println_Msg(F("KB"));
-    display_Update();
+    ui->printMsg(F("File size: "));
+    ui->printMsg(fileSize / 1024);
+    ui->printlnMsg(F("KB"));
+    ui->flushOutput();
 
     // Compare file size to flashrom size
     if (fileSize > 262144) {
-      print_Error(F("File too big"));
+      ui->printErrorAndAbort(F("File too big"), false);
     }
 
     // SST 29LE010, chip erase not needed as this eeprom automaticly erases during the write cycle
     eraseGameshark_N64();
 
     // Write flashrom
-    print_Msg(F("Writing "));
-    println_Msg(filePath);
-    display_Update();
+    ui->printMsg(F("Writing "));
+    ui->printlnMsg(inputFilePath);
+    ui->flushOutput();
     writeGameshark_N64(inputFile);
 
     // Close the file:
     inputFile.close();
 
     // Verify
-    print_Msg(F("Verifying..."));
-    display_Update();
-    writeErrors = verifyGameshark_N64();
+    ui->printMsg(F("Verifying..."));
+    ui->flushOutput();
+    writeErrors = verifyGameshark_N64(inputFilePath);
 
     if (writeErrors == 0) {
-      println_Msg(F("OK"));
-      display_Update();
+      ui->printlnMsg(F("OK"));
+      ui->flushOutput();
     }
     else {
-      print_Msg(writeErrors);
-      print_Msg(F(" bytes "));
-      print_Warning(F("did not verify."));
+      ui->printMsg(writeErrors);
+      ui->printMsg(F(" bytes "));
+      ui->printError(F("did not verify."));
     }
   }
   // If the ID is unknown show error message
   else {
-    print_Msg(F("ID: "));
-    println_Msg(flashid);
-    print_Warning(F("Unknown flashrom"));
+    ui->printMsg(F("ID: "));
+    ui->printlnMsg(flashid);
+    ui->printError(F("Unknown flashrom"));
   }
 
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
-  display_Clear();
-  display_Update();
+  ui->printlnMsg(F("Press Button..."));
+  ui->flushOutput();
+  ui->waitForUserInput();
+  ui->clearOutput();
+  ui->flushOutput();
 }
 
 
@@ -3456,25 +3415,10 @@ void resetGameshark_N64() {
 
 // Read rom and save to the SD card
 void backupGameshark_N64() {
-  // create a new folder
-  foldern = loadFolderNumber();
-  sprintf(fileName, "GS%d", foldern);
-  strcat(fileName, ".z64");
-  mkdir("N64/ROM/Gameshark", true);
-  chdir("N64/ROM/Gameshark");
-
-  display_Clear();
-  print_Msg(F("Saving "));
-  print_Msg(fileName);
-  println_Msg(F("..."));
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextN64GamesharkBackupOutputPathAndPrintMessage();
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   for (unsigned long currByte = romBase + 0xC00000; currByte < (romBase + 0xC00000 + 262144); currByte += 512) {
     // Blink led
@@ -3502,8 +3446,8 @@ void backupGameshark_N64() {
 
 // Send chip erase to the two SST29LE010 inside the Gameshark
 void eraseGameshark_N64() {
-  println_Msg(F("Erasing..."));
-  display_Update();
+  ui->printlnMsg(F("Erasing..."));
+  ui->flushOutput();
 
   //Sending erase command according to datasheet
   setAddress_N64(romBase + 0xAAAA);
@@ -3552,7 +3496,7 @@ void writeGameshark_N64(SafeSDFile &inputFile) {
   }
 }
 
-unsigned long verifyGameshark_N64() {
+unsigned long verifyGameshark_N64(const String &filePath) {
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
