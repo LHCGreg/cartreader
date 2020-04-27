@@ -371,24 +371,14 @@ void n64CartMenu() {
 }
 
 String getNextN64MPKOutputPath() {
-  int16_t folderNumber = loadFolderNumber();
-
-  String fileName = String(folderNumber);
-  fileName.concat(F(".mpk"));
-
-  String outputFilePath = F("/N64/MPK/");
-  outputFilePath.concat(fileName);
-
-  saveFolderNumber(folderNumber + 1);
-
-  return outputFilePath;
+  return getNextOutputPathWithNumberedFilename(F("N64/MPK"), "", F(".mpk"));
 }
 
-String getNextN64EepomOutputPath(const String &gameName) {
-  return getNextOutputPath(F("N64"), F("SAVE"), gameName, F(".eep"));
+String getNextN64EepomOutputPath(const String &romName) {
+  return getNextOutputPathWithNumberedFolder(F("N64"), F("SAVE"), romName, F(".eep"));
 }
 
-String getNextN64SramOutputPath(const String &gameName, uint8_t saveType) {
+String getNextN64SramOutputPath(const String &romName, uint8_t saveType) {
   const __FlashStringHelper *extension;
   if (saveType == 4) {
     extension = F(".fla");
@@ -400,11 +390,11 @@ String getNextN64SramOutputPath(const String &gameName, uint8_t saveType) {
     ui->printErrorAndAbort(F("Savetype Error"), true);
   }
 
-  return getNextOutputPath(F("N64"), F("SAVE"), gameName, extension);
+  return getNextOutputPathWithNumberedFolder(F("N64"), F("SAVE"), romName, extension);
 }
 
-String getNextN64RomOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("N64"), F("ROM"), gameName, F(".Z64"));
+String getNextN64RomOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("N64"), F("ROM"), romName, F(".Z64"));
 }
 
 String getNextN64GamesharkBackupOutputPathAndPrintMessage() {

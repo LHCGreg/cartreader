@@ -60,8 +60,11 @@ void pathJoinInPlace(String &path, const concatable &otherPath) {
 
 String pathGetDir(const String &path);
 
-String getNextOutputPath(const String &console, const String &fileType, const String &gameName, const String &extension);
-String getNextOutputPathAndPrintMessage(const String &console, const String &fileType, const String &gameName, const String &extension);
+void printSavingMessage(const String &outputFilePath);
+String getNextOutputPathWithNumberedFolder(const String &console, const String &fileType, const String &romName, const String &extension);
+String getNextOutputPathWithNumberedFolderAndPrintMessage(const String &console, const String &fileType, const String &romName, const String &extension);
+String getNextOutputPathWithNumberedFilename(const String &fileType, const String &fileNamePrefix, const String &extension);
+String getNextOutputPathWithNumberedFilenameAndPrintMessage(const String &fileType, const String &fileNamePrefix, const String &extension);
 
 // Power for int
 uint16_t int_pow(uint16_t base, uint8_t exp);

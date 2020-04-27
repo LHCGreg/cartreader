@@ -97,11 +97,11 @@ boolean realtec = 0;
 /******************************************
    Function prototypes
  *****************************************/
-String getNextMDRomOutputPathAndPrintMessage(const String &gameName);
-String getNextMDSramOutputPathAndPrintMessage(const String &gameName);
-String getNextMDEepromOutputPathAndPrintMessage(const String &gameName);
+String getNextMDRomOutputPathAndPrintMessage(const String &romName);
+String getNextMDSramOutputPathAndPrintMessage(const String &romName);
+String getNextMDEepromOutputPathAndPrintMessage(const String &romName);
 String getNextMDBramOutputPathAndPrintMessage();
-String getNextMDRealtecOutputPathAndPrintMessage(const String &gameName);
+String getNextMDRealtecOutputPathAndPrintMessage(const String &romName);
 void setup_MD();
 void getCartInfo_MD();
 void readROM_MD();
@@ -367,16 +367,16 @@ void segaCDMenu() {
   }
 }
 
-String getNextMDRomOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("MD"), F("ROM"), gameName, F(".BIN"));
+String getNextMDRomOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("MD"), F("ROM"), romName, F(".BIN"));
 }
 
-String getNextMDSramOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("MD"), F("SAVE"), gameName, F(".srm"));
+String getNextMDSramOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("MD"), F("SAVE"), romName, F(".srm"));
 }
 
-String getNextMDEepromOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("MD"), F("SAVE"), gameName, F(".eep"));
+String getNextMDEepromOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("MD"), F("SAVE"), romName, F(".eep"));
 }
 
 String getNextMDBramOutputPathAndPrintMessage() {
@@ -389,15 +389,11 @@ String getNextMDBramOutputPathAndPrintMessage() {
   // write new folder number back to eeprom
   saveFolderNumber(folderNumber + 1);
 
-  ui->clearOutput();
-  ui->printMsg(F("Saving as "));
-  ui->printMsg(outputFilePath);
-  ui->printlnMsg(F("..."));
-  ui->flushOutput();
+  printSavingMessage(outputFilePath);
 }
 
-String getNextMDRealtecOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("MD"), F("ROM"), gameName, F(".MD"));
+String getNextMDRealtecOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("MD"), F("ROM"), romName, F(".MD"));
 }
 
 /******************************************

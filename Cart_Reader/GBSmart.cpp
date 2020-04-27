@@ -275,23 +275,7 @@ void gbSmartFlashMenu() {
 }
 
 String getNextGbSmartFlashOutputPathAndPrintMessage() {
-  int16_t folderNumber = loadFolderNumber();
-  String folder = F("/GB/GBS");
-
-  String fileName = F("GBS");
-  fileName.concat(folderNumber);
-  fileName.concat(F(".bin"));
-
-  String outputFilePath = pathJoin(folder, fileName);
-
-  // write new folder number back to eeprom
-  saveFolderNumber(folderNumber + 1);
-
-  ui->clearOutput();
-  ui->printMsg(F("Saving as "));
-  ui->printMsg(outputFilePath);
-  ui->printlnMsg(F("..."));
-  ui->flushOutput();
+  return getNextOutputPathWithNumberedFilenameAndPrintMessage(F("GB/GBS"), F("GBS"), F(".bin"));
 }
 
 void gbSmartGetGames()

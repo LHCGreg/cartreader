@@ -440,23 +440,7 @@ void epromMenu() {
 }
 
 String getNextFlashOutputPathAndPrintMessage() {
-  int16_t folderNumber = loadFolderNumber();
-  String folder = F("/FLASH");
-
-  String fileName = F("FL");
-  fileName.concat(folderNumber);
-  fileName.concat(F(".bin"));
-
-  String outputFilePath = pathJoin(folder, fileName);
-
-  // write new folder number back to eeprom
-  saveFolderNumber(folderNumber + 1);
-
-  ui->clearOutput();
-  ui->printMsg(F("Saving as "));
-  ui->printMsg(outputFilePath);
-  ui->printlnMsg(F("..."));
-  ui->flushOutput();
+  return getNextOutputPathWithNumberedFilename(F("FLASH"), F("FL"), F(".bin"));
 }
 
 /******************************************

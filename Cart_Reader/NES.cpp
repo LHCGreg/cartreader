@@ -6,7 +6,6 @@
 // Pinout changes: LED and CIRAM_A10
 
 #include <Arduino.h>
-#include "options.h"
 #include "NES.h"
 #include "filebrowser.h"
 #include "ui.h"
@@ -14,23 +13,23 @@
 #include "utils.h"
 #include "SD.h"
 
-//Line Content
-//26   Supported Mappers
-//101  Defines
-//131  Variables
-//189  Menu
-//308  Setup
-//337  Low Level Functions
-//584  CRC Functions
-//639  File Functions
-//801  Config Functions
-//1397 ROM Functions
-//2490 RAM Functions
-//2925 Eeprom Functions
-//3115 NESmaker Flash Cart Functions
+// Contents
+// [Supported Mappers]
+// [Defines]
+// [Variables]
+// [Function Prototypes]
+// [Setup]
+// [Low Level Functions]
+// [CRC Functions]
+// [File Functions]
+// [Config Functions]
+// [ROM Functions]
+// [RAM Functions]
+// [Eeprom Functions]
+// [NESmaker Flash Cart [SST 39SF40] Functions]
 
 /******************************************
-  Supported Mappers
+  [Supported Mappers]
  *****************************************/
 // Supported Mapper Array (iNES Mapper #s)
 // Format = {mapper,prglo,prghi,chrlo,chrhi,ramlo,ramhi}
@@ -104,8 +103,10 @@ static const byte PROGMEM mapsize [] = {
   210, 3, 5, 5, 6, 0, 0, // namco 175/340
 };
 
+const uint8_t fieldsPerMapper = 7;
+
 /******************************************
-  Defines
+  [Defines]
  *****************************************/
 #define ROMSEL_HI PORTF |= (1<<1)
 #define ROMSEL_LOW PORTF &= ~(1<<1)
@@ -129,13 +130,8 @@ static const byte PROGMEM mapsize [] = {
 #define MODE_READ { PORTK = 0xFF; DDRK = 0; }
 #define MODE_WRITE DDRK = 0xFF
 
-#define press 1
-#define doubleclick 2
-#define hold 3
-#define longhold 4
-
 /******************************************
-  Variables
+  [Variables]
 *****************************************/
 // Mapper
 byte mapcount = (sizeof(mapsize) / sizeof(mapsize[0])) / 7;
@@ -171,47 +167,32 @@ byte firstbyte;
 char flashID[5];
 boolean flashfound = false; // NESmaker 39SF040 Flash Cart
 
-// Files
-char fileCount[3];
-char filePRG[] = "PRG.bin";
-char fileCHR[] = "CHR.bin";
-char fileNES[] = "CART.nes";
-
 // Cartridge Config
 byte mapper;
-byte newmapper;
 byte prgsize;
-byte newprgsize;
 byte chrsize;
-byte newchrsize;
 byte ramsize;
-byte newramsize;
-
-// Button
-int b = 0;
 
 /******************************************
-   Function prototypes
+   [Function prototypes]
  *****************************************/
 void nesCartMenu();
 void nesCartWriteMenu();
+String getOutputFolderPath();
 void setup_NES();
 static void set_address(unsigned int address);
 void resetROM();
 static void write_reg_byte(unsigned int address, uint8_t data);
-void CreateROMFolderInSD();
-void outputNES();
-void CartStart();
-void CartFinish();
+void outputNES(const String &outputFolderPath);
 void setMapper();
 void checkMapperSize();
 void setPRGSize();
 void setCHRSize();
 void setRAMSize();
 void checkStatus_NES();
-void readPRG();
-void readCHR();
-void readRAM();
+void readPRG(const String &outputFolderPath);
+void readCHR(const String &outputFolderPath);
+void readRAM(const String &outputFolderPath);
 void writeRAM();
 void EepromREAD(byte address);
 void EepromWRITE(byte address);
@@ -221,124 +202,131 @@ void writeFLASH();
 /******************************************
   Menu
 *****************************************/
-static const char menuItem1[] PROGMEM = "Select Mapper";
-static const char menuItem2[] PROGMEM = "Read Complete Cart";
-static const char menuItem3[] PROGMEM = "Read PRG";
-static const char menuItem4[] PROGMEM = "Read CHR";
-static const char menuItem5[] PROGMEM = "Read RAM";
-static const char menuItem6[] PROGMEM = "Write Options";
-static const char* const baseMenu[] PROGMEM = {menuItem1, menuItem2, menuItem3, menuItem4, menuItem5, menuItem6};
-
-static const char writeItem1[] PROGMEM = "Write RAM";
-static const char writeItem2[] PROGMEM = "Write FLASH";
-static const char writeItem3[] PROGMEM = "Return to Main Menu";
-static const char* const writeMenu[] PROGMEM = {writeItem1, writeItem2, writeItem3};
 
 // NES start menu
 void nesMenu() {
-  display_Clear();
-  display_Update();
+  mode = CartReaderMode::NES;
+  ui->clearOutput();
+  ui->flushOutput();
   setup_NES();
   checkStatus_NES();
   nesCartMenu();
-  mode = mode_NES;
 }
 
 void nesCartMenu() {
-  // create menu with title "NES CART READER" and 6 options to choose from
-  convertPgm(baseMenu, 6);
-  unsigned char answer = question_box(F("NES CART READER"), menuOptions, 6, 0);
+  while (true) {
+    const __FlashStringHelper *item_SelectMapper = F("Select Mapper");
+    const __FlashStringHelper *item_ReadEverything = F("Read Complete Cart");
+    const __FlashStringHelper *item_ReadPrg= F("Read PRG");
+    const __FlashStringHelper *item_ReadChr = F("Read CHR");
+    const __FlashStringHelper *item_ReadRam = F("Read RAM");
+    const __FlashStringHelper *item_WriteOptions = F("Write Options");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_SelectMapper,
+      item_ReadEverything,
+      item_ReadPrg,
+      item_ReadChr,
+      item_ReadRam,
+      item_WriteOptions,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (answer) {
-    // Select Mapper
-    case 0:
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("NES CART READER"), menu, ARRAY_LENGTH(menu), item_SelectMapper);
+
+    // wait for user choice to come back from the question box menu
+    if (answer == item_SelectMapper) {
       setMapper();
       checkMapperSize();
       setPRGSize();
       setCHRSize();
       setRAMSize();
-      break;
-
-    // Read Complete Cart
-    case 1:
-      CartStart();
-      readPRG();
+    }
+    else if (answer == item_ReadEverything) {
+      String outputFolderPath = getOutputFolderPath();
+      readPRG(outputFolderPath);
       delay(2000);
-      readCHR();
+      readCHR(outputFolderPath);
       delay(2000);
-      outputNES();
+      outputNES(outputFolderPath);
       delay(2000);
-      readRAM();
+      readRAM(outputFolderPath);
       delay(2000);
       resetROM();
-      CartFinish();
-      break;
-
-    // Read PRG
-    case 2:
-      CreateROMFolderInSD();
-      readPRG();
+    }
+    else if (answer == item_ReadPrg) {
+      String outputFolderPath = getOutputFolderPath();
+      readPRG(outputFolderPath);
       resetROM();
-      wait();
-      break;
-
-    // Read CHR
-    case 3:
-      CreateROMFolderInSD();
-      readCHR();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_ReadChr) {
+      String outputFolderPath = getOutputFolderPath();
+      readCHR(outputFolderPath);
       resetROM();
-      wait();
-      break;
-
-    // Read RAM
-    case 4:
-      CreateROMFolderInSD();
-      readRAM();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_ReadRam) {
+      String outputFolderPath = getOutputFolderPath();
+      readRAM(outputFolderPath);
       resetROM();
-      wait();
-      break;
-
-    // Write Options
-    case 5:
+      ui->waitForUserInput();
+    }
+    else if (answer == item_WriteOptions) {
       nesCartWriteMenu();
-      wait();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_Back) {
       break;
+    }
   }
 }
 
 void nesCartWriteMenu() {
-  // create menu with title "WRITE OPTIONS MENU" and 3 options to choose from
-  convertPgm(writeMenu, 3);
-  unsigned char answer = question_box(F("WRITE OPTIONS MENU"), menuOptions, 3, 0);
+  while (true) {
+    const __FlashStringHelper *writeMenuItem_RAM = F("Write RAM");
+    const __FlashStringHelper *writeMenuItem_Flash = F("Write FLASH");
+    const __FlashStringHelper *writeMenuItem_Return = F("Return to Main Menu");
+    const __FlashStringHelper *writeMenu[] = {
+      writeMenuItem_RAM,
+      writeMenuItem_Flash,
+      writeMenuItem_Return,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (answer) {
-    // Write RAM
-    case 0:
+    const __FlashStringHelper *writeAnswer = ui->askMultipleChoiceQuestion(
+      F("WRITE OPTIONS MENU"), writeMenu, ARRAY_LENGTH(writeMenu), writeMenuItem_RAM);
+
+    if (writeAnswer == writeMenuItem_RAM) {
       writeRAM();
       resetROM();
-      wait();
+      ui->waitForUserInput();
       break;
-
-    // Write FLASH
-    case 1:
-      if (mapper == 30)
+    }
+    else if (writeAnswer == writeMenuItem_Flash) {
+      if (mapper == 30) {
         writeFLASH();
+      }
       resetROM();
-      wait();
+      ui->waitForUserInput();
       break;
-
-    // Return to Main Menu
-    case 2:
-      nesCartMenu();
-      wait();
-      break;
+    }
+    else if (writeAnswer == writeMenuItem_Return) {
+      break; // return from this function to the main NES menu
+    }
   }
 }
 
+String getOutputFolderPath() {
+  int16_t folderNumber = loadFolderNumber();
+  saveFolderNumber(folderNumber + 1);
+  String folderPath(F("/NES/CART/"));
+  folderPath.concat(folderNumber);
+  return folderPath;
+}
+
 /******************************************
-   Setup
+   [Setup]
  *****************************************/
 void setup_NES() {
   // CPU R/W, IRQ, PPU /RD, PPU /A13, CIRAM /CE, PPU /WR, /ROMSEL, PHI2
@@ -367,7 +355,7 @@ void setup_NES() {
 }
 
 /******************************************
-   Low Level Functions
+   [Low Level Functions]
  *****************************************/
 
 static void set_address(unsigned int address) {
@@ -539,7 +527,7 @@ static void write_wram_byte(unsigned int address, uint8_t data) { // Mapper 5 (M
 }
 
 /******************************************
-   CRC Functions
+   [CRC Functions]
  *****************************************/
 char tempCRC[9];
 
@@ -577,9 +565,9 @@ uint32_t crc32EEP(SafeSDFile &file, uint32_t &charcnt) {
   return ~oldcrc32;
 }
 
-void calcCRC(char* checkFile, uint32_t filesize) {
+void calcCRC(const String &checkFilePath, uint32_t filesize) {
   uint32_t crc;
-  SafeSDFile crcFile = SafeSDFile::openForReading(checkFile);
+  SafeSDFile crcFile = SafeSDFile::openForReading(checkFilePath);
   if (filesize < 1024)
     crc = crc32EEP(crcFile, filesize);
   else
@@ -587,106 +575,35 @@ void calcCRC(char* checkFile, uint32_t filesize) {
   crcFile.close();
   sprintf(tempCRC, "%08lX", crc);
 
-  print_Msg(F("CRC: "));
-  println_Msg(tempCRC);
-  display_Update();
+  ui->printMsg(F("CRC: "));
+  ui->printlnMsg(tempCRC);
+  ui->flushOutput();
 }
 
 /******************************************
-   File Functions
+   [File Functions]
  *****************************************/
-void CreateROMFolderInSD() {
-  chdirToRoot();
-  sprintf(folder, "NES/ROM");
-  mkdir(folder, true);
-  chdir(folder);
-}
-
-SafeSDFile CreatePRGFileInSD() {
-  strcpy(fileName, "PRG");
-  strcat(fileName, ".bin");
-  for (byte i = 0; i < 100; i++) {
-    if (!fileExists(fileName)) {
-      return SafeSDFile::openForCreating(fileName);
-    }
-    sprintf(fileCount, "%02d", i);
-    strcpy(fileName, "PRG.");
-    strcat(fileName, fileCount);
-    strcat(fileName, ".bin");
-  }
-
-  // If we somehow got through 100 numeric suffixes without getting a file name that's not already taken...
-
-  LED_RED_ON;
-
-  display_Clear();
-  println_Msg(F("PRG FILE FAILED!"));
-  display_Update();
-  print_Error(F("SD Error"));
-}
-
-SafeSDFile CreateCHRFileInSD() {
-  strcpy(fileName, "CHR");
-  strcat(fileName, ".bin");
-  for (byte i = 0; i < 100; i++) {
-    if (!fileExists(fileName)) {
-      return SafeSDFile::openForCreating(fileName);
-    }
-    sprintf(fileCount, "%02d", i);
-    strcpy(fileName, "CHR.");
-    strcat(fileName, fileCount);
-    strcat(fileName, ".bin");
-  }
-
-  // If we somehow got through 100 numeric suffixes without getting a file name that's not already taken...
-
-  LED_RED_ON;
-
-  display_Clear();
-  println_Msg(F("CHR FILE FAILED!"));
-  display_Update();
-  print_Error(F("SD Error"));
-}
-
-SafeSDFile CreateRAMFileInSD() {
-  strcpy(fileName, "RAM");
-  strcat(fileName, ".bin");
-  for (byte i = 0; i < 100; i++) {
-    if (!fileExists(fileName)) {
-      return SafeSDFile::openForCreating(fileName);
-    }
-    sprintf(fileCount, "%02d", i);
-    strcpy(fileName, "RAM.");
-    strcat(fileName, fileCount);
-    strcat(fileName, ".bin");
-  }
-
-  // If we somehow got through 100 numeric suffixes without getting a file name that's not already taken...
-
-  LED_RED_ON;
-
-  display_Clear();
-  println_Msg(F("RAM FILE FAILED!"));
-  display_Update();
-  print_Error(F("SD Error"));
-}
-
-void outputNES() {
-  display_Clear();
+void outputNES(const String &outputFolderPath) {
+  ui->clearOutput();
 
   LED_RED_ON;
   LED_GREEN_ON;
   LED_BLUE_ON;
-  SafeSDFile prgFile = SafeSDFile::openForReading(filePRG);
-  SafeSDFile cartFile = SafeSDFile::openForCreating(fileNES);
+  String prgFilePath = pathJoin(outputFolderPath, F("PRG.bin"));
+  SafeSDFile prgFile = SafeSDFile::openForReading(prgFilePath);
+
+  String cartFilePath = pathJoin(outputFolderPath, F("CART.nes"));
+  SafeSDFile cartFile = SafeSDFile::openForCreating(cartFilePath);
 
   size_t n;
   while ((n = prgFile.read(sdBuffer, sizeof(sdBuffer))) > 0) {
     cartFile.write(sdBuffer, n);
   }
   prgFile.close();
-  if (fileExists(fileCHR)) {
-    SafeSDFile chrFile = SafeSDFile::openForReading(fileCHR);
+
+  String chrFilePath = pathJoin(outputFolderPath, F("CHR.bin"));
+  if (fileExists(chrFilePath)) {
+    SafeSDFile chrFile = SafeSDFile::openForReading(chrFilePath);
     while ((n = chrFile.read(sdBuffer, sizeof(sdBuffer))) > 0) {
       cartFile.write(sdBuffer, n);
     }
@@ -694,202 +611,74 @@ void outputNES() {
   }
   cartFile.close();
 
-  println_Msg(F("NES FILE OUTPUT!"));
-  println_Msg(F(""));
-  display_Update();
+  ui->printlnMsg(F("NES FILE OUTPUT!"));
+  ui->printlnMsg(F(""));
+  ui->flushOutput();
 
-  calcCRC(fileNES, (prg + chr) * 1024);
+  calcCRC(cartFilePath, (prg + chr) * 1024);
   LED_RED_OFF;
   LED_GREEN_OFF;
   LED_BLUE_OFF;
 }
 
-void CartStart() {
-  chdirToRoot();
-  foldern = loadFolderNumber(); // FOLDER #
-  sprintf(folder, "NES/CART/%d", foldern);
-  mkdir(folder, true);
-  chdir(folder);
-}
-
-void CartFinish() {
-  foldern += 1;
-  saveFolderNumber(foldern); // FOLDER #
-  chdirToRoot();
-}
-
 /******************************************
-   Config Functions
+   [Config Functions]
  *****************************************/
 void setMapper() {
-#ifdef enable_OLED
-chooseMapper:
   // Read stored mapper
-  newmapper = loadNESMapperNumber();
-  if (newmapper > 220)
+  byte storedMapper = loadNESMapperNumber();
+
+  byte newmapper = storedMapper;
+  if (newmapper > 220) {
     newmapper = 0;
-  // Split into digits
-  byte hundreds = newmapper / 100;
-  byte tens = newmapper / 10 - hundreds * 10;
-  byte units = newmapper - hundreds * 100 - tens * 10;
+  }
 
-  // Cycle through al 3 digits
-  for (byte digit = 0; digit < 3; digit++) {
-    while (1) {
-      display.clearDisplay();
-      display.setCursor(0, 0);
-      display.println("Select Mapper:");
-      display.setCursor(23, 20);
-      display.println(hundreds);
-      display.setCursor(43, 20);
-      display.println(tens);
-      display.setCursor(63, 20);
-      display.println(units);
-      display.println("");
-      display.println(F("Press to Change"));
-      display.println(F("Hold to Select"));
-      if (digit == 0) {
-        display.drawLine(20, 30, 30, 30, WHITE);
-        display.drawLine(40, 30, 50, 30, BLACK);
-        display.drawLine(60, 30, 70, 30, BLACK);
+  String prompt;
+  if (ui->supportsLargeMessages()) {
+    prompt = String(F("SUPPORTED MAPPERS:"));
+    for (byte i = 0; i < mapcount; i++) {
+      uint16_t index = i * fieldsPerMapper;
+      byte mapselect = pgm_read_byte(mapsize + index);
+      prompt += F("[");
+      prompt += mapselect;
+      prompt += F("]");
+      if (i < mapcount - 1) {
+        if ((i != 0) && ((i + 1) % 10 == 0)) {
+          prompt += F("\r\n");
+        }
+        else {
+          prompt += F("\t");
+        }
       }
-      else if (digit == 1) {
-        display.drawLine(20, 30, 30, 30, BLACK);
-        display.drawLine(40, 30, 50, 30, WHITE);
-        display.drawLine(60, 30, 70, 30, BLACK);
+      else {
+        prompt += F("\r\n");
       }
-      else if (digit == 2) {
-        display.drawLine(20, 30, 30, 30, BLACK);
-        display.drawLine(40, 30, 50, 30, BLACK);
-        display.drawLine(60, 30, 70, 30, WHITE);
-      }
-      /* Check Button
-         1 click
-         2 doubleClick
-         3 hold
-         4 longHold */
-      int b = checkButton();
+    }
 
-      if (b == 1) {
-        if (digit == 0) {
-          if (hundreds < 2)
-            hundreds++;
-          else
-            hundreds = 0;
-        }
-        else if (digit == 1) {
-          if (hundreds == 2) {
-            if (tens < 1)
-              tens++;
-            else
-              tens = 0;
-          }
-          else {
-            if (tens < 9)
-              tens++;
-            else
-              tens = 0;
-          }
-        }
-        else if (digit == 2) {
-          if (units < 9)
-            units++;
-          else
-            units = 0;
-        }
+    prompt += F("Enter Mapper: ");
+  }
+  else {
+    prompt = String(F("Enter Mapper: "));
+  }
+
+  bool validMapper = false;
+  while (!validMapper) {
+    newmapper = (byte) ui->readNumber(3, newmapper, 220, prompt, F("Mapper not supported"));
+
+    // Check if valid
+    byte mapcount = ARRAY_LENGTH(mapsize) / fieldsPerMapper;
+    for (byte currMaplist = 0; currMaplist < mapcount; currMaplist++) {
+      if (pgm_read_byte(mapsize + currMaplist * fieldsPerMapper) == newmapper) {
+        validMapper = true;
       }
-      else if (b == 2) {
-        if (digit == 0) {
-          if (hundreds > 0)
-            hundreds--;
-          else
-            hundreds = 2;
-        }
-        else if (digit == 1) {
-          if (hundreds == 2) {
-            if (tens > 0)
-              tens--;
-            else
-              tens = 1;
-          }
-          else {
-            if (tens > 0)
-              tens--;
-            else
-              tens = 9;
-          }
-        }
-        else if (digit == 2) {
-          if (units > 0)
-            units--;
-          else
-            units = 9;
-        }
-      }
-      else if (b == 3) {
-        break;
-      }
-      display.display();
+    }
+
+    if (!validMapper) {
+      errorLvl = 1;
+      ui->displayMessage(F("Mapper not supported"));
     }
   }
-  display.clearDisplay();
-  display.setCursor(0, 0);
 
-  newmapper = hundreds * 100 + tens * 10 + units;
-
-  // Check if valid
-  boolean validMapper = 0;
-  byte mapcount = (sizeof(mapsize) / sizeof(mapsize[0])) / 7;
-  for (byte currMaplist = 0; currMaplist < mapcount; currMaplist++) {
-    if (pgm_read_byte(mapsize + currMaplist * 7) == newmapper)
-      validMapper = 1;
-  }
-
-  if (!validMapper) {
-    errorLvl = 1;
-    display.println("Mapper not supported");
-    display.display();
-    wait_btn();
-    goto chooseMapper;
-  }
-#else
-setmapper:
-  String newmap;
-  mapfound = false;
-  Serial.println(F("SUPPORTED MAPPERS:"));
-  for (int i = 0; i < mapcount; i++) {
-    index = i * 7;
-    mapselect = pgm_read_byte(mapsize + index);
-    Serial.print("[");
-    Serial.print(mapselect);
-    Serial.print("]");
-    if (i < mapcount - 1) {
-      if ((i != 0) && ((i + 1) % 10 == 0))
-        Serial.println(F(""));
-      else
-        Serial.print(F("\t"));
-    }
-    else
-      Serial.println(F(""));
-  }
-  Serial.print(F("Enter Mapper: "));
-  while (Serial.available() == 0) {}
-  newmap = Serial.readStringUntil('\n');
-  Serial.println(newmap);
-  newmapper = newmap.toInt();
-  for (int i = 0; i < mapcount; i++) {
-    index = i * 7;
-    mapselect = pgm_read_byte(mapsize + index);
-    if (newmapper == mapselect)
-      mapfound = true;
-  }
-  if (mapfound == false) {
-    Serial.println(F("MAPPER NOT SUPPORTED!"));
-    Serial.println(F(""));
-    newmapper = 0;
-    goto setmapper;
-  }
-#endif
   saveNESMapperNumber(newmapper);
   mapper = newmapper;
 }
@@ -911,324 +700,108 @@ void checkMapperSize() {
 }
 
 void setPRGSize() {
-#ifdef enable_OLED
-  display_Clear();
-  if (prglo == prghi)
+  byte newprgsize;
+  // If only one possible PRG size for this mapper, use it, no need to ask for user input.
+  if (prglo == prghi) {
     newprgsize = prglo;
+  }
   else {
-    b = 0;
-    int i = prglo;
-    while (1) {
-      display_Clear();
-      print_Msg(F("PRG Size: "));
-      println_Msg(String(PRG[i]));
-      println_Msg(F(""));
-      println_Msg(F("Press to Change"));
-      println_Msg(F("Hold to Select"));
-      display_Update();
-      b = checkButton();
-      if (b == doubleclick) { // Previous
-        if (i == prglo)
-          i = prghi;
-        else
-          i--;
-      }
-      if (b == press) { // Next
-        if (i == prghi)
-          i = prglo;
-        else
-          i++;
-      }
-      if (b == hold) { // Long Press - Execute
-        newprgsize = i;
-        break;
-      }
+    // Have user choose a size from [prglo, ..., prghi] from the predetermined sizes in the PRG array
+    uint8_t numChoices = prghi - prglo + 1;
+    String prgSizeChoices[numChoices];
+    for (uint8_t prgIndex = prglo; prgIndex <= prghi; prgIndex++) {
+      prgSizeChoices[prgIndex - prglo] = String(PRG[prgIndex]) + F(" kB");
     }
 
-    display.setCursor(0, 56); // Display selection at bottom
+    uint8_t choiceIndex = ui->askMultipleChoiceQuestion(F("PRG Size:"), prgSizeChoices, numChoices, 0);
+    newprgsize = prglo + choiceIndex;
   }
-  print_Msg(F("PRG SIZE "));
-  print_Msg(PRG[newprgsize]);
-  println_Msg(F("K"));
-  display_Update();
-  delay(1000);
-#else
-  if (prglo == prghi)
-    newprgsize = prglo;
-  else {
-setprg:
-    String sizePRG;
-    for (int i = 0; i < (prghi - prglo + 1); i++) {
-      Serial.print(F("Select PRG Size:  "));
-      Serial.print(i);
-      Serial.print(F(" = "));
-      Serial.print(PRG[i + prglo]);
-      Serial.println(F("K"));
-    }
-    Serial.print(F("Enter PRG Size: "));
-    while (Serial.available() == 0) {}
-    sizePRG = Serial.readStringUntil('\n');
-    Serial.println(sizePRG);
-    newprgsize = sizePRG.toInt() + prglo;
-    if (newprgsize > prghi) {
-      Serial.println(F("SIZE NOT SUPPORTED"));
-      Serial.println(F(""));
-      goto setprg;
-    }
-  }
-  Serial.print(F("PRG Size = "));
-  Serial.print(PRG[newprgsize]);
-  Serial.println(F("K"));
-#endif
+
   saveNESPRG(newprgsize);
   prgsize = newprgsize;
 }
 
 void setCHRSize() {
-#ifdef enable_OLED
-  display_Clear();
-  if (chrlo == chrhi)
+  byte newchrsize;
+  // If only one possible CHR size for this mapper, use it, no need to ask for user input.
+  if (chrlo == chrhi) {
     newchrsize = chrlo;
-  else {
-    b = 0;
-    int i = chrlo;
-    while (1) {
-      display_Clear();
-      print_Msg(F("CHR Size: "));
-      println_Msg(CHR[i]);
-      println_Msg(F(""));
-      println_Msg(F("Press to Change"));
-      println_Msg(F("Hold to Select"));
-      display_Update();
-      b = checkButton();
-      if (b == doubleclick) { // Previous
-        if (i == chrlo)
-          i = chrhi;
-        else
-          i--;
-      }
-      if (b == press) { // Next
-        if (i == chrhi)
-          i = chrlo;
-        else
-          i++;
-      }
-      if (b == hold) { // Long Press - Execute
-        newchrsize = i;
-        break;
-      }
-    }
-    display.setCursor(0, 56); // Display selection at bottom
   }
-  print_Msg(F("CHR SIZE "));
-  print_Msg(CHR[newchrsize]);
-  println_Msg(F("K"));
-  display_Update();
-  delay(1000);
-#else
-  if (chrlo == chrhi)
-    newchrsize = chrlo;
   else {
-setchr:
-    String sizeCHR;
-    for (int i = 0; i < (chrhi - chrlo + 1); i++) {
-      Serial.print(F("Select CHR Size:  "));
-      Serial.print(i);
-      Serial.print(F(" = "));
-      Serial.print(CHR[i + chrlo]);
-      Serial.println(F("K"));
+    // Have user choose a size from [chrlo, ..., chrhi] from the predetermined sizes in the CHR array
+    uint8_t numChoices = chrhi - chrlo + 1;
+    String chrSizeChoices[numChoices];
+    for (uint8_t chrIndex = chrlo; chrIndex <= chrhi; chrIndex++) {
+      chrSizeChoices[chrIndex - chrlo] = String(CHR[chrIndex]) + F(" kB");
     }
-    Serial.print(F("Enter CHR Size: "));
-    while (Serial.available() == 0) {}
-    sizeCHR = Serial.readStringUntil('\n');
-    Serial.println(sizeCHR);
-    newchrsize = sizeCHR.toInt() + chrlo;
-    if (newchrsize > chrhi) {
-      Serial.println(F("SIZE NOT SUPPORTED"));
-      Serial.println(F(""));
-      goto setchr;
-    }
+
+    uint8_t choiceIndex = ui->askMultipleChoiceQuestion(F("CHR Size:"), chrSizeChoices, numChoices, 0);
+    newchrsize = chrlo + choiceIndex;
   }
-  Serial.print(F("CHR Size = "));
-  Serial.print(CHR[newchrsize]);
-  Serial.println(F("K"));
-#endif
+
   saveNESCHR(newchrsize);
   chrsize = newchrsize;
 }
 
 void setRAMSize() {
-#ifdef enable_OLED
-  display_Clear();
-  if (ramlo == ramhi)
+  byte newramsize;
+  // If only one possible RAM size for this mapper, use it, no need to ask for user input.
+  if (ramlo == ramhi) {
     newramsize = ramlo;
+  }
   else {
-    b = 0;
-    int i = 0;
-    while (1) {
-      display_Clear();
-      print_Msg(F("RAM Size: "));
-      if (mapper == 0)
-        println_Msg(RAM[i] / 4);
-      else if (mapper == 16)
-        println_Msg(RAM[i] * 32);
+    const __FlashStringHelper *prompt;
+    if (mapper == 16 || mapper == 159) {
+      prompt = F("EEPROM Size:");
+    }
+    else {
+      prompt = F("RAM Size:");
+    }
+
+    uint8_t numChoices = ramhi - ramlo + 1;
+    String ramSizeChoices[numChoices];
+    for (uint8_t ramIndex = ramlo; ramIndex <= ramhi; ramIndex++) {
+      if (mapper == 0) {
+        String ramSizeString = String(RAM[ramIndex] / 4);
+        ramSizeString.concat(F(" kB"));
+        ramSizeChoices[ramIndex - ramlo] = ramSizeString;
+      }
+      else if (mapper == 16) {
+        String ramSizeString = String(static_cast<uint16_t>(RAM[ramIndex]) * 32);
+        ramSizeString.concat(F(" B"));
+        ramSizeChoices[ramIndex - ramlo] = ramSizeString;
+      }
       else if (mapper == 19) {
-        if (i == 2)
-          println_Msg(F("128"));
-        else
-          println_Msg(RAM[i]);
+        if (ramIndex == 2) {
+          ramSizeChoices[ramIndex - ramlo] = F("128 B");
+        }
+        else {
+          String ramSizeString = String(RAM[ramIndex]);
+          ramSizeString.concat(F(" kB"));
+          ramSizeChoices[ramIndex - ramlo] = ramSizeString;
+        }
       }
-      else if ((mapper == 159) || (mapper == 80))
-        println_Msg(RAM[i] * 16);
-      else if (mapper == 82)
-        println_Msg(i * 5);
-      else
-        println_Msg(RAM[i]);
-      println_Msg(F(""));
-      println_Msg(F("Press to Change"));
-      println_Msg(F("Hold to Select"));
-      display_Update();
-      b = checkButton();
-      if (b == doubleclick) { // Previous Mapper
-        if (i == 0)
-          i = ramhi;
-        else
-          i--;
+      else if (mapper == 159 || mapper == 80) {
+        String ramSizeString = String(static_cast<uint16_t>(RAM[ramIndex] * 16));
+        ramSizeString.concat(F(" B"));
+        ramSizeChoices[ramIndex - ramlo] = ramSizeString;
       }
-      if (b == press) { // Next
-        if (i == ramhi)
-          i = 0;
-        else
-          i++;
+      else if (mapper == 82) {
+        String ramSizeString = String(ramIndex * 5);
+        ramSizeString.concat(F(" kB"));
+        ramSizeChoices[ramIndex - ramlo] = ramSizeString;
       }
-      if (b == hold) { // Long Press - Execute
-        newramsize = i;
-        break;
+      else {
+        String ramSizeString = String(RAM[ramIndex]);
+        ramSizeString.concat(F(" kB"));
+        ramSizeChoices[ramIndex - ramlo] = ramSizeString;
       }
     }
 
-    display.setCursor(0, 56); // Display selection at bottom
+    uint8_t choiceIndex = ui->askMultipleChoiceQuestion(prompt, ramSizeChoices, numChoices, 0);
+    newramsize = ramlo + choiceIndex;
   }
-  if ((mapper == 16) || (mapper == 159)) {
-    int sizeEEP = 0;
-    print_Msg(F("EEPROM SIZE "));
-    if (mapper == 16)
-      sizeEEP = RAM[newramsize] * 32;
-    else
-      sizeEEP = RAM[newramsize] * 16;
-    print_Msg(sizeEEP);
-    println_Msg(F("B"));
-  }
-  else if (mapper == 19) {
-    print_Msg(F("RAM SIZE "));
-    if (newramsize == 2)
-      println_Msg(F("128B"));
-    else {
-      print_Msg(RAM[newramsize]);
-      println_Msg(F("K"));
-    }
-  }
-  else if (mapper == 80) {
-    print_Msg(F("RAM SIZE "));
-    print_Msg(RAM[newramsize] * 16);
-    println_Msg(F("B"));
-  }
-  else {
-    print_Msg(F("RAM SIZE "));
-    if (mapper == 0)
-      print_Msg(newramsize * 2);
-    else if (mapper == 82)
-      print_Msg(newramsize * 5);
-    else
-      print_Msg(RAM[newramsize]);
-    println_Msg(F("K"));
-  }
-  display_Update();
-  delay(1000);
-#else
-  if (ramlo == ramhi)
-    newramsize = ramlo;
-  else {
-setram:
-    String sizeRAM;
-    for (int i = 0; i < (ramhi - ramlo + 1); i++) {
-      Serial.print(F("Select RAM Size:  "));
-      Serial.print(i);
-      Serial.print(F(" = "));
-      if (mapper == 0) {
-        Serial.println(RAM[i] / 4);
-        Serial.println(F("K"));
-      }
-      else if ((mapper == 16) || (mapper == 159)) {
-        if (mapper == 16)
-          Serial.print(RAM[i + ramlo] * 32);
-        else
-          Serial.print(RAM[i + ramlo] * 16);
-        Serial.println(F("B"));
-      }
-      else if (mapper == 19) {
-        if (i == 2)
-          Serial.println(F("128B"));
-        else {
-          Serial.print(RAM[i + ramlo]);
-          Serial.println(F("K"));
-        }
-      }
-      else {
-        Serial.print(RAM[i + ramlo]);
-        Serial.println(F("K"));
-      }
-    }
-    Serial.print(F("Enter RAM Size: "));
-    while (Serial.available() == 0) {}
-    sizeRAM = Serial.readStringUntil('\n');
-    Serial.println(sizeRAM);
-    newramsize = sizeRAM.toInt() + ramlo;
-    if (newramsize > ramhi) {
-      Serial.println(F("SIZE NOT SUPPORTED"));
-      Serial.println(F(""));
-      goto setram;
-    }
-  }
-  if ((mapper == 16) || (mapper == 159)) {
-    int sizeEEP = 0;
-    Serial.print(F("EEPROM Size = "));
-    if (mapper == 16)
-      sizeEEP = RAM[newramsize] * 32;
-    else
-      sizeEEP = RAM[newramsize] * 16;
-    Serial.print(sizeEEP);
-    Serial.println(F("B"));
-    Serial.println(F(""));
-  }
-  else if (mapper == 19) {
-    Serial.print(F("RAM Size =  "));
-    if (newramsize == 2)
-      Serial.println(F("128B"));
-    else {
-      Serial.print(RAM[newramsize]);
-      Serial.println(F("K"));
-    }
-    Serial.println(F(""));
-  }
-  else if (mapper == 80) {
-    Serial.print(F("RAM Size = "));
-    Serial.print(RAM[newramsize] * 16);
-    Serial.println(F("B"));
-    Serial.println(F(""));
-  }
-  else {
-    Serial.print(F("RAM Size = "));
-    if (mapper == 0)
-      Serial.print(newramsize * 2);
-    else if (mapper == 82)
-      Serial.print(newramsize * 5);
-    else
-      Serial.print(RAM[newramsize]);
-    Serial.println(F("K"));
-    Serial.println(F(""));
-  }
-#endif
+
   saveNESRAM(newramsize);
   ramsize = newramsize;
 }
@@ -1274,48 +847,48 @@ void checkStatus_NES() {
   else if (mapper == 30) // Check for Flashable/Non-Flashable
     NESmaker_ID(); // Flash ID
 
-  display_Clear();
-  println_Msg(F("NES CART READER"));
-  println_Msg(F("CURRENT SETTINGS"));
-  println_Msg(F(""));
-  print_Msg(F("MAPPER:   "));
-  println_Msg(mapper);
-  print_Msg(F("PRG SIZE: "));
-  print_Msg(prg);
-  println_Msg(F("K"));
-  print_Msg(F("CHR SIZE: "));
-  print_Msg(chr);
-  println_Msg(F("K"));
-  print_Msg(F("RAM SIZE: "));
+  ui->clearOutput();
+  ui->printlnMsg(F("NES CART READER"));
+  ui->printlnMsg(F("CURRENT SETTINGS"));
+  ui->printlnMsg(F(""));
+  ui->printMsg(F("MAPPER:   "));
+  ui->printlnMsg(mapper);
+  ui->printMsg(F("PRG SIZE: "));
+  ui->printMsg(prg);
+  ui->printlnMsg(F("K"));
+  ui->printMsg(F("CHR SIZE: "));
+  ui->printMsg(chr);
+  ui->printlnMsg(F("K"));
+  ui->printMsg(F("RAM SIZE: "));
   if (mapper == 0) {
-    print_Msg(ram / 4);
-    println_Msg(F("K"));
+    ui->printMsg(ram / 4);
+    ui->printlnMsg(F("K"));
   }
   else if ((mapper == 16) || (mapper == 80) || (mapper == 159)) {
     if (mapper == 16)
-      print_Msg(ram * 32);
+      ui->printMsg(ram * 32);
     else
-      print_Msg(ram * 16);
-    println_Msg(F("B"));
+      ui->printMsg(ram * 16);
+    ui->printlnMsg(F("B"));
   }
   else if (mapper == 19) {
     if (ramsize == 2)
-      println_Msg(F("128B"));
+      ui->printlnMsg(F("128B"));
     else {
-      print_Msg(ram);
-      println_Msg(F("K"));
+      ui->printMsg(ram);
+      ui->printlnMsg(F("K"));
     }
   }
   else {
-    print_Msg(ram);
-    println_Msg(F("K"));
+    ui->printMsg(ram);
+    ui->printlnMsg(F("K"));
   }
-  display_Update();
-  wait();
+  ui->flushOutput();
+  ui->waitForUserInput();
 }
 
 /******************************************
-   ROM Functions
+   [ROM Functions]
  *****************************************/
 void dumpPRG(word base, word address, SafeSDFile &sdFile) {
   for (int x = 0; x < 512; x++) {
@@ -1354,14 +927,15 @@ void writeMMC5RAM(word base, word address, SafeSDFile &sdFile) { // MMC5 SRAM WR
   write_prg_byte(0x5103, 0); // PRG RAM PROTECT2
 }
 
-void readPRG() {
-  display_Clear();
-  display_Update();
+void readPRG(const String &outputFolderPath) {
+  ui->clearOutput();
+  ui->flushOutput();
 
   LED_BLUE_ON;
   set_address(0);
   _delay_us(1);
-  SafeSDFile prgFile = CreatePRGFileInSD();
+  String prgFilePath = pathJoin(outputFolderPath, F("PRG.bin"));
+  SafeSDFile prgFile = SafeSDFile::openForCreating(prgFilePath);
   word base = 0x8000;
   switch (mapper) {
     case 0:
@@ -1833,11 +1407,11 @@ void readPRG() {
   }
   prgFile.close();
 
-  println_Msg(F("PRG FILE DUMPED!"));
-  println_Msg(F(""));
-  display_Update();
+  ui->printlnMsg(F("PRG FILE DUMPED!"));
+  ui->printlnMsg(F(""));
+  ui->flushOutput();
 
-  calcCRC(fileName, prg * 1024);
+  calcCRC(prgFilePath, prg * 1024);
 
   set_address(0);
   PHI2_HI;
@@ -1845,20 +1419,20 @@ void readPRG() {
   LED_BLUE_OFF;
 }
 
-void readCHR() {
-
-  display_Clear();
-  display_Update();
+void readCHR(const String &outputFolderPath) {
+  ui->clearOutput();
+  ui->flushOutput();
 
   LED_GREEN_ON;
   set_address(0);
   _delay_us(1);
   if (chrsize == 0) {
-    println_Msg(F("CHR SIZE 0K"));
-    display_Update();
+    ui->printlnMsg(F("CHR SIZE 0K"));
+    ui->flushOutput();
   }
   else {
-    SafeSDFile chrFile = CreateCHRFileInSD();
+    String chrFilePath = pathJoin(outputFolderPath, F("CHR.bin"));
+    SafeSDFile chrFile = SafeSDFile::openForCreating(chrFilePath);
 
     switch (mapper) {
       case 0: // 8K
@@ -2391,11 +1965,11 @@ void readCHR() {
     }
     chrFile.close();
 
-    println_Msg(F("CHR FILE DUMPED!"));
-    println_Msg(F(""));
-    display_Update();
+    ui->printlnMsg(F("CHR FILE DUMPED!"));
+    ui->printlnMsg(F(""));
+    ui->flushOutput();
 
-    calcCRC(fileName, chr * 1024);
+    calcCRC(chrFilePath, chr * 1024);
   }
   set_address(0);
   PHI2_HI;
@@ -2404,23 +1978,23 @@ void readCHR() {
 }
 
 /******************************************
-   RAM Functions
+   [RAM Functions]
  *****************************************/
-void readRAM() {
-  display_Clear();
-  display_Update();
+void readRAM(const String &outputFolderPath) {
+  ui->clearOutput();
+  ui->flushOutput();
 
   LED_BLUE_ON;
   LED_GREEN_ON;
   set_address(0);
   _delay_us(1);
   if (ramsize == 0) {
-
-    println_Msg(F("RAM SIZE 0K"));
-    display_Update();
+    ui->printlnMsg(F("RAM SIZE 0K"));
+    ui->flushOutput();
   }
   else {
-    SafeSDFile ramFile = CreateRAMFileInSD();
+    String ramFilePath = pathJoin(outputFolderPath, F("RAM.bin"));
+    SafeSDFile ramFile = SafeSDFile::openForCreating(ramFilePath);
     word base = 0x6000;
     switch (mapper) {
       case 0: // 2K/4K
@@ -2505,7 +2079,7 @@ void readRAM() {
           EepromREAD(address);
         }
         ramFile.write(sdBuffer, eepsize);
-        //          display_Clear(); // TEST PURPOSES - DISPLAY EEPROM DATA
+        //          ui->clearOutput(); // TEST PURPOSES - DISPLAY EEPROM DATA
         break;
 
       case 19:
@@ -2580,14 +2154,14 @@ void readRAM() {
     }
     ramFile.close();
 
-    println_Msg(F("RAM FILE DUMPED!"));
-    println_Msg(F(""));
-    display_Update();
+    ui->printlnMsg(F("RAM FILE DUMPED!"));
+    ui->printlnMsg(F(""));
+    ui->flushOutput();
 
     if ((mapper == 16) || (mapper == 159))
-      calcCRC(fileName, eepsize);
+      calcCRC(ramFilePath, eepsize);
     else
-      calcCRC(fileName, ram * 1024);
+      calcCRC(ramFilePath, ram * 1024);
   }
   set_address(0);
   PHI2_HI;
@@ -2597,26 +2171,22 @@ void readRAM() {
 }
 
 void writeRAM() {
-  display_Clear();
+  ui->clearOutput();
 
   if (ramsize == 0) {
-    print_Warning(F("RAM SIZE 0K"));
+    ui->printError(F("RAM SIZE 0K"));
   }
   else {
-    fileBrowser(F("Select RAM File"));
+    String ramFilePath = fileBrowser(F("Select RAM File"));
     word base = 0x6000;
 
-    chdirToRoot();
-    sprintf(filePath, "%s/%s", filePath, fileName);
-
-    display_Clear();
-    println_Msg(F("Writing File: "));
-    println_Msg(filePath);
-    println_Msg(fileName);
-    display_Update();
+    ui->clearOutput();
+    ui->printlnMsg(F("Writing File: "));
+    ui->printlnMsg(ramFilePath);
+    ui->flushOutput();
 
     //open file on sd card
-    SafeSDFile ramFile = SafeSDFile::openForReading(filePath);
+    SafeSDFile ramFile = SafeSDFile::openForReading(ramFilePath);
     switch (mapper) {
       case 0: // 2K/4K
         for (word address = 0x0; address < (0x800 * ramsize); address += 512) { // 2K/4K
@@ -2716,9 +2286,9 @@ void writeRAM() {
         for (word address = 0; address < eepsize; address++) {
           EepromWRITE(address);
           if ((address % 128) == 0)
-            display_Clear();
-          print_Msg(F("."));
-          display_Update();
+            ui->clearOutput();
+          ui->printMsg(F("."));
+          ui->flushOutput();
         }
         break;
 
@@ -2817,21 +2387,19 @@ void writeRAM() {
     ramFile.close();
     LED_GREEN_ON;
 
-    println_Msg(F(""));
-    println_Msg(F("RAM FILE WRITTEN!"));
-    display_Update();
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("RAM FILE WRITTEN!"));
+    ui->flushOutput();
   }
 
-  display_Clear();
+  ui->clearOutput();
 
   LED_RED_OFF;
   LED_GREEN_OFF;
-  chdirToRoot(); // root
-  filePath[0] = '\0'; // Reset filePath
 }
 
 /******************************************
-   Eeprom Functions
+   [Eeprom Functions]
  *****************************************/
 void EepromStart_NES() {
   write_prg_byte(0x800D, 0x00); // sda low, scl low
@@ -2999,7 +2567,7 @@ void EepromWRITE(byte address) {
 }
 
 /******************************************
-   NESmaker Flash Cart [SST 39SF40]
+   [NESmaker Flash Cart [SST 39SF40] Functions]
  *****************************************/
 void NESmaker_ResetFlash() { // Reset Flash
   write_prg_byte(0xC000, 0x01);
@@ -3075,36 +2643,32 @@ void NESmaker_ChipErase() { // Typical 70ms
 }
 
 void writeFLASH() {
-  display_Clear();
+  ui->clearOutput();
   if (!flashfound) {
     LED_RED_ON;
-    println_Msg(F("FLASH NOT DETECTED"));
-    display_Update();
+    ui->printlnMsg(F("FLASH NOT DETECTED"));
+    ui->flushOutput();
   }
   else {
-    print_Msg(F("Flash ID: "));
-    println_Msg(flashID);
-    println_Msg(F(""));
-    println_Msg(F("NESmaker Flash Found"));
-    println_Msg(F(""));
-    display_Update();
+    ui->printMsg(F("Flash ID: "));
+    ui->printlnMsg(flashID);
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("NESmaker Flash Found"));
+    ui->printlnMsg(F(""));
+    ui->flushOutput();
     delay(100);
 
-    fileBrowser(F("Select FLASH File"));
+    String flashFilePath = fileBrowser(F("Select FLASH File"));
     word base = 0x8000;
 
-    chdirToRoot();
-    sprintf(filePath, "%s/%s", filePath, fileName);
-
     LED_RED_ON;
-    display_Clear();
-    println_Msg(F("Writing File: "));
-    println_Msg(filePath);
-    println_Msg(fileName);
-    display_Update();
+    ui->clearOutput();
+    ui->printlnMsg(F("Writing File: "));
+    ui->printlnMsg(flashFilePath);
+    ui->flushOutput();
 
     //open file on sd card
-    SafeSDFile flashFile = SafeSDFile::openForReading(filePath);
+    SafeSDFile flashFile = SafeSDFile::openForReading(flashFilePath);
 
     banks = int_pow(2, prgsize); // 256K/512K
     for (int i = 0; i < banks; i++) { // 16K Banks
@@ -3136,27 +2700,23 @@ void writeFLASH() {
           }
         }
       }
-#ifdef OLED
-      display.print(F("*"));
-      display.display();
-#else
-      Serial.print(F("*"));
-      if ((i != 0) && ((i + 1) % 16 == 0))
-        Serial.println(F(""));
-#endif
+
+      ui->printMsg(F("*"));
+      if ((i + 1) % 16 == 0) {
+        ui->printlnMsg(F(""));
+      }
+      ui->flushOutput();
     }
     flashFile.close();
     LED_GREEN_ON;
 
-    println_Msg(F(""));
-    println_Msg(F("FLASH FILE WRITTEN!"));
-    display_Update();
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("FLASH FILE WRITTEN!"));
+    ui->flushOutput();
   }
-  display_Clear();
+  ui->clearOutput();
   LED_RED_OFF;
   LED_GREEN_OFF;
-  chdirToRoot(); // root
-  filePath[0] = '\0'; // Reset filePath
 }
 
 //******************************************

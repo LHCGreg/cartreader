@@ -24,7 +24,7 @@ uint16_t sramEndAddress = 0;
 /******************************************
    Function prototypes
  *****************************************/
-String getNextGBSaveOutputPath(const String &gameName);
+String getNextGBSaveOutputPath(const String &romName);
 void setup_GB();
 void writeFlash_GB(byte MBC);
 
@@ -165,12 +165,12 @@ void gbMenu() {
   }
 }
 
-String getNextGBRomOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("GB"), F("ROM"), gameName, F(".GB"));
+String getNextGBRomOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("GB"), F("ROM"), romName, F(".GB"));
 }
 
-String getNextGBSaveOutputPath(const String &gameName) {
-  return getNextOutputPath(F("GB"), F("SAVE"), gameName, F(".sav"));
+String getNextGBSaveOutputPath(const String &romName) {
+  return getNextOutputPathWithNumberedFolder(F("GB"), F("SAVE"), romName, F(".sav"));
 }
 
 /******************************************

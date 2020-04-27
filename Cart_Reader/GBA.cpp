@@ -20,10 +20,10 @@ boolean readType;
    Function prototypes
  *****************************************/
 uint8_t saveTypeMenu();
-String getNextGBARomOutputPathAndPrintMessage(const String &gameName);
-String getNextGBAEepromOutputPathAndPrintMessage(const String &gameName);
-String getNextGBASRAMOutputPathAndPrintMessage(const String &gameName);
-String getNextGBAFlashSaveOutputPathAndPrintMessage(const String &gameName);
+String getNextGBARomOutputPathAndPrintMessage(const String &romName);
+String getNextGBAEepromOutputPathAndPrintMessage(const String &romName);
+String getNextGBASRAMOutputPathAndPrintMessage(const String &romName);
+String getNextGBAFlashSaveOutputPathAndPrintMessage(const String &romName);
 void setROM_GBA();
 void getCartInfo_GBA();
 void readROM_GBA(const String &outputFilePath);
@@ -426,20 +426,20 @@ uint8_t saveTypeMenu() {
   }
 }
 
-String getNextGBARomOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("GBA"), F("ROM"), gameName, F(".gba"));
+String getNextGBARomOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("GBA"), F("ROM"), romName, F(".gba"));
 }
 
-String getNextGBAEepromOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("GBA"), F("SAVE"), gameName, F(".eep"));
+String getNextGBAEepromOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("GBA"), F("SAVE"), romName, F(".eep"));
 }
 
-String getNextGBASRAMOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("GBA"), F("SAVE"), gameName, F(".srm"));
+String getNextGBASRAMOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("GBA"), F("SAVE"), romName, F(".srm"));
 }
 
-String getNextGBAFlashSaveOutputPathAndPrintMessage(const String &gameName) {
-  return getNextOutputPathAndPrintMessage(F("GBA"), F("SAVE"), gameName, F(".fla"));
+String getNextGBAFlashSaveOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("GBA"), F("SAVE"), romName, F(".fla"));
 }
 
 /******************************************

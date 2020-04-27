@@ -59,11 +59,11 @@ class UserInterface {
   }
 
   template <class printableType>
-  [[noreturn]] void printErrorAndAbort(const printableType &errorMessage, bool clearOutput) {
+  [[noreturn]] void printErrorAndAbort(const printableType &errorMessage, bool clearOutputBeforePrinting) {
     errorLvl = 1;
     rgb.setColor(255, 0, 0);
     
-    if (clearOutput) {
+    if (clearOutputBeforePrinting) {
       clearOutput();
     }
 

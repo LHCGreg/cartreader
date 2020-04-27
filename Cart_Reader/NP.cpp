@@ -9,7 +9,7 @@
 #include "FLASH.h"
 #include "filebrowser.h"
 #include "RGB_LED.h"
-#include "menu.h"
+#include "ui.h"
 #include "globals.h"
 #include "utils.h"
 #include "SD.h"
@@ -47,6 +47,11 @@ boolean hirom[8];
    Function prototypes
  *****************************************/
 void sfmGameMenu();
+String getNextSFMFlashOutputPathAndPrintMessage();
+String getNextSFMRomOutputPathAndPrintMessage(const String &romName);
+String getNextNPMappingOutputPath();
+String getNextGBMRomOutputPath();
+String getNextGBMMappingOutputPath();
 void getGames();
 void controlIn_SFM();
 byte readBank_SFM(byte myBank, word myAddress);
@@ -61,70 +66,49 @@ void printMapping();
 void readMapping();
 void eraseMapping(byte startBank);
 byte blankcheckMapping_SFM();
-void writeMapping_SFM(byte startBank, uint32_t pos);
+void writeMapping_SFM(const String &inputFilePath, byte startBank, uint32_t pos);
 boolean unlockHirom();
 byte send_SFM(byte command);
-void write_SFM(int startBank, uint32_t pos);
+void write_SFM(const String &inputFilePath, int startBank, uint32_t pos);
 byte readByte_GBM(word myAddress);
 void readROM_GBM(word numBanks);
 void send_GBM(byte myCommand);
 boolean readFlashID_GBM();
 void eraseFlash_GBM();
 boolean blankcheckFlash_GBM();
-void writeFlash_GBM();
+void writeFlash_GBM(const String &inputFilePath);
 void readMapping_GBM();
 void eraseMapping_GBM();
 boolean blankcheckMapping_GBM();
-void writeMapping_GBM();
+void writeMapping_GBM(const String &inputFilePath);
 
 /******************************************
   Menu
 *****************************************/
-// SFM menu items
-static const char sfmMenuItem1[] PROGMEM = "Game Menu";
-static const char sfmMenuItem2[] PROGMEM = "Flash Menu";
-static const char sfmMenuItem3[] PROGMEM = "Reset";
-static const char* const menuOptionsSFM[] PROGMEM = {sfmMenuItem1, sfmMenuItem2, sfmMenuItem3};
-
-// SFM flash menu items
-static const char sfmFlashMenuItem1[] PROGMEM = "Read Flash";
-static const char sfmFlashMenuItem2[] PROGMEM = "Write Flash";
-static const char sfmFlashMenuItem3[] PROGMEM = "Print Mapping";
-static const char sfmFlashMenuItem4[] PROGMEM = "Read Mapping";
-static const char sfmFlashMenuItem5[] PROGMEM = "Write Mapping";
-static const char sfmFlashMenuItem6[] PROGMEM = "Back";
-static const char* const menuOptionsSFMFlash[] PROGMEM = {sfmFlashMenuItem1, sfmFlashMenuItem2, sfmFlashMenuItem3, sfmFlashMenuItem4, sfmFlashMenuItem5, sfmFlashMenuItem6};
-
-// SFM game menu items
-static const char sfmGameMenuItem1[] PROGMEM = "Read Sram";
-static const char sfmGameMenuItem2[] PROGMEM = "Read Game";
-static const char sfmGameMenuItem3[] PROGMEM = "Write Sram";
-static const char sfmGameMenuItem4[] PROGMEM = "Switch Game";
-static const char sfmGameMenuItem5[] PROGMEM = "Reset";
-static const char* const menuOptionsSFMGame[] PROGMEM = {sfmGameMenuItem1, sfmGameMenuItem2, sfmGameMenuItem3, sfmGameMenuItem4, sfmGameMenuItem5};
-
 void sfmMenu() {
-  // create menu with title and 3 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsSFM, 3);
-  mainMenu = question_box(F("SF Memory"), menuOptions, 3, 0);
+  while (true) {
+    const __FlashStringHelper *item_GameMenu = F("Game Menu");
+    const __FlashStringHelper *item_FlashMenu = F("Flash Menu");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_GameMenu,
+      item_FlashMenu,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    // Game menu
-    case 0:
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("SF Memory"), menu, ARRAY_LENGTH(menu), item_GameMenu);
+
+    if (answer == item_GameMenu) {
       sfmGameMenu();
+    }
+    else if (answer == item_FlashMenu) {
+      mode = CartReaderMode::SFMFlash;
+      sfmFlashMenu();
+    }
+    else if (answer == item_Back) {
       break;
-    // Flash menu
-    case 1:
-      mode = mode_SFM_Flash;
-      break;
-    // Reset
-    case 2:
-      resetArduino();
-      break;
+    }
   }
 }
 
@@ -138,15 +122,15 @@ void sfmGameMenu() {
 
     if (hasMenu) {
       // Create submenu options
-      char menuOptionsSFMGames[8][20];
-      for (int i = 0; i < (numGames); i++) {
-        strncpy(menuOptionsSFMGames[i], gameCode[i], 10);
+      String menuOptionsSFMGames[8];
+      char gameCode10Bytes[11];
+      gameCode10Bytes[10] = '\0';
+      for (int i = 0; i < numGames; i++) {
+        strncpy(gameCode10Bytes, gameCode[i], 10);
+        menuOptionsSFMGames[i] = gameCode10Bytes;
       }
 
-      // Create menu with title and numGames options to choose from
-      unsigned char gameSubMenu;
-      // wait for user choice to come back from the question box menu
-      gameSubMenu = question_box(F("Select Game"), menuOptionsSFMGames, numGames, 0);
+      uint8_t gameSubMenu = ui->askMultipleChoiceQuestion(F("Select Game"), menuOptionsSFMGames, numGames, 0);
 
       // Switch to game
       send_SFM(gameSubMenu + 0x80);
@@ -161,13 +145,13 @@ void sfmGameMenu() {
         timeout++;
         // Abort, something is wrong
         if (timeout == 5) {
-          display_Clear();
-          print_Msg(F("Game "));
-          print_Msg(gameSubMenu + 0x80, HEX);
-          println_Msg(F(" Timeout"));
-          println_Msg(readBank_SFM(0, 0x2400), HEX);
-          println_Msg(F(""));
-          print_Error(F("Powercycle SFM cart"));
+          ui->clearOutput();
+          ui->printMsg(F("Game "));
+          ui->printMsg(gameSubMenu + 0x80, HEX);
+          ui->printlnMsg(F(" Timeout"));
+          ui->printlnMsg(readBank_SFM(0, 0x2400), HEX);
+          ui->printlnMsg(F(""));
+          ui->printErrorAndAbort(F("Powercycle SFM cart"), false);
         }
       }
       // Copy gameCode to romName in case of japanese chars in romName
@@ -175,7 +159,8 @@ void sfmGameMenu() {
 
       // Print info
       getCartInfo_SFM();
-      mode = mode_SFM_Game;
+      mode = CartReaderMode::SFMGame;
+      sfmGameOptions();
     }
     else {
       // No menu so switch to only game
@@ -188,104 +173,103 @@ void sfmGameMenu() {
 
       // Print info
       getCartInfo_SFM();
-      mode = mode_SFM_Game;
+      mode = CartReaderMode::SFMGame;
     }
   }
   else {
-    print_Warning(F("Switch to HiRom failed"));
+    ui->printError(F("Switch to HiRom failed"));
   }
 }
 
 void sfmGameOptions() {
-  // create menu with title and 5 options to choose from
-  unsigned char gameSubMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsSFMGame, 5);
-  gameSubMenu = question_box(F("SFM Game Menu"), menuOptions, 5, 0);
+  while (true) {
+    const __FlashStringHelper *item_ReadSRAM = F("Read Sram");
+    const __FlashStringHelper *item_ReadGame = F("Read Game");
+    const __FlashStringHelper *item_WriteSRAM = F("Write Sram");
+    const __FlashStringHelper *item_SwitchGame = F("Switch Game");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadSRAM,
+      item_ReadGame,
+      item_WriteSRAM,
+      item_SwitchGame,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (gameSubMenu)
-  {
-    // Read sram
-    case 0:
-      display_Clear();
-      // Change working dir to root
-      chdir("/");
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("SFM Game Menu"), menu, ARRAY_LENGTH(menu), item_ReadSRAM);
+
+    if (answer == item_ReadSRAM) {
+      ui->clearOutput();
       readSRAM();
-      break;
-
-    // Read rom
-    case 1:
-      display_Clear();
-      // Change working dir to root
-      chdir("/");
+    }
+    else if (answer == item_ReadGame) {
+      ui->clearOutput();
       readROM_SFM();
       compare_checksum();
-      break;
-
-    // Write sram
-    case 2:
-      display_Clear();
-      // Change working dir to root
-      chdir("/");
+    }
+    else if (answer == item_WriteSRAM) {
+      ui->clearOutput();
       writeSRAM(1);
-      unsigned long wrErrors;
-      wrErrors = verifySRAM();
-      if (wrErrors == 0) {
-        println_Msg(F("Verified OK"));
-        display_Update();
+      uint32_t writeErrors = verifySRAM();
+      if (writeErrors == 0) {
+        ui->printlnMsg(F("Verified OK"));
+        ui->flushOutput();
       }
       else {
-        print_Msg(F("Error: "));
-        print_Msg(wrErrors);
-        println_Msg(F(" bytes "));
-        print_Warning(F("did not verify."));
+        ui->printMsg(F("Error: "));
+        ui->printMsg(writeErrors);
+        ui->printlnMsg(F(" bytes "));
+        ui->printError(F("did not verify."));
       }
-      break;
-
-    // Switch game
-    case 3:
+    }
+    else if (answer == item_SwitchGame) {
       sfmGameMenu();
+    }
+    else if (answer == item_Back) {
       break;
+    }
 
-    // Reset
-    case 4:
-      resetArduino();
-      break;
-  }
-  if (gameSubMenu != 3) {
-    println_Msg(F(""));
-    println_Msg(F("Press Button..."));
-    display_Update();
-    wait();
+    if (answer != item_SwitchGame) {
+      ui->printlnMsg(F(""));
+      ui->printlnMsg(F("Press Button..."));
+      ui->flushOutput();
+      ui->waitForUserInput();
+    }
   }
 }
 
 void sfmFlashMenu() {
-  // create menu with title and 6 options to choose from
-  unsigned char flashSubMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsSFMFlash, 6);
-  flashSubMenu = question_box(F("SFM Flash Menu"), menuOptions, 6, 0);
+  while (true) {
+    const __FlashStringHelper *item_ReadFlash = F("Read Flash");
+    const __FlashStringHelper *item_WriteFlash = F("Write Flash");
+    const __FlashStringHelper *item_PrintMapping = F("Print Mapping");
+    const __FlashStringHelper *item_ReadMapping = F("Read Mapping");
+    const __FlashStringHelper *item_WriteMapping = F("Write Mapping");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadFlash,
+      item_WriteFlash,
+      item_PrintMapping,
+      item_ReadMapping,
+      item_WriteMapping,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (flashSubMenu)
-  {
-    // Read Flash
-    case 0:
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("SFM Flash Menu"), menu, ARRAY_LENGTH(menu), item_ReadFlash);
+    
+    if (answer == item_ReadFlash) {
       // Clear screen
-      display_Clear();
-
-      // Reset to root directory
-      chdir("/");
+      ui->clearOutput();
 
       // Reset to HIROM ALL
       romType = 1;
-      print_Msg(F("Switch to HiRom..."));
-      display_Update();
+      ui->printMsg(F("Switch to HiRom..."));
+      ui->flushOutput();
       if (send_SFM(0x04) == 0x2A) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
 
         // Reset flash
         resetFlash_SFM(0xC0);
@@ -294,76 +278,56 @@ void sfmFlashMenu() {
         flashSize = 4194304;
         numBanks = 64;
 
-        // Get name, add extension and convert to char array for sd lib
-        foldern = loadFolderNumber();
-        sprintf(fileName, "SFM%d", foldern);
-        strcat(fileName, ".bin");
-        mkdir("NP", true);
-        chdir("NP");
-        // write new folder number back to eeprom
-        foldern = foldern + 1;
-        saveFolderNumber(foldern);
-
         // Read flash
         readFlash_SFM();
       }
       else {
-        print_Warning(F("Switch to HiRom failed"));
+        ui->printError(F("Switch to HiRom failed"));
       }
-      break;
-
-    // Write Flash
-    case 1:
+    }
+    else if (answer == item_WriteFlash) {
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
 
       // Print warning
-      println_Msg(F("Attention"));
-      println_Msg(F("This will erase your"));
-      println_Msg(F("NP Cartridge."));
-      println_Msg("");
-      println_Msg(F("Press Button"));
-      println_Msg(F("to continue"));
-      display_Update();
-      wait();
+      ui->printlnMsg(F("Attention"));
+      ui->printlnMsg(F("This will erase your"));
+      ui->printlnMsg(F("NP Cartridge."));
+      ui->printlnMsg("");
+      ui->printlnMsg(F("Press Button"));
+      ui->printlnMsg(F("to continue"));
+      ui->flushOutput();
+      ui->waitForUserInput();
 
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
 
-      filePath[0] = '\0';
-      chdir("/");
       // Launch file browser
-      fileBrowser(F("Select 4MB file"));
-      display_Clear();
-      sprintf(filePath, "%s/%s", filePath, fileName);
+      String inputFilePath = fileBrowser(F("Select 4MB file"));
+      ui->clearOutput();
       flashSize = 2097152;
       numBanks = 32;
-      println_Msg(F("Writing 1st rom"));
-      display_Update();
+      ui->printlnMsg(F("Writing 1st rom"));
+      ui->flushOutput();
       // Program 1st flashrom
-      write_SFM(0xC0, 0);
-      display_Clear();
-      println_Msg(F("Writing 2nd rom"));
-      display_Update();
+      write_SFM(inputFilePath, 0xC0, 0);
+      ui->clearOutput();
+      ui->printlnMsg(F("Writing 2nd rom"));
+      ui->flushOutput();
       // Program 2nd flashrom
-      write_SFM(0xE0, 2097152);
-      break;
-
-    // Print mapping
-    case 2:
+      write_SFM(inputFilePath, 0xE0, 2097152);
+    }
+    else if (answer == item_PrintMapping) {
       // Clear screen
-      display_Clear();
-
-      // Reset to root directory
-      chdir("/");
+      ui->clearOutput();
 
       // Reset to HIROM ALL
       romType = 1;
-      print_Msg(F("Switch to HiRom..."));
-      display_Update();
+      ui->printMsg(F("Switch to HiRom..."));
+      ui->flushOutput();
       if (send_SFM(0x04) == 0x2A) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
         idFlash_SFM(0xC0);
         if (strcmp(flashid, "c2f3") == 0) {
           idFlash_SFM(0xE0);
@@ -373,39 +337,34 @@ void sfmFlashMenu() {
             resetFlash_SFM(0xE0);
             delay(100);
             // Clear screen
-            display_Clear();
+            ui->clearOutput();
             printMapping();
             resetFlash_SFM(0xC0);
             resetFlash_SFM(0xE0);
           }
           else {
-            print_Error(F("Error: Wrong Flash ID"));
+            ui->printErrorAndAbort(F("Error: Wrong Flash ID"), false);
           }
         }
         else {
-          print_Error(F("Error: Wrong Flash ID"));
+          ui->printErrorAndAbort(F("Error: Wrong Flash ID"), false);
         }
       }
       else {
-        print_Warning(F("failed"));
+        ui->printError(F("failed"));
       }
-      break;
-
-    // Read mapping
-    case 3:
+    }
+    else if (answer == item_ReadMapping) {
       // Clear screen
-      display_Clear();
-
-      // Reset to root directory
-      chdir("/");
+      ui->clearOutput();
 
       // Reset to HIROM ALL
       romType = 1;
-      print_Msg(F("Switch to HiRom..."));
-      display_Update();
+      ui->printMsg(F("Switch to HiRom..."));
+      ui->flushOutput();
       if (send_SFM(0x04) == 0x2A) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
         idFlash_SFM(0xC0);
         if (strcmp(flashid, "c2f3") == 0) {
           idFlash_SFM(0xE0);
@@ -419,84 +378,88 @@ void sfmFlashMenu() {
             resetFlash_SFM(0xE0);
           }
           else {
-            print_Error(F("Error: Wrong Flash ID"));
+            ui->printErrorAndAbort(F("Error: Wrong Flash ID"), false);
           }
         }
         else {
-          print_Error(F("Error: Wrong Flash ID"));
+          ui->printErrorAndAbort(F("Error: Wrong Flash ID"), false);
         }
       }
       else {
-        print_Warning(F("failed"));
+        ui->printError(F("failed"));
       }
-      break;
-
-    // Write mapping
-    case 4:
-      // Clear screen
-      display_Clear();
+    }
+    else if (answer == item_WriteMapping) {
+      ui->clearOutput();
 
       // Print warning
-      println_Msg(F("Attention"));
-      println_Msg(F("This will erase your"));
-      println_Msg(F("NP Cartridge."));
-      println_Msg("");
-      println_Msg(F("Press Button"));
-      println_Msg(F("to continue"));
-      display_Update();
-      wait();
+      ui->printlnMsg(F("Attention"));
+      ui->printlnMsg(F("This will erase your"));
+      ui->printlnMsg(F("NP Cartridge."));
+      ui->printlnMsg("");
+      ui->printlnMsg(F("Press Button"));
+      ui->printlnMsg(F("to continue"));
+      ui->flushOutput();
+      ui->waitForUserInput();
 
       // Clear screen
-      display_Clear();
-
-      // Reset to root directory
-      chdir("/");
+      ui->clearOutput();
 
       // Erase mapping
       eraseMapping(0xD0);
       eraseMapping(0xE0);
-      print_Msg(F("Blankcheck..."));
-      display_Update();
+      ui->printMsg(F("Blankcheck..."));
+      ui->flushOutput();
       if (blankcheckMapping_SFM()) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
+
+        // Clear screen
+        ui->clearOutput();
+
+        // Launch file browser
+        String inputFilePath = fileBrowser(F("Select MAP file"));
+        ui->clearOutput();
+        ui->flushOutput();
+
+        // Write mapping
+        writeMapping_SFM(inputFilePath, 0xD0, 0);
+        writeMapping_SFM(inputFilePath, 0xE0, 256);
       }
       else {
-        println_Msg(F("Nope"));
-        break;
+        ui->printlnMsg(F("Nope"));
       }
-
-      // Clear screen
-      display_Clear();
-
-      // Clear filepath
-      filePath[0] = '\0';
-
-      // Reset to root directory
-      chdir("/");
-
-      // Launch file browser
-      fileBrowser(F("Select MAP file"));
-      display_Clear();
-      sprintf(filePath, "%s/%s", filePath, fileName);
-      display_Update();
-
-      // Write mapping
-      writeMapping_SFM(0xD0, 0);
-      writeMapping_SFM(0xE0, 256);
+    }
+    else if (answer == item_Back) {
+      mode = CartReaderMode::SFM;
       break;
+    }
 
-    // Go back
-    case 5:
-      mode = mode_SFM;
-      break;
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
-  if (flashSubMenu != 5) {
-    println_Msg(F(""));
-    println_Msg(F("Press Button..."));
-    display_Update();
-    wait();
-  }
+}
+
+String getNextSFMFlashOutputPathAndPrintMessage() {
+  return getNextOutputPathWithNumberedFilenameAndPrintMessage(F("NP"), F("SFM"), F(".bin"));
+}
+
+String getNextSFMRomOutputPathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("NP"), F(""), romName, F(".sfc"));
+}
+
+String getNextNPMappingOutputPath() {
+  return getNextOutputPathWithNumberedFilename(F("NP"), F("NP"), F(".MAP"));
+}
+
+String getNextGBMRomOutputPath() {
+  return getNextOutputPathWithNumberedFilename(F("NP"), F(".GBM"), F(".bin"));
+}
+
+String getNextGBMMappingOutputPath() {
+  return getNextOutputPathWithNumberedFilename(F("NP"), F(".GBM"), F(".map"));
 }
 
 // Read the games from the menu area
@@ -675,10 +638,10 @@ void setup_SFM() {
     timeout++;
     // Abort, something is wrong
     if (timeout == 5) {
-      println_Msg(F("Hirom All Timeout"));
-      println_Msg(F(""));
-      println_Msg(F(""));
-      print_Error(F("Powercycle SFM cart"));
+      ui->printlnMsg(F("Hirom All Timeout"));
+      ui->printlnMsg(F(""));
+      ui->printlnMsg(F(""));
+      ui->printErrorAndAbort(F("Powercycle SFM cart"), false);
     }
   }
 }
@@ -752,49 +715,49 @@ void getCartInfo_SFM() {
     // Checksum either corrupt or 0000
     errorLvl = 1;
     rgb.setColor(255, 0, 0);
-    display_Clear();
-    println_Msg(F("ERROR"));
-    println_Msg(F("Rom header corrupt"));
-    println_Msg(F("or missing"));
-    display_Update();
-    wait();
-    // Wait() clears errors but in this case we still have an error
+    ui->clearOutput();
+    ui->printlnMsg(F("ERROR"));
+    ui->printlnMsg(F("Rom header corrupt"));
+    ui->printlnMsg(F("or missing"));
+    ui->flushOutput();
+    ui->waitForUserInput();
+    // ui->waitForUserInput() clears errors but in this case we still have an error
     errorLvl = 1;
   }
 
-  display_Clear();
-  print_Msg(F("Name: "));
-  println_Msg(romName);
-  println_Msg(F(" "));
+  ui->clearOutput();
+  ui->printMsg(F("Name: "));
+  ui->printlnMsg(romName);
+  ui->printlnMsg(F(" "));
 
-  print_Msg(F("Version: 1."));
-  println_Msg(romVersion);
+  ui->printMsg(F("Version: 1."));
+  ui->printlnMsg(romVersion);
 
-  print_Msg(F("Checksum: "));
-  println_Msg(checksumStr);
+  ui->printMsg(F("Checksum: "));
+  ui->printlnMsg(checksumStr);
 
-  print_Msg(F("Size: "));
-  print_Msg(romSize);
-  println_Msg(F("Mbit "));
+  ui->printMsg(F("Size: "));
+  ui->printMsg(romSize);
+  ui->printlnMsg(F("Mbit "));
 
-  print_Msg(F("Type: "));
+  ui->printMsg(F("Type: "));
   if (romType == 1)
-    println_Msg(F("HiROM"));
+    ui->printlnMsg(F("HiROM"));
   else if (romType == 0)
-    println_Msg(F("LoROM"));
+    ui->printlnMsg(F("LoROM"));
   else
-    println_Msg(romType);
+    ui->printlnMsg(romType);
 
-  print_Msg(F("Banks: "));
-  println_Msg(numBanks);
+  ui->printMsg(F("Banks: "));
+  ui->printlnMsg(numBanks);
 
-  print_Msg(F("Sram: "));
-  print_Msg(sramSize);
-  println_Msg(F("Kbit"));
-  println_Msg(F("Press Button"));
-  display_Update();
+  ui->printMsg(F("Sram: "));
+  ui->printMsg(sramSize);
+  ui->printlnMsg(F("Kbit"));
+  ui->printlnMsg(F("Press Button"));
+  ui->flushOutput();
   // Wait for user input
-  wait();
+  ui->waitForUserInput();
 }
 
 // Read header information
@@ -899,33 +862,15 @@ void readROM_SFM() {
   dataIn();
   controlIn_SFM();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".sfc");
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "NP/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  //clear the screen
-  display_Clear();
-  println_Msg(F("Creating folder: "));
-  println_Msg(folder);
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextSFMRomOutputPathAndPrintMessage(romName);
 
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   // Check if LoROM or HiROM...
   if (romType == 0) {
-    println_Msg(F("Dumping LoRom..."));
-    display_Update();
+    ui->printlnMsg(F("Dumping LoRom..."));
+    ui->flushOutput();
 
     // Read up to 96 banks starting at bank 0×00.
     for (int currBank = 0; currBank < numBanks; currBank++) {
@@ -940,8 +885,8 @@ void readROM_SFM() {
   }
   // Dump High-type ROM
   else {
-    println_Msg(F("Dumping HiRom..."));
-    display_Update();
+    ui->printlnMsg(F("Dumping HiRom..."));
+    ui->flushOutput();
 
     for (int currBank = 192; currBank < (numBanks + 192); currBank++) {
       for (long currByte = 0; currByte < 65536; currByte += 512) {
@@ -956,8 +901,8 @@ void readROM_SFM() {
   outputFile.close();
 
   // Signal end of process
-  print_Msg(F("Saved as "));
-  println_Msg(fileName);
+  ui->printMsg(F("Saved as "));
+  ui->printlnMsg(outputFilePath);
 }
 
 /******************************************
@@ -1020,15 +965,15 @@ void idFlash_SFM(int startBank) {
 }
 
 // Write the flashroms by reading a file from the SD card, pos defines where in the file the reading/writing should start
-void writeFlash_SFM(int startBank, uint32_t pos) {
-  display_Clear();
-  print_Msg(F("Writing Bank 0x"));
-  print_Msg(startBank, HEX);
-  print_Msg(F("..."));
-  display_Update();
+void writeFlash_SFM(const String &inputFilePath, int startBank, uint32_t pos) {
+  ui->clearOutput();
+  ui->printMsg(F("Writing Bank 0x"));
+  ui->printMsg(startBank, HEX);
+  ui->printMsg(F("..."));
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   // Seek to a new position in the file
   if (pos != 0)
@@ -1091,7 +1036,7 @@ void writeFlash_SFM(int startBank, uint32_t pos) {
   }
   // Close the file:
   inputFile.close();
-  println_Msg("");
+  ui->printlnMsg("");
 }
 
 // Delay between write operations based on status register
@@ -1191,7 +1136,7 @@ byte blankcheck_SFM(int startBank) {
 }
 
 // Check if a write succeeded, returns 0 if all is ok and number of errors if not
-unsigned long verifyFlash_SFM(int startBank, uint32_t pos) {
+unsigned long verifyFlash_SFM(const String &filePath, int startBank, uint32_t pos) {
   unsigned long  verified = 0;
 
   // Open file on sd card
@@ -1245,13 +1190,10 @@ void readFlash_SFM() {
   // Set control pins to input
   controlIn_SFM();
 
-  print_Msg(F("Saving as NP/"));
-  print_Msg(fileName);
-  println_Msg(F("..."));
-  display_Update();
+  String outputFilePath = getNextSFMFlashOutputPathAndPrintMessage();
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   if (romType) {
     for (int currBank = 0xC0; currBank < 0xC0 + numBanks; currBank++) {
@@ -1275,9 +1217,9 @@ void readFlash_SFM() {
   }
   // Close the file:
   outputFile.close();
-  println_Msg("");
-  println_Msg(F("Finished reading"));
-  display_Update();
+  ui->printlnMsg("");
+  ui->printlnMsg(F("Finished reading"));
+  ui->flushOutput();
 }
 
 // Display protected sectors/banks as 0xc2 and unprotected as 0x00
@@ -1297,14 +1239,14 @@ void readSectorProtection_SFM(byte startBank) {
   controlIn_SFM();
   // Set data pins to output
   dataIn();
-  display_Clear();
+  ui->clearOutput();
   for (int i = 0; i <= 0x1F; i++) {
-    print_Msg(F("Sector: 0x"));
-    print_Msg(startBank + i, HEX);
-    print_Msg(F(" Sector Protect: 0x"));
-    println_Msg(readBank_SFM(startBank + i, 0x04), HEX);
+    ui->printMsg(F("Sector: 0x"));
+    ui->printMsg(startBank + i, HEX);
+    ui->printMsg(F(" Sector Protect: 0x"));
+    ui->printlnMsg(readBank_SFM(startBank + i, 0x04), HEX);
   }
-  display_Update();
+  ui->flushOutput();
 }
 
 // Read the current mapping from the hidden "page buffer" and print it
@@ -1334,14 +1276,14 @@ void printMapping() {
     for (int c = 0; c < 10; c++) {
       itoa (readBank_SFM(0xC0, currByte + c), buffer, 16);
       for (size_t i = 0; i < 2 - strlen(buffer); i++) {
-        print_Msg("0");
+        ui->printMsg("0");
       }
       // Now print the significant bits
-      print_Msg(buffer);
+      ui->printMsg(buffer);
     }
-    println_Msg("");
+    ui->printlnMsg("");
   }
-  display_Update();
+  ui->flushOutput();
 
   // Switch to write
   dataOut();
@@ -1364,7 +1306,6 @@ void printMapping() {
 
 // Read the current mapping from the hidden "page buffer"
 void readMapping() {
-
   // Switch to write
   dataOut();
   controlOut_SFM();
@@ -1383,19 +1324,10 @@ void readMapping() {
   dataIn();
   controlIn_SFM();
 
-  // Get name, add extension and convert to char array for sd lib
-  foldern = loadFolderNumber();
-  sprintf(fileName, "NP%d", foldern);
-  strcat(fileName, ".MAP");
-  mkdir("NP", true);
-  chdir("NP");
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextNPMappingOutputPath();
 
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   // Read the mapping info out of the 1st chip
   for (unsigned long currByte = 0xFF00; currByte <= 0xFFFF; currByte++) {
@@ -1447,13 +1379,12 @@ void readMapping() {
   controlIn_SFM();
 
   // Signal end of process
-  print_Msg(F("Saved to NP/"));
-  println_Msg(fileName);
-  display_Update();
+  ui->printMsg(F("Saved to "));
+  ui->printlnMsg(outputFilePath);
+  ui->flushOutput();
 }
 
 void eraseMapping(byte startBank) {
-
   if (unlockHirom()) {
     // Get ID
     idFlash_SFM(startBank);
@@ -1481,11 +1412,11 @@ void eraseMapping(byte startBank) {
       controlIn_SFM();
     }
     else {
-      print_Error(F("Error: Wrong Flash ID"));
+      ui->printErrorAndAbort(F("Error: Wrong Flash ID"), false);
     }
   }
   else {
-    print_Error(F("Unlock failed"));
+    ui->printErrorAndAbort(F("Unlock failed"), false);
   }
 }
 
@@ -1564,8 +1495,7 @@ byte blankcheckMapping_SFM() {
   return blank;
 }
 
-void writeMapping_SFM(byte startBank, uint32_t pos) {
-
+void writeMapping_SFM(const String &inputFilePath, byte startBank, uint32_t pos) {
   if (unlockHirom()) {
     // Get ID
     idFlash_SFM(startBank);
@@ -1577,7 +1507,7 @@ void writeMapping_SFM(byte startBank, uint32_t pos) {
       controlOut_SFM();
 
       // Open file on sd card
-      SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+      SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
       // Seek to a new position in the file
       if (pos != 0)
@@ -1608,18 +1538,18 @@ void writeMapping_SFM(byte startBank, uint32_t pos) {
 
       // Close the file:
       inputFile.close();
-      println_Msg("");
+      ui->printlnMsg("");
 
       // Switch to read
       dataIn();
       controlIn_SFM();
     }
     else {
-      print_Error(F("Error: Wrong Flash ID"));
+      ui->printErrorAndAbort(F("Error: Wrong Flash ID"), false);
     }
   }
   else {
-    print_Error(F("Unlock failed"));
+    ui->printErrorAndAbort(F("Unlock failed"), false);
   }
 }
 
@@ -1629,29 +1559,29 @@ void writeMapping_SFM(byte startBank, uint32_t pos) {
 // Switch to HiRom All and unlock Write Protection
 boolean unlockHirom() {
   romType = 1;
-  print_Msg(F("Switch to HiRom..."));
-  display_Update();
+  ui->printMsg(F("Switch to HiRom..."));
+  ui->flushOutput();
   if (send_SFM(0x04) == 0x2A) {
-    println_Msg(F("OK"));
-    display_Update();
+    ui->printlnMsg(F("OK"));
+    ui->flushOutput();
     // Unlock Write Protection
-    print_Msg(F("Enable Write..."));
-    display_Update();
+    ui->printMsg(F("Enable Write..."));
+    ui->flushOutput();
     send_SFM(0x02);
     if (readBank_SFM(0, 0x2401) == 0x4) {
-      println_Msg(F("OK"));
-      display_Update();
+      ui->printlnMsg(F("OK"));
+      ui->flushOutput();
       return 1;
     }
     else {
-      println_Msg(F("failed"));
-      display_Update();
+      ui->printlnMsg(F("failed"));
+      ui->flushOutput();
       return 0;
     }
   }
   else {
-    println_Msg(F("failed"));
-    display_Update();
+    ui->printlnMsg(F("failed"));
+    ui->flushOutput();
     return 0;
   }
 }
@@ -1698,69 +1628,69 @@ byte send_SFM(byte command) {
 }
 
 // This function will erase and program the NP cart from a 4MB file off the SD card
-void write_SFM(int startBank, uint32_t pos) {
+void write_SFM(const String &inputFilePath, int startBank, uint32_t pos) {
   // Switch NP cart's mapping
   if (unlockHirom()) {
     // Get ID
     idFlash_SFM(startBank);
     if (strcmp(flashid, "c2f3") == 0) {
-      print_Msg(F("Flash ID: "));
-      println_Msg(flashid);
-      display_Update();
+      ui->printMsg(F("Flash ID: "));
+      ui->printlnMsg(flashid);
+      ui->flushOutput();
       resetFlash_SFM(startBank);
       delay(1000);
       // Erase flash
-      print_Msg(F("Blankcheck..."));
-      display_Update();
+      ui->printMsg(F("Blankcheck..."));
+      ui->flushOutput();
       if (blankcheck_SFM(startBank)) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
       }
       else {
-        println_Msg(F("Nope"));
-        display_Clear();
-        print_Msg(F("Erasing..."));
-        display_Update();
+        ui->printlnMsg(F("Nope"));
+        ui->clearOutput();
+        ui->printMsg(F("Erasing..."));
+        ui->flushOutput();
         eraseFlash_SFM(startBank);
         resetFlash_SFM(startBank);
-        println_Msg(F("Done"));
-        print_Msg(F("Blankcheck..."));
-        display_Update();
+        ui->printlnMsg(F("Done"));
+        ui->printMsg(F("Blankcheck..."));
+        ui->flushOutput();
         if (blankcheck_SFM(startBank)) {
-          println_Msg(F("OK"));
-          display_Update();
+          ui->printlnMsg(F("OK"));
+          ui->flushOutput();
         }
         else {
-          print_Error(F("Could not erase flash"));
+          ui->printErrorAndAbort(F("Could not erase flash"), false);
         }
       }
       // Write flash
-      writeFlash_SFM(startBank, pos);
+      writeFlash_SFM(inputFilePath, startBank, pos);
 
       // Reset flash
       resetFlash_SFM(startBank);
 
       // Checking for errors
-      print_Msg(F("Verifying..."));
-      display_Update();
-      writeErrors = verifyFlash_SFM(startBank, pos);
+      ui->printMsg(F("Verifying..."));
+      ui->flushOutput();
+      writeErrors = verifyFlash_SFM(inputFilePath, startBank, pos);
       if (writeErrors == 0) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
       }
       else {
-        print_Msg(F("Error: "));
-        print_Msg(writeErrors);
-        println_Msg(F(" bytes "));
-        print_Error(F("did not verify."));
+        ui->printMsg(F("Error: "));
+        ui->printMsg(writeErrors);
+        ui->printlnMsg(F(" bytes "));
+        ui->printErrorAndAbort(F("did not verify."), false);
       }
     }
     else {
-      print_Error(F("Error: Wrong Flash ID"));
+      ui->printErrorAndAbort(F("Error: Wrong Flash ID"), false);
     }
   }
   else {
-    print_Error(F("Unlock failed"));
+    ui->printErrorAndAbort(F("Unlock failed"), false);
   }
 }
 
@@ -1771,52 +1701,50 @@ void write_SFM(int startBank, uint32_t pos) {
 /******************************************
   Menu
 *****************************************/
-// GBM menu items
-static const char gbmMenuItem1[] PROGMEM = "Read ID";
-static const char gbmMenuItem2[] PROGMEM = "Read Flash";
-static const char gbmMenuItem3[] PROGMEM = "Erase Flash";
-static const char gbmMenuItem4[] PROGMEM = "Blankcheck";
-static const char gbmMenuItem5[] PROGMEM = "Write Flash";
-static const char gbmMenuItem6[] PROGMEM = "Read Mapping";
-static const char gbmMenuItem7[] PROGMEM = "Write Mapping";
-static const char* const menuOptionsGBM[] PROGMEM = {gbmMenuItem1, gbmMenuItem2, gbmMenuItem3, gbmMenuItem4, gbmMenuItem5, gbmMenuItem6, gbmMenuItem7};
-
 void gbmMenu() {
-  // create menu with title and 7 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsGBM, 7);
-  mainMenu = question_box(F("GB Memory Menu"), menuOptions, 7, 0);
+  while (true) {
+    const __FlashStringHelper *item_ReadID = F("Read ID");
+    const __FlashStringHelper *item_ReadFlash = F("Read Flash");
+    const __FlashStringHelper *item_EraseFlash = F("Erase Flash");
+    const __FlashStringHelper *item_BlankCheck = F("Blankcheck");
+    const __FlashStringHelper *item_WriteFlash = F("Write Flash");
+    const __FlashStringHelper *item_ReadMapping = F("Read Mapping");
+    const __FlashStringHelper *item_WriteMapping = F("Write Mapping");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadID,
+      item_ReadFlash,
+      item_EraseFlash,
+      item_BlankCheck,
+      item_WriteFlash,
+      item_ReadMapping,
+      item_WriteMapping,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    // Read Flash ID
-    case 0:
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("GB Memory Menu"), menu, ARRAY_LENGTH(menu), item_ReadID);
+
+    if (answer == item_ReadID) {
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
       readFlashID_GBM();
-      break;
-
-    // Read Flash
-    case 1:
+    }
+    else if (answer == item_ReadFlash) {
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
       // Print warning
-      println_Msg(F("Attention"));
-      println_Msg(F("Always power cycle"));
-      println_Msg(F("cartreader directly"));
-      println_Msg(F("before reading"));
-      println_Msg("");
-      println_Msg(F("Press Button"));
-      println_Msg(F("to continue"));
-      display_Update();
-      wait();
+      ui->printlnMsg(F("Attention"));
+      ui->printlnMsg(F("Always power cycle"));
+      ui->printlnMsg(F("cartreader directly"));
+      ui->printlnMsg(F("before reading"));
+      ui->printlnMsg("");
+      ui->printlnMsg(F("Press Button"));
+      ui->printlnMsg(F("to continue"));
+      ui->flushOutput();
+      ui->waitForUserInput();
       // Clear screen
-      display_Clear();
-
-      // Reset to root directory
-      chdir("/");
+      ui->clearOutput();
 
       // Enable access to ports 0120h
       send_GBM(0x09);
@@ -1826,125 +1754,100 @@ void gbmMenu() {
       send_GBM(0x08);
       // Read 1MB rom
       readROM_GBM(64);
-      break;
-
-    // Erase Flash
-    case 2:
+    }
+    else if (answer == item_EraseFlash) {
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
       // Print warning
-      println_Msg(F("Attention"));
-      println_Msg(F("This will erase your"));
-      println_Msg(F("NP Cartridge."));
-      println_Msg("");
-      println_Msg("");
-      println_Msg(F("Press Button"));
-      println_Msg(F("to continue"));
-      display_Update();
-      wait();
+      ui->printlnMsg(F("Attention"));
+      ui->printlnMsg(F("This will erase your"));
+      ui->printlnMsg(F("NP Cartridge."));
+      ui->printlnMsg("");
+      ui->printlnMsg("");
+      ui->printlnMsg(F("Press Button"));
+      ui->printlnMsg(F("to continue"));
+      ui->flushOutput();
+      ui->waitForUserInput();
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
       eraseFlash_GBM();
-      break;
-
-    // Blankcheck Flash
-    case 3:
+    }
+    else if (answer == item_BlankCheck) {
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
       if (blankcheckFlash_GBM()) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
       }
       else {
-        println_Msg(F("ERROR"));
-        display_Update();
+        ui->printlnMsg(F("ERROR"));
+        ui->flushOutput();
       }
-      break;
-
-    // Write Flash
-    case 4:
+    }
+    else if (answer == item_WriteFlash) {
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
 
-      filePath[0] = '\0';
-      chdir("/");
       // Launch file browser
-      fileBrowser(F("Select 1MB file"));
-      display_Clear();
-      sprintf(filePath, "%s/%s", filePath, fileName);
+      String inputFilePath = fileBrowser(F("Select 1MB file"));
+      ui->clearOutput();
 
       // Write rom
-      writeFlash_GBM();
-      break;
-
-    // Read mapping
-    case 5:
+      writeFlash_GBM(inputFilePath);
+    }
+    else if (answer == item_ReadMapping) {
       // Clear screen
-      display_Clear();
-
-      // Reset to root directory
-      chdir("/");
+      ui->clearOutput();
 
       // Read mapping
       readMapping_GBM();
-      break;
-
-    // Write mapping
-    case 6:
+    }
+    else if (answer == item_WriteMapping) {
       // Clear screen
-      display_Clear();
+      ui->clearOutput();
 
       // Print warning
-      println_Msg(F("Attention"));
-      println_Msg(F("This will erase your"));
-      println_Msg(F("NP Cartridge's"));
-      println_Msg(F("mapping data"));
-      println_Msg("");
-      println_Msg(F("Press Button"));
-      println_Msg(F("to continue"));
-      display_Update();
-      wait();
-
-      // Reset to root directory
-      chdir("/");
+      ui->printlnMsg(F("Attention"));
+      ui->printlnMsg(F("This will erase your"));
+      ui->printlnMsg(F("NP Cartridge's"));
+      ui->printlnMsg(F("mapping data"));
+      ui->printlnMsg("");
+      ui->printlnMsg(F("Press Button"));
+      ui->printlnMsg(F("to continue"));
+      ui->flushOutput();
+      ui->waitForUserInput();
 
       // Clear screen
-      display_Clear();
-
-      // Clear filepath
-      filePath[0] = '\0';
-
-      // Reset to root directory
-      chdir("/");
+      ui->clearOutput();
 
       // Launch file browser
-      fileBrowser(F("Select MAP file"));
-      display_Clear();
-      sprintf(filePath, "%s/%s", filePath, fileName);
-      display_Update();
-
-      // Clear screen
-      display_Clear();
+      String inputFilePath = fileBrowser(F("Select MAP file"));
+      ui->clearOutput();
+      ui->flushOutput();
 
       // Erase mapping
       eraseMapping_GBM();
       if (blankcheckMapping_GBM()) {
-        println_Msg(F("OK"));
-        display_Update();
+        ui->printlnMsg(F("OK"));
+        ui->flushOutput();
       }
       else {
-        print_Warning(F("Erasing failed"));
+        ui->printError(F("Erasing failed"));
         break;
       }
 
       // Write mapping
-      writeMapping_GBM();
+      writeMapping_GBM(inputFilePath);
+    }
+    else if (answer == item_Back) {
       break;
+    }
+
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
 }
 
 /******************************************
@@ -1982,8 +1885,8 @@ void setup_GBM() {
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t""nop\n\t");
     timeout++;
     if (timeout > 10) {
-      println_Msg(F("Error: Time Out"));
-      print_Error(F("Please power cycle"));
+      ui->printlnMsg(F("Error: Time Out"));
+      ui->printErrorAndAbort(F("Please power cycle"), false);
     }
   }
 }
@@ -2049,30 +1952,22 @@ void printSdBuffer(word startByte, word numBytes) {
       // Convert to char array so we don't lose leading zeros
       char currByteStr[2];
       sprintf(currByteStr, "%02X", sdBuffer[startByte + currByte + c]);
-      print_Msg(currByteStr);
+      ui->printMsg(currByteStr);
     }
     // Add a new line every 10 bytes
-    println_Msg("");
+    ui->printlnMsg("");
   }
-  display_Update();
+  ui->flushOutput();
 }
 
 void readROM_GBM(word numBanks) {
-  println_Msg(F("Reading Rom..."));
-  display_Update();
+  ui->printlnMsg(F("Reading Rom..."));
+  ui->flushOutput();
 
-  // Get name, add extension and convert to char array for sd lib
-  foldern = loadFolderNumber();
-  sprintf(fileName, "GBM%d", foldern);
-  strcat(fileName, ".bin");
-  mkdir("NP", true);
-  chdir("NP");
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextGBMRomOutputPath();
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   // Read rom
   word currAddress = 0;
@@ -2098,9 +1993,9 @@ void readROM_GBM(word numBanks) {
   outputFile.close();
 
   // Signal end of process
-  print_Msg(F("Saved to NP/"));
-  println_Msg(fileName);
-  display_Update();
+  ui->printMsg(F("Saved to "));
+  ui->printlnMsg(outputFilePath);
+  ui->flushOutput();
 }
 
 /**********************
@@ -2173,7 +2068,7 @@ void send_GBM(byte myCommand) {
       break;
 
     default:
-      print_Error(F("Unknown Command"));
+      ui->printErrorAndAbort(F("Unknown Command"), false);
       break;
   }
 }
@@ -2193,7 +2088,7 @@ void send_GBM(byte myCommand, word myAddress, byte myData) {
       break;
 
     default:
-      print_Error(F("Unknown Command"));
+      ui->printErrorAndAbort(F("Unknown Command"), false);
       break;
   }
 }
@@ -2232,24 +2127,24 @@ boolean readFlashID_GBM() {
   // Read the two id bytes into a string
   sprintf(flashid, "%02X%02X", readByte_GBM(0), readByte_GBM(1));
   if (strcmp(flashid, "C289") == 0) {
-    print_Msg(F("Flash ID: "));
-    println_Msg(flashid);
-    display_Update();
+    ui->printMsg(F("Flash ID: "));
+    ui->printlnMsg(flashid);
+    ui->flushOutput();
     resetFlash_GBM();
     return 1;
   }
   else {
-    print_Msg(F("Flash ID: "));
-    println_Msg(flashid);
-    print_Error(F("Unknown Flash ID"));
+    ui->printMsg(F("Flash ID: "));
+    ui->printlnMsg(flashid);
+    ui->printErrorAndAbort(F("Unknown Flash ID"), false);
     resetFlash_GBM();
     return 0;
   }
 }
 
 void eraseFlash_GBM() {
-  println_Msg(F("Erasing..."));
-  display_Update();
+  ui->printlnMsg(F("Erasing..."));
+  ui->flushOutput();
 
   //enable access to ports 0120h
   send_GBM(0x09);
@@ -2284,8 +2179,8 @@ void eraseFlash_GBM() {
 }
 
 boolean blankcheckFlash_GBM() {
-  print_Msg(F("Blankcheck..."));
-  display_Update();
+  ui->printMsg(F("Blankcheck..."));
+  ui->flushOutput();
 
   //enable access to ports 0120h (F2)
   send_GBM(0x09);
@@ -2316,17 +2211,17 @@ boolean blankcheckFlash_GBM() {
   return 1;
 }
 
-void writeFlash_GBM() {
-  print_Msg(F("Writing..."));
-  display_Update();
+void writeFlash_GBM(const String &inputFilePath) {
+  ui->printMsg(F("Writing..."));
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   // Get rom size from file
   fileSize = inputFile.fileSize();
   if ((fileSize / 0x4000) > 64) {
-    print_Error(F("File is too big."));
+    ui->printErrorAndAbort(F("File is too big."), false);
   }
 
   // Enable access to ports 0120h
@@ -2417,7 +2312,7 @@ void writeFlash_GBM() {
   }
   // Close the file:
   inputFile.close();
-  println_Msg(F("Done"));
+  ui->printlnMsg(F("Done"));
 }
 
 void readMapping_GBM() {
@@ -2438,21 +2333,14 @@ void readMapping_GBM() {
   send_GBM(0x0F, 0x5555, 0x77);
 
   // Read mapping
-  println_Msg(F("Reading Mapping..."));
-  display_Update();
+  ui->printlnMsg(F("Reading Mapping..."));
+  ui->flushOutput();
 
   // Get name, add extension and convert to char array for sd lib
-  foldern = loadFolderNumber();
-  sprintf(fileName, "GBM%d", foldern);
-  strcat(fileName, ".map");
-  mkdir("NP", true);
-  chdir("NP");
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextGBMMappingOutputPath();
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
   for (byte currByte = 0; currByte < 128; currByte++) {
     sdBuffer[currByte] = readByte_GBM(currByte);
   }
@@ -2464,18 +2352,18 @@ void readMapping_GBM() {
   // Signal end of process
   printSdBuffer(0, 20);
   printSdBuffer(102, 20);
-  println_Msg("");
-  print_Msg(F("Saved to NP/"));
-  println_Msg(fileName);
-  display_Update();
+  ui->printlnMsg("");
+  ui->printMsg(F("Saved to "));
+  ui->printlnMsg(outputFilePath);
+  ui->flushOutput();
 
   // Reset flash to leave hidden mapping area
   resetFlash_GBM();
 }
 
 void eraseMapping_GBM() {
-  println_Msg(F("Erasing..."));
-  display_Update();
+  ui->printlnMsg(F("Erasing..."));
+  ui->flushOutput();
 
   //enable access to ports 0120h
   send_GBM(0x09);
@@ -2510,8 +2398,8 @@ void eraseMapping_GBM() {
 }
 
 boolean blankcheckMapping_GBM() {
-  print_Msg(F("Blankcheck..."));
-  display_Update();
+  ui->printMsg(F("Blankcheck..."));
+  ui->flushOutput();
 
   // Enable ports 0x0120
   send_GBM(0x09);
@@ -2541,16 +2429,16 @@ boolean blankcheckMapping_GBM() {
   return 1;
 }
 
-void writeMapping_GBM() {
-  print_Msg(F("Writing..."));
-  display_Update();
+void writeMapping_GBM(const String &inputFilePath) {
+  ui->printMsg(F("Writing..."));
+  ui->flushOutput();
 
   // Open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   // Get map file size and check if it exceeds 128KByte
   if (inputFile.fileSize() > 0x80) {
-    print_Error(F("File is too big."));
+    ui->printErrorAndAbort(F("File is too big."), false);
   }
 
   // Enable access to ports 0120h
@@ -2626,7 +2514,7 @@ void writeMapping_GBM() {
 
   // Close the file:
   inputFile.close();
-  println_Msg(F("Done"));
+  ui->printlnMsg(F("Done"));
 }
 
 //******************************************
