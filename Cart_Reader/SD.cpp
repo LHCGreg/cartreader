@@ -197,25 +197,13 @@ SafeSDFile::~SafeSDFile() {
   close();
 }
 
-void SafeSDFile::renameInCurrentDir(const String &newName) {
-  bool success = m_file.rename(newName.c_str());
+void SafeSDFile::rename(const String &newPath) {
+  bool success = m_file.rename(newPath.c_str());
   if (!success) {
     String errorMessage = F("ERROR RENAMING ");
     errorMessage.concat(m_path);
     errorMessage.concat(F(" TO "));
-    errorMessage.concat(newName);
-    errorMessage.concat(F("\nSD ERROR"));
-    ui->printErrorAndAbort(errorMessage, true);
-  }
-}
-
-void SafeSDFile::rename(SafeSDFile &dirFile, const String &newName) {
-  bool success = m_file.rename(&dirFile.m_file, newName.c_str());
-  if (!success) {
-    String errorMessage = F("ERROR RENAMING ");
-    errorMessage.concat(m_path);
-    errorMessage.concat(F(" TO "));
-    errorMessage.concat(newName);
+    errorMessage.concat(newPath);
     errorMessage.concat(F("\nSD ERROR"));
     ui->printErrorAndAbort(errorMessage, true);
   }

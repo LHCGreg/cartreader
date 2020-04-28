@@ -55,8 +55,7 @@ class SafeSDFile {
   bool isHidden();
   bool isDir();
   bool isFile();
-  void renameInCurrentDir(const String &newName);
-  void rename(SafeSDFile &dirFile, const String &newName);
+  void rename(const String &newPath);
   void remove();
   void close();
   ~SafeSDFile();

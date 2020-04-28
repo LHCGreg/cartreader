@@ -6,7 +6,7 @@
 #include "options.h"
 #include "SMS.h"
 #include "RGB_LED.h"
-#include "menu.h"
+#include "ui.h"
 #include "globals.h"
 #include "utils.h"
 #include "filebrowser.h"

@@ -34,6 +34,8 @@
    Prototype Declarations
  *****************************************/
 /* Several PCE dedicated functions */
+void hucardMenu();
+void turbochipMenu();
 void pin_read_write_PCE(void);
 void pin_init_PCE(void);
 void setup_cart_PCE(void);
@@ -53,50 +55,105 @@ uint8_t pce_internal_mode; //0 - HuCARD, 1 - TurboChip
   Menu
 *****************************************/
 // PCE start menu
-static const char pceMenuItem1[] PROGMEM = "HuCARD";
-static const char pceMenuItem2[] PROGMEM = "Turbochip";
-static const char* const menuOptionspce[] PROGMEM = {pceMenuItem1, pceMenuItem2};
-
-// PCE card menu items
-static const char pceCartMenuItem1[] PROGMEM = "Read Rom";
-static const char pceCartMenuItem2[] PROGMEM = "Read Tennokoe Bank";
-static const char pceCartMenuItem3[] PROGMEM = "Write Tennokoe Bank";
-static const char pceCartMenuItem4[] PROGMEM = "Reset";
-static const char* const menuOptionspceCart[] PROGMEM = {pceCartMenuItem1, pceCartMenuItem2, pceCartMenuItem3, pceCartMenuItem4};
-
-// Turbochip menu items
-static const char pceTCMenuItem1[] PROGMEM = "Read Rom";
-static const char pceTCMenuItem2[] PROGMEM = "Reset";
-static const char* const menuOptionspceTC[] PROGMEM = {pceTCMenuItem1, pceTCMenuItem2};
-
-// PCE start menu
 void pcsMenu(void) {
-  // create menu with title and 3 options to choose from
-  unsigned char pceDev;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionspce, 2);
-  pceDev = question_box(F("Select device"), menuOptions, 2, 0);
+  while (true) {
+    const __FlashStringHelper *item_Hucard = F("HuCARD");
+    const __FlashStringHelper *item_Turbochip = F("Turbochip");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_Hucard,
+      item_Turbochip,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (pceDev)
-  {
-    case 0:
-      //Hucard
-      display_Clear();
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Select device"), menu, ARRAY_LENGTH(menu), item_Hucard);
+
+    if (answer == item_Hucard) {
+      ui->clearOutput();
+      ui->flushOutput();
       pce_internal_mode = HUCARD;
       setup_cart_PCE();
-      mode = mode_PCE;
-      break;
-
-    case 1:
-      //Turbografx
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::PCE;
+      hucardMenu();
+    }
+    else if (answer == item_Turbochip) {
+      ui->clearOutput();
+      ui->flushOutput();
       pce_internal_mode = TURBOCHIP;
       setup_cart_PCE();
-      mode = mode_PCE;
+      mode = CartReaderMode::PCE;
+      turbochipMenu();
+    }
+    else if (answer == item_Back) {
       break;
+    }
+  }
+}
+
+void hucardMenu() {
+  while (true) {
+    const __FlashStringHelper *item_ReadROM = F("Read Rom");
+    const __FlashStringHelper *item_ReadTennokoe = F("Read Tennokoe Bank");
+    const __FlashStringHelper *item_WriteTennokoe = F("Write Tennokoe Bank");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadROM,
+      item_ReadTennokoe,
+      item_WriteTennokoe,
+      item_Back,
+    };
+
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("PCE HuCARD menu"), menu, ARRAY_LENGTH(menu), item_ReadROM);
+
+    if (answer == item_ReadROM) {
+      ui->clearOutput();
+      read_rom_PCE();
+    }
+    else if (answer == item_ReadTennokoe) {
+      ui->clearOutput();
+      read_tennokoe_bank_PCE();
+    }
+    else if (answer == item_WriteTennokoe) {
+      ui->clearOutput();
+      write_tennokoe_bank_PCE();
+    }
+    else if (answer == item_Back) {
+      break;
+    }
+
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
+  }
+}
+
+void turbochipMenu() {
+  while (true) {
+    const __FlashStringHelper *item_ReadROM = F("Read Rom");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadROM,
+      item_Back,
+    };
+
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("TG TurboChip menu"), menu, ARRAY_LENGTH(menu), item_ReadROM);
+
+    if (answer == item_ReadROM) {
+      ui->clearOutput();
+      read_rom_PCE();
+    }
+    else if (answer == item_Back) {
+      break;
+    }
+
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
 }
 
@@ -329,7 +386,7 @@ uint32_t detect_rom_size_PCE(void)
 
   //debug
   //sprintf(fileName, "%d %d %d %d", detect_128, detect_256, detect_512, detect_768); //using filename global variable as string. Initialzed in below anyways.
-  //println_Msg(fileName);
+  //ui->printlnMsg(fileName);
 
   //ROM size detection by result
   if (detect_128 == DETECTION_SIZE)
@@ -387,7 +444,7 @@ void read_bank_PCE(uint32_t address_start, uint32_t address_end, uint32_t *proce
     }
     outputFile.write(sdBuffer, 512);
     *processed_size += 512;
-    draw_progressbar(*processed_size, total_size);
+    ui->drawProgressBar(*processed_size, total_size);
   }
 }
 
@@ -452,7 +509,7 @@ uint32_t calculate_crc32(int n, unsigned char c[], uint32_t r)
   return r;
 }
 
-void crc_search(char *file_p, char *folder_p, uint32_t rom_size)
+void crc_search(const String &tempOutputFilePath, uint32_t rom_size)
 {
   uint32_t r, crc, processedsize;
   char gamename[100];
@@ -461,33 +518,31 @@ void crc_search(char *file_p, char *folder_p, uint32_t rom_size)
   flag = CHKSUM_SKIP;
 
   //Open list file. If no list file found, just skip
-  chdir("/"); //Set read directry to root
   
   if (fileExists(F("/PCE_CRC_LIST.txt")))
   {
     SafeSDFile script = SafeSDFile::openForReading(F("/PCE_CRC_LIST.txt"));
     //Calculate CRC of ROM file
-    chdir(folder_p);
-    SafeSDFile rom = SafeSDFile::openForReading(file_p);
+    SafeSDFile rom = SafeSDFile::openForReading(tempOutputFilePath);
 
     //Initialize flag as error
     flag = CHKSUM_ERROR;
     crc = 0xFFFFFFFFUL; //Initialize CRC
-    display_Clear();
-    println_Msg(F("Calculating chksum..."));
+    ui->clearOutput();
+    ui->printlnMsg(F("Calculating chksum..."));
     processedsize = 0;
-    draw_progressbar(0, rom_size * 1024UL); //Initialize progress bar
+    ui->drawProgressBar(0, rom_size * 1024UL); //Initialize progress bar
 
     while (rom.bytesAvailable() > 0)
     {
       r = rom.read(sdBuffer, 512);
       crc = calculate_crc32(r, sdBuffer, crc);
       processedsize += r;
-      draw_progressbar(processedsize, rom_size * 1024UL);
+      ui->drawProgressBar(processedsize, rom_size * 1024UL);
     }
 
     crc = crc ^ 0xFFFFFFFFUL; //Finish CRC calculation and progress bar
-    draw_progressbar(rom_size * 1024UL, rom_size * 1024UL);
+    ui->drawProgressBar(rom_size * 1024UL, rom_size * 1024UL);
 
     //Display calculated CRC
     sprintf(crc_file, "%08lX", crc);
@@ -502,16 +557,22 @@ void crc_search(char *file_p, char *folder_p, uint32_t rom_size)
       //if checksum search successful, rename the file and end search
       if (strcmp(crc_search, crc_file) == 0)
       {
-        print_Msg(F("Chksum OK "));
-        println_Msg(crc_file);
-        print_Msg(F("Saved to "));
-        print_Msg(folder_p);
-        print_Msg(F("/"));
-        print_Msg(gamename);
-        print_Msg(F(".pce"));
+        String newFileName = gamename;
+        newFileName.concat(F(".pce"));
+
+        int16_t previousFolderNumber = loadFolderNumber() - 1;
+        String pathToMoveTo = F("/PCE/ROM/");
+        pathJoinInPlace(pathToMoveTo, gamename);
+        pathJoinInPlace(pathToMoveTo, previousFolderNumber);
+        pathJoinInPlace(pathToMoveTo, newFileName);
+
+        rom.rename(pathToMoveTo);
+
+        ui->printMsg(F("Chksum OK "));
+        ui->printlnMsg(crc_file);
+        ui->printMsg(F("Saved to "));
+        ui->printMsg(pathToMoveTo);
         flag = CHKSUM_OK;
-        strcat(gamename, ".pce");
-        rom.renameInCurrentDir(gamename);
         break;
       }
     }
@@ -522,19 +583,15 @@ void crc_search(char *file_p, char *folder_p, uint32_t rom_size)
 
   if (flag == CHKSUM_SKIP)
   {
-    print_Msg(F("Saved to "));
-    print_Msg(folder_p);
-    print_Msg(F("/"));
-    print_Msg(file_p);
+    ui->printMsg(F("Saved to "));
+    ui->printMsg(tempOutputFilePath);
   }
   else if (flag == CHKSUM_ERROR)
   {
-    print_Msg(F("Chksum Error "));
-    println_Msg(crc_file);
-    print_Msg(F("Saved to "));
-    print_Msg(folder_p);
-    print_Msg(F("/"));
-    print_Msg(file_p);
+    ui->printMsg(F("Chksum Error "));
+    ui->printlnMsg(crc_file);
+    ui->printMsg(F("Saved to "));
+    ui->printMsg(tempOutputFilePath);
   }
 }
 
@@ -546,34 +603,22 @@ void read_tennokoe_bank_PCE(void)
   uint8_t verify_flag = 1;
 
   //clear the screen
-  display_Clear();
+  ui->clearOutput();
 
-  println_Msg(F("RAM size: 8KB"));
+  ui->printlnMsg(F("RAM size: 8KB"));
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, "BANKRAM");
-  strcat(fileName, ".sav");
+  String outputFilePath = getNextOutputPathWithNumberedFolder(F("PCE"), F("ROM"), F("BANKRAM"), F(".sav"));
 
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "PCE/ROM/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  println_Msg(F("Saving RAM..."));
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  ui->printlnMsg(F("Saving RAM..."));
+  ui->flushOutput();
 
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   pin_read_write_PCE();
 
   //Initialize progress bar by setting processed size as 0
-  draw_progressbar(0, 8 * 1024UL);
+  ui->drawProgressBar(0, 8 * 1024UL);
 
   //Unlock Tennokoe Bank RAM
   write_byte_PCE(0x0D0000, 0x68); //Unlock RAM sequence 1 Bank 68
@@ -594,20 +639,20 @@ void read_tennokoe_bank_PCE(void)
     if (outputFile.readByteOrDie() != read_byte_PCE(verify_loop + 0x080000))
     {
       verify_flag = 0;
-      draw_progressbar(8 * 1024UL, 8 * 1024UL);
+      ui->drawProgressBar(8 * 1024UL, 8 * 1024UL);
       break;
     }
-    draw_progressbar(verify_loop, 8 * 1024UL);
+    ui->drawProgressBar(verify_loop, 8 * 1024UL);
   }
 
   //If verify flag is 0, verify failed
   if (verify_flag == 1)
   {
-    println_Msg(F("Verify OK..."));
+    ui->printlnMsg(F("Verify OK..."));
   }
   else
   {
-    println_Msg(F("Verify failed..."));
+    ui->printlnMsg(F("Verify failed..."));
   }
 
   //Lock Tennokoe Bank RAM
@@ -619,7 +664,6 @@ void read_tennokoe_bank_PCE(void)
 
   //Close the file:
   outputFile.close();
-
 }
 
 void write_tennokoe_bank_PCE(void)
@@ -628,22 +672,18 @@ void write_tennokoe_bank_PCE(void)
   uint32_t verify_flag = 1;
 
   //Display file Browser and wait user to select a file. Size must be 8KB.
-  filePath[0] = '\0';
-  chdir("/");
-  fileBrowser(F("Select RAM file"));
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  display_Clear();
+  String inputFilePath = fileBrowser(F("Select RAM file"));
+  ui->clearOutput();
 
   //open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   fileSize = inputFile.fileSize();
   if (fileSize != 8 * 1024UL) {
-    println_Msg(F("File must be 1MB"));
-    display_Update();
+    ui->printlnMsg(F("File must be 1MB"));
+    ui->flushOutput();
     inputFile.close();
-    wait();
+    ui->waitForUserInput();
     return;
   }
 
@@ -660,7 +700,7 @@ void write_tennokoe_bank_PCE(void)
   for (readwrite_loop = 0; readwrite_loop < 8 * 1024UL; readwrite_loop++)
   {
     write_byte_PCE(0x080000 + readwrite_loop, inputFile.readByteOrDie());
-    draw_progressbar(readwrite_loop, 8 * 1024UL);
+    ui->drawProgressBar(readwrite_loop, 8 * 1024UL);
   }
 
   inputFile.seekSet(0);    // Go back to file beginning
@@ -669,21 +709,21 @@ void write_tennokoe_bank_PCE(void)
   {
     if (inputFile.readByteOrDie() != read_byte_PCE(verify_loop + 0x080000))
     {
-      draw_progressbar(2 * 1024UL, 8 * 1024UL);
+      ui->drawProgressBar(2 * 1024UL, 8 * 1024UL);
       verify_flag = 0;
       break;
     }
-    draw_progressbar(verify_loop, 8 * 1024UL);
+    ui->drawProgressBar(verify_loop, 8 * 1024UL);
   }
 
   //If verify flag is 0, verify failed
   if (verify_flag == 1)
   {
-    println_Msg(F("Verify OK..."));
+    ui->printlnMsg(F("Verify OK..."));
   }
   else
   {
-    println_Msg(F("Verify failed..."));
+    ui->printlnMsg(F("Verify failed..."));
   }
 
   //Lock Tennokoe Bank RAM
@@ -695,9 +735,9 @@ void write_tennokoe_bank_PCE(void)
 
   // Close the file:
   inputFile.close();
-  println_Msg(F("Finished"));
-  display_Update();
-  wait();
+  ui->printlnMsg(F("Finished"));
+  ui->flushOutput();
+  ui->waitForUserInput();
 }
 
 void read_rom_PCE(void)
@@ -706,37 +746,25 @@ void read_rom_PCE(void)
   uint32_t processed_size = 0;
 
   //clear the screen
-  display_Clear();
+  ui->clearOutput();
   rom_size = detect_rom_size_PCE();
 
-  print_Msg(F("Detected size: "));
-  print_Msg(rom_size);
-  println_Msg(F("KB"));
+  ui->printMsg(F("Detected size: "));
+  ui->printMsg(rom_size);
+  ui->printlnMsg(F("KB"));
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, "PCEROM");
-  strcat(fileName, ".pce");
+  String tempOutputFilePath = getNextOutputPathWithNumberedFilename(F("PCE/ROM"), F("PCEROM"), F(".pce"));
 
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "PCE/ROM/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  println_Msg(F("Saving ROM..."));
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  ui->printlnMsg(F("Saving ROM..."));
+  ui->flushOutput();
 
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(tempOutputFilePath);
 
   pin_read_write_PCE();
 
   //Initialize progress bar by setting processed size as 0
-  draw_progressbar(0, rom_size * 1024UL);
+  ui->drawProgressBar(0, rom_size * 1024UL);
 
   if (rom_size == 384)
   {
@@ -769,74 +797,9 @@ void read_rom_PCE(void)
   outputFile.close();
 
   //CRC search and rename ROM
-  crc_search(fileName, folder, rom_size);
+  crc_search(tempOutputFilePath, rom_size);
 
 }
-
-
-
-
-// PC Engine Menu
-void pceMenu() {
-  // create menu with title and 7 options to choose from
-  unsigned char mainMenu;
-
-  if (pce_internal_mode == HUCARD)
-  {
-    // Copy menuOptions out of progmem
-    convertPgm(menuOptionspceCart, 4);
-    mainMenu = question_box(F("PCE HuCARD menu"), menuOptions, 4, 0);
-
-    // wait for user choice to come back from the question box menu
-    switch (mainMenu)
-    {
-      case 0:
-        display_Clear();
-        // Change working dir to root
-        chdir("/");
-        read_rom_PCE();
-        break;
-      case 1:
-        display_Clear();
-        read_tennokoe_bank_PCE();
-        break;
-      case 2:
-        display_Clear();
-        write_tennokoe_bank_PCE();
-        break;
-      case 3:
-        resetArduino();
-        break;
-    }
-  }
-  else
-  {
-    // Copy menuOptions out of progmem
-    convertPgm(menuOptionspceTC, 2);
-    mainMenu = question_box(F("TG TurboChip menu"), menuOptions, 2, 0);
-
-    // wait for user choice to come back from the question box menu
-    switch (mainMenu)
-    {
-      case 0:
-        display_Clear();
-        // Change working dir to root
-        chdir("/");
-        read_rom_PCE();
-        break;
-
-      case 1:
-        resetArduino();
-        break;
-    }
-  }
-
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
-}
-
 
 //******************************************
 // End of File
