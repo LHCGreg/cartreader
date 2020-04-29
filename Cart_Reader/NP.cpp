@@ -57,7 +57,7 @@ void controlIn_SFM();
 byte readBank_SFM(byte myBank, word myAddress);
 void getCartInfo_SFM();
 boolean checkcart_SFM();
-void readROM_SFM();
+void readROM_SFM(const String &outputFilePath);
 void resetFlash_SFM(int startBank);
 void idFlash_SFM(int startBank);
 void busyCheck_SFM(byte startBank);
@@ -201,17 +201,20 @@ void sfmGameOptions() {
 
     if (answer == item_ReadSRAM) {
       ui->clearOutput();
-      readSRAM();
+      String outputFilePath = getNextSnesSRAMOutputFilePathAndPrintMessage(romName);
+      readSRAM(outputFilePath);
     }
     else if (answer == item_ReadGame) {
       ui->clearOutput();
-      readROM_SFM();
-      compare_checksum();
+      String outputFilePath = getNextSFMRomOutputPathAndPrintMessage(romName);
+      readROM_SFM(outputFilePath);
+      compare_checksum(outputFilePath);
     }
     else if (answer == item_WriteSRAM) {
       ui->clearOutput();
-      writeSRAM(1);
-      uint32_t writeErrors = verifySRAM();
+      String inputFilePath = fileBrowser(F("Select srm file"));
+      writeSRAM(inputFilePath);
+      uint32_t writeErrors = verifySRAM(inputFilePath);
       if (writeErrors == 0) {
         ui->printlnMsg(F("Verified OK"));
         ui->flushOutput();
@@ -857,12 +860,10 @@ boolean checkcart_SFM() {
 }
 
 // Read rom to SD card
-void readROM_SFM() {
+void readROM_SFM(const String &outputFilePath) {
   // Set control
   dataIn();
   controlIn_SFM();
-
-  String outputFilePath = getNextSFMRomOutputPathAndPrintMessage(romName);
 
   //open file on sd card
   SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);

@@ -3,14 +3,13 @@
 //******************************************
 
 #include <Arduino.h>
-#include "options.h"
 #include "SNES.h"
 #include "NP.h"
 #include "SV.h"
 #include "FLASH.h"
 #include "RGB_LED.h"
 #include "filebrowser.h"
-#include "menu.h"
+#include "ui.h"
 #include "globals.h"
 #include "utils.h"
 #include "SD.h"
@@ -39,206 +38,195 @@ byte cx4Map = 0;
 /******************************************
    Function prototypes
  *****************************************/
+void regularSNESMenu();
 void stopSnesClocks_resetCic_resetCart();
 void setup_Snes();
 void getCartInfo_SNES();
 boolean checkcart_SNES();
-void readROM_SNES();
+void readROM_SNES(const String &outputFilePath);
 boolean eraseSRAM(byte b);
 
 /******************************************
   Menu
 *****************************************/
-// SNES/Nintendo Power SF Memory start menu
-static const char snsMenuItem1[] PROGMEM = "Super Nintendo";
-static const char snsMenuItem2[] PROGMEM = "NPower SF Memory";
-static const char snsMenuItem3[] PROGMEM = "Satellaview BS-X";
-static const char snsMenuItem4[] PROGMEM = "HiROM repro";
-static const char snsMenuItem5[] PROGMEM = "LoROM repro";
-static const char* const menuOptionsSNS[] PROGMEM = {snsMenuItem1, snsMenuItem2, snsMenuItem3, snsMenuItem4, snsMenuItem5};
-
-// SNES menu items
-static const char SnesMenuItem1[] PROGMEM = "Read Rom";
-static const char SnesMenuItem2[] PROGMEM = "Read Save";
-static const char SnesMenuItem3[] PROGMEM = "Write Save";
-static const char SnesMenuItem4[] PROGMEM = "Test SRAM";
-static const char SnesMenuItem5[] PROGMEM = "Cycle cart";
-static const char SnesMenuItem6[] PROGMEM = "Reset";
-static const char* const menuOptionsSNES[] PROGMEM = {SnesMenuItem1, SnesMenuItem2, SnesMenuItem3, SnesMenuItem4, SnesMenuItem5, SnesMenuItem6};
-
-// Manual config menu items
-static const char confMenuItem1[] PROGMEM = "Use header info";
-static const char confMenuItem2[] PROGMEM = "4MB LoRom 256K Sram";
-static const char confMenuItem3[] PROGMEM = "4MB HiRom 64K Sram";
-static const char confMenuItem4[] PROGMEM = "6MB ExRom 256K Sram";
-static const char confMenuItem5[] PROGMEM = "Reset";
-static const char* const menuOptionsConfManual[] PROGMEM = {confMenuItem1, confMenuItem2, confMenuItem3, confMenuItem4, confMenuItem5};
-
 // SNES start menu
-void snsMenu() {
-  // create menu with title and 4 options to choose from
-  unsigned char snsCart;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsSNS, 5);
-  snsCart = question_box(F("Select Cart Type"), menuOptions, 5, 0);
+void snesMenu() {
+  while (true) {
+    const __FlashStringHelper *item_Regular = F("Super Nintendo");
+    const __FlashStringHelper *item_NP = F("NPower SF Memory");
+    const __FlashStringHelper *item_SV = F("Satellaview BS-X");
+    const __FlashStringHelper *item_HiROMRepro = F("HiROM repro");
+    const __FlashStringHelper *item_LoROMRepro = F("LoROM repro");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_Regular,
+      item_NP,
+      item_SV,
+      item_HiROMRepro,
+      item_LoROMRepro,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (snsCart)
-  {
-    case 0:
-      display_Clear();
-      display_Update();
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Select Cart Type"), menu, ARRAY_LENGTH(menu), item_Regular);
+
+    if (answer == item_Regular) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_Snes();
-      mode = mode_SNES;
-      break;
-
-    case 1:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::SNES;
+      regularSNESMenu();
+    }
+    else if (answer == item_NP) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_SFM();
-      mode = mode_SFM;
-      break;
-
-    case 2:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::SFM;
+      sfmMenu();
+    }
+    else if (answer == item_SV) {
+      ui->clearOutput();
+      ui->flushOutput();
       setup_SV();
-      mode = mode_SV;
-      break;
-
-    case 3:
-      display_Clear();
-      display_Update();
+      mode = CartReaderMode::SV;
+      svMenu();
+    }
+    else if (answer == item_HiROMRepro) {
+      ui->clearOutput();
+      ui->flushOutput();
       hiROM = 1;
       setup_Flash8();
       id_Flash8();
-      wait();
-      mode = mode_FLASH8;
-      break;
-
-    case 4:
-      display_Clear();
-      display_Update();
+      ui->waitForUserInput();
+      mode = CartReaderMode::FLASH8;
+      flashromMenu8();
+    }
+    else if (answer == item_LoROMRepro) {
+      ui->clearOutput();
+      ui->flushOutput();
       hiROM = 0;
       setup_Flash8();
       id_Flash8();
-      wait();
-      mode = mode_FLASH8;
+      ui->waitForUserInput();
+      mode = CartReaderMode::FLASH8;
+      flashromMenu8();
+    }
+    else if (answer == item_Back) {
       break;
+    }
   }
 }
 
 // SNES Menu
-void snesMenu() {
-  // create menu with title and 7 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsSNES, 6);
-  mainMenu = question_box(F("SNES Cart Reader"), menuOptions, 6, 0);
+void regularSNESMenu() {
+  while (true) {
+    const __FlashStringHelper *item_ReadROM = F("Read Rom");
+    const __FlashStringHelper *item_ReadSave = F("Read Save");
+    const __FlashStringHelper *item_WriteSave = F("Write Save");
+    const __FlashStringHelper *item_TestSRAM = F("Test SRAM");
+    const __FlashStringHelper *item_CycleCart = F("Cycle cart");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadROM,
+      item_ReadSave,
+      item_WriteSave,
+      item_TestSRAM,
+      item_CycleCart,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      {
-        if (numBanks > 0) {
-          display_Clear();
-          // Change working dir to root
-          chdir("/");
-          // get current time
-          unsigned long startTime = millis();
-          // start reading from cart
-          readROM_SNES();
-          compare_checksum();
-          // print elapsed time
-          print_Msg(F("Time elapsed: "));
-          print_Msg((millis() - startTime) / 1000);
-          println_Msg(F("s"));
-          display_Update();
-        }
-        else {
-          display_Clear();
-          print_Warning(F("Does not have ROM"));
-        }
-      }
-      break;
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("SNES Cart Reader"), menu, ARRAY_LENGTH(menu), item_ReadROM);
 
-    case 1:
-      if (sramSize > 0) {
-        display_Clear();
-        // Change working dir to root
-        chdir("/");
-        readSRAM();
+    if (answer == item_ReadROM) {
+      if (numBanks > 0) {
+        ui->clearOutput();
+        // get current time
+        unsigned long startTime = millis();
+        // start reading from cart
+        String outputFilePath = getNextOutputPathWithNumberedFolderAndPrintMessage(F("SNES"), F("ROM"), romName, F(".sfc"));
+        readROM_SNES(outputFilePath);
+        compare_checksum(outputFilePath);
+        // print elapsed time
+        ui->printMsg(F("Time elapsed: "));
+        ui->printMsg((millis() - startTime) / 1000);
+        ui->printlnMsg(F("s"));
+        ui->flushOutput();
       }
       else {
-        display_Clear();
-        print_Warning(F("Does not have SRAM"));
+        ui->clearOutput();
+        ui->printError(F("Does not have ROM"));
       }
-      break;
-
-    case 2:
+    }
+    else if (answer == item_ReadSave) {
       if (sramSize > 0) {
-        display_Clear();
-        // Change working dir to root
-        chdir("/");
-        writeSRAM(1);
-        unsigned long wrErrors;
-        wrErrors = verifySRAM();
-        if (wrErrors == 0) {
-          println_Msg(F("Verified OK"));
-          display_Update();
+        ui->clearOutput();
+        String outputFilePath = getNextSnesSRAMOutputFilePathAndPrintMessage(romName);
+        readSRAM(outputFilePath);
+      }
+      else {
+        ui->clearOutput();
+        ui->printError(F("Does not have SRAM"));
+      }
+    }
+    else if (answer == item_WriteSave) {
+      if (sramSize > 0) {
+        ui->clearOutput();
+        String inputFilePath = fileBrowser(F("Select srm file"));
+        writeSRAM(inputFilePath);
+        uint32_t writeErrors = verifySRAM(inputFilePath);
+        if (writeErrors == 0) {
+          ui->printlnMsg(F("Verified OK"));
+          ui->flushOutput();
         }
         else {
-          print_Msg(F("Error: "));
-          print_Msg(wrErrors);
-          println_Msg(F(" bytes "));
-          print_Warning(F("did not verify."));
+          ui->printMsg(F("Error: "));
+          ui->printMsg(writeErrors);
+          ui->printlnMsg(F(" bytes "));
+          ui->printError(F("did not verify."));
         }
       }
       else {
-        display_Clear();
-        print_Warning(F("Does not have SRAM"));
+        ui->clearOutput();
+        ui->printError(F("Does not have SRAM"));
       }
-      break;
-
-    case 3:
+    }
+    else if (answer == item_TestSRAM) {
       if (sramSize > 0) {
-        display_Clear();
-        println_Msg(F("Warning:"));
-        println_Msg(F("This can erase"));
-        println_Msg(F("your save games"));
-        println_Msg(F(""));
-        println_Msg(F(""));
-        println_Msg(F("Press any button to"));
-        println_Msg(F("start sram testing"));
-        display_Update();
-        wait();
-        display_Clear();
-        // Change working dir to root
-        chdir("/");
-        readSRAM();
+        ui->clearOutput();
+        ui->printlnMsg(F("Warning:"));
+        ui->printlnMsg(F("This can erase"));
+        ui->printlnMsg(F("your save games"));
+        ui->printlnMsg(F(""));
+        ui->printlnMsg(F(""));
+        ui->printlnMsg(F("Press any button to"));
+        ui->printlnMsg(F("start sram testing"));
+        ui->flushOutput();
+        ui->waitForUserInput();
+        ui->clearOutput();
+        String outputFilePath = getNextSnesSRAMOutputFilePathAndPrintMessage(romName);
+        readSRAM(outputFilePath);
         eraseSRAM(0x00);
         eraseSRAM(0xFF);
-        writeSRAM(0);
-        unsigned long wrErrors = verifySRAM();
-        if (wrErrors == 0) {
-          println_Msg(F("Restored OK"));
-          display_Update();
+        writeSRAM(outputFilePath);
+        uint32_t writeErrors = verifySRAM(outputFilePath);
+        if (writeErrors == 0) {
+          ui->printlnMsg(F("Restored OK"));
+          ui->flushOutput();
         }
         else {
-          print_Msg(F("Error: "));
-          print_Msg(wrErrors);
-          println_Msg(F(" bytes "));
-          print_Warning(F("did not verify."));
+          ui->printMsg(F("Error: "));
+          ui->printMsg(writeErrors);
+          ui->printlnMsg(F(" bytes "));
+          ui->printError(F("did not verify."));
         }
       }
       else {
-        display_Clear();
-        print_Warning(F("Does not have SRAM"));
+        ui->clearOutput();
+        ui->printError(F("Does not have SRAM"));
       }
-      break;
-
-    case 4:
+    }
+    else if (answer == item_CycleCart) {
       // For arcademaster1 (Markfrizb) multi-game carts
       // Set reset pin to output (PH0)
       DDRH |= (1 << 0);
@@ -249,65 +237,73 @@ void snesMenu() {
       // But if that's false, uncomment this:
       // stopSnesClocks_resetCic_resetCart();
 
-      display_Clear();
-      print_Msg(F("Resetting..."));
-      display_Update();
-      delay(3000);  // wait 3 secs to switch to next game
+      ui->clearOutput();
+      ui->printMsg(F("Resetting..."));
+      ui->flushOutput();
+      delay(3000); // wait 3 secs to switch to next game
       resetArduino();
-      break;
-
-    case 5:
+    }
+    else if (answer == item_Back) {
       stopSnesClocks_resetCic_resetCart();
-      resetArduino();
       break;
+    }
+
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
 }
 
 // Menu for manual configuration
 void confMenuManual() {
-  // create menu with title and 5 options to choose from
-  unsigned char subMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsConfManual, 5);
-  subMenu = question_box(F("Choose mapping"), menuOptions, 5, 0);
+  while (true) {
+    const __FlashStringHelper *item_Header = F("Use header info");
+    const __FlashStringHelper *item_4MBLoRom = F("4MB LoRom 256K Sram");
+    const __FlashStringHelper *item_4MBHiRom = F("4MB HiRom 64K Sram");
+    const __FlashStringHelper *item_6MBExRom = F("6MB ExRom 256K Sram");
+    const __FlashStringHelper *item_Reset = F("Reset");
+    const __FlashStringHelper *menu[] = {
+      item_Header,
+      item_4MBLoRom,
+      item_4MBHiRom,
+      item_6MBExRom,
+      item_Reset,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (subMenu)
-  {
-    case 0:
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Choose mapping"), menu, ARRAY_LENGTH(menu), item_Header);
+
+    if (answer == item_Header) {
       break;
-
-    case 1:
+    }
+    else if (answer == item_4MBLoRom) {
       romType = LO;
       numBanks = 128;
       sramSize = 256;
       strcpy(romName, "LOROM");
-      break;
-
-    case 2:
+    }
+    else if (answer == item_4MBHiRom) {
       romType = HI;
       numBanks = 64;
       sramSize = 64;
       strcpy(romName, "HIROM");
-      break;
-
-    case 3:
+    }
+    else if (answer == item_6MBExRom) {
       romType = EX;
       numBanks = 96;
       sramSize = 256;
       strcpy(romName, "EXROM");
-      break;
-
-    case 4:
-      // Reset
+    }
+    else if (answer == item_Reset) {
       stopSnesClocks_resetCic_resetCart();
       resetArduino();
-      break;
+    }
   }
+}
+
+String getNextSnesSRAMOutputFilePathAndPrintMessage(const String &romName) {
+  return getNextOutputPathWithNumberedFolderAndPrintMessage(F("SNES"), F("SAVE"), romName, F(".srm"));
 }
 
 void stopSnesClocks_resetCic_resetCart() {
@@ -489,7 +485,7 @@ void readLoRomBanks( unsigned int start, unsigned int total, SafeSDFile &file)
   //Initialize progress bar
   uint32_t processedProgressBar = 0;
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
-  draw_progressbar(0, totalProgressBar);
+  ui->drawProgressBar(0, totalProgressBar);
 
   for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
@@ -522,7 +518,7 @@ void readLoRomBanks( unsigned int start, unsigned int total, SafeSDFile &file)
 
     // update progress bar
     processedProgressBar += 1024;
-    draw_progressbar(processedProgressBar, totalProgressBar);
+    ui->drawProgressBar(processedProgressBar, totalProgressBar);
   }
 }
 
@@ -536,7 +532,7 @@ void readHiRomBanks( unsigned int start, unsigned int total, SafeSDFile &file)
   //Initialize progress bar
   uint32_t processedProgressBar = 0;
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
-  draw_progressbar(0, totalProgressBar);
+  ui->drawProgressBar(0, totalProgressBar);
 
   for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
@@ -569,7 +565,7 @@ void readHiRomBanks( unsigned int start, unsigned int total, SafeSDFile &file)
 
     // update progress bar
     processedProgressBar += 1024;
-    draw_progressbar(processedProgressBar, totalProgressBar);
+    ui->drawProgressBar(processedProgressBar, totalProgressBar);
   }
 }
 
@@ -605,113 +601,109 @@ void getCartInfo_SNES() {
     errorLvl = 1;
     rgb.setColor(255, 0, 0);
 
-    display_Clear();
-    println_Msg(F("ERROR"));
-    println_Msg(F("Rom header corrupt"));
-    println_Msg(F("or missing"));
-    println_Msg(F(""));
-    println_Msg(F(""));
-    println_Msg(F("Press button for"));
-    println_Msg(F("manual configuration"));
-    println_Msg(F("or powercycle if SA1"));
-    display_Update();
-    wait();
-    // Wait() clears errors but in this case we still have an error
+    ui->clearOutput();
+    ui->printlnMsg(F("ERROR"));
+    ui->printlnMsg(F("Rom header corrupt"));
+    ui->printlnMsg(F("or missing"));
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press button for"));
+    ui->printlnMsg(F("manual configuration"));
+    ui->printlnMsg(F("or powercycle if SA1"));
+    ui->flushOutput();
+    ui->waitForUserInput();
+    // ui->waitForUserInput() clears errors but in this case we still have an error
     errorLvl = 1;
   }
 
-  display_Clear();
-  print_Msg(F("Name: "));
-  println_Msg(romName);
+  ui->clearOutput();
+  ui->printMsg(F("Name: "));
+  ui->printlnMsg(romName);
 
-  print_Msg(F("Type: "));
+  ui->printMsg(F("Type: "));
   if (romType == HI)
-    print_Msg(F("HiROM"));
+    ui->printMsg(F("HiROM"));
   else if (romType == LO)
-    print_Msg(F("LoROM"));
+    ui->printMsg(F("LoROM"));
   else if (romType == EX)
-    print_Msg(F("ExHiRom"));
+    ui->printMsg(F("ExHiRom"));
   else
-    print_Msg(romType);
-  print_Msg(F(" "));
+    ui->printMsg(romType);
+  ui->printMsg(F(" "));
   if (romSpeed == 0)
-    println_Msg(F("SlowROM"));
+    ui->printlnMsg(F("SlowROM"));
   else if (romSpeed == 2)
-    println_Msg(F("SlowROM"));
+    ui->printlnMsg(F("SlowROM"));
   else if (romSpeed == 3)
-    println_Msg(F("FastROM"));
+    ui->printlnMsg(F("FastROM"));
   else
-    println_Msg(romSpeed);
+    ui->printlnMsg(romSpeed);
 
-  print_Msg(F("ICs: ROM "));
+  ui->printMsg(F("ICs: ROM "));
   if (romChips == 0)
-    println_Msg(F("ONLY"));
+    ui->printlnMsg(F("ONLY"));
   else if (romChips == 1)
-    println_Msg(F("RAM"));
+    ui->printlnMsg(F("RAM"));
   else if (romChips == 2)
-    println_Msg(F("SAVE"));
+    ui->printlnMsg(F("SAVE"));
   else if (romChips == 3)
-    println_Msg(F("DSP1"));
+    ui->printlnMsg(F("DSP1"));
   else if (romChips == 4)
-    println_Msg(F("DSP1 RAM"));
+    ui->printlnMsg(F("DSP1 RAM"));
   else if (romChips == 5)
-    println_Msg(F("DSP1 SAVE"));
+    ui->printlnMsg(F("DSP1 SAVE"));
   else if ((romChips == 19) || (romChips == 20) || (romChips == 21) || (romChips == 26))
-    println_Msg(F("SuperFX"));
+    ui->printlnMsg(F("SuperFX"));
   else if (romChips == 52) {
-    println_Msg(F("SA1 RAM"));
+    ui->printlnMsg(F("SA1 RAM"));
     romType = SA;
   }
   else if (romChips == 53) {
-    println_Msg(F("SA1 RAM BATT"));
+    ui->printlnMsg(F("SA1 RAM BATT"));
     romType = SA;
   }
   else if (romChips == 69) {
-    println_Msg(F("SDD1 BATT"));
+    ui->printlnMsg(F("SDD1 BATT"));
   }
   else if (romChips == 227)
-    println_Msg(F("RAM GBoy"));
+    ui->printlnMsg(F("RAM GBoy"));
   else if (romChips == 243)
-    println_Msg(F("CX4"));
+    ui->printlnMsg(F("CX4"));
   else if (romChips == 246)
-    println_Msg(F("DSP2"));
+    ui->printlnMsg(F("DSP2"));
   else if (romChips == 245)
-    println_Msg(F("SPC RAM BATT"));
+    ui->printlnMsg(F("SPC RAM BATT"));
   else if (romChips == 249)
-    println_Msg(F("SPC RAM RTC"));
+    ui->printlnMsg(F("SPC RAM RTC"));
   else
-    println_Msg(F(""));
+    ui->printlnMsg(F(""));
 
-  print_Msg(F("Rom Size: "));
-  print_Msg(romSize);
-  println_Msg(F("Mbit"));
+  ui->printMsg(F("Rom Size: "));
+  ui->printMsg(romSize);
+  ui->printlnMsg(F("Mbit"));
 
-  print_Msg(F("Banks: "));
-  print_Msg(numBanks);
-  print_Msg(F(" Chips: "));
-  println_Msg(romChips);
+  ui->printMsg(F("Banks: "));
+  ui->printMsg(numBanks);
+  ui->printMsg(F(" Chips: "));
+  ui->printlnMsg(romChips);
 
-  print_Msg(F("Sram Size: "));
-  print_Msg(sramSize);
-  println_Msg(F("Kbit"));
+  ui->printMsg(F("Sram Size: "));
+  ui->printMsg(sramSize);
+  ui->printlnMsg(F("Kbit"));
 
-  print_Msg(F("ROM Version: 1."));
-  println_Msg(romVersion);
+  ui->printMsg(F("ROM Version: 1."));
+  ui->printlnMsg(romVersion);
 
-  print_Msg(F("Checksum: "));
-  println_Msg(checksumStr);
-  display_Update();
+  ui->printMsg(F("Checksum: "));
+  ui->printlnMsg(checksumStr);
+  ui->flushOutput();
 
   // Wait for user input
-#ifdef enable_OLED
-  println_Msg(F(" "));
-  println_Msg(F(" "));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
-#else
-  println_Msg(F(" "));
-#endif
+  ui->printlnMsg(F(" "));
+  ui->printlnMsg(F(" "));
+  ui->printlnMsg(F("Press Button..."));
+  ui->flushOutput();
+  ui->waitForUserInput();
 
   // Start manual config
   if (manualConfig == 1) {
@@ -940,7 +932,7 @@ boolean checkcart_SNES() {
   }
 }
 
-unsigned int calc_checksum (char* fileName, char* folder) {
+unsigned int calc_checksum(const String &filePath) {
   unsigned int calcChecksum = 0;
   unsigned int calcChecksumChunk = 0;
   int calcFilesize = 0;
@@ -948,10 +940,7 @@ unsigned int calc_checksum (char* fileName, char* folder) {
   unsigned long i = 0;
   unsigned long j = 0;
 
-  if (strcmp(folder, "root") != 0)
-    chdir(folder);
-
-  SafeSDFile fileToChecksum = SafeSDFile::openForReading(fileName);
+  SafeSDFile fileToChecksum = SafeSDFile::openForReading(filePath);
   calcFilesize = fileToChecksum.fileSize() * 8 / 1024 / 1024;
 
   // Nintendo Power (SF Memory Cassette)
@@ -1058,69 +1047,39 @@ unsigned int calc_checksum (char* fileName, char* folder) {
     }
   }
   fileToChecksum.close();
-  chdirToRoot();
   return (calcChecksum);
 }
 
-boolean compare_checksum() {
-
-  println_Msg(F("Calculating Checksum"));
-  display_Update();
-
-  strcpy(fileName, romName);
-  strcat(fileName, ".sfc");
-
-  // last used rom folder
-  foldern = loadFolderNumber();
-  sprintf(folder, "SNES/ROM/%s/%d", romName, foldern - 1);
+boolean compare_checksum(const String &filePath) {
+  ui->printlnMsg(F("Calculating Checksum"));
+  ui->flushOutput();
 
   char calcsumStr[5];
-  sprintf(calcsumStr, "%04X", calc_checksum(fileName, folder));
+  sprintf(calcsumStr, "%04X", calc_checksum(filePath));
 
   if (strcmp(calcsumStr, checksumStr) == 0) {
-    print_Msg(F("Checksum OK: "));
-    println_Msg(calcsumStr);
-    display_Update();
+    ui->printMsg(F("Checksum OK: "));
+    ui->printlnMsg(calcsumStr);
+    ui->flushOutput();
     return 1;
   }
   else {
-    print_Msg(F("Checksum Error: "));
-    println_Msg(calcsumStr);
-    print_Warning(F(""));
-    display_Update();
+    ui->printMsg(F("Checksum Error: "));
+    ui->printlnMsg(calcsumStr);
+    ui->printError(F(""));
+    ui->flushOutput();
     return 0;
   }
 }
 
 // Read rom to SD card
-void readROM_SNES() {
+void readROM_SNES(const String &outputFilePath) {
   // Set control
   dataIn();
   controlIn_SNES();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".sfc");
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "SNES/ROM/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  //clear the screen
-  display_Clear();
-  print_Msg(F("Saving to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
-
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   //Dump Derby Stallion '96 (Japan) Actual Size is 24Mb
   if ((romType == LO) && (numBanks == 128) && (strcmp("CC86", checksumStr) == 0)) {
@@ -1184,8 +1143,8 @@ void readROM_SNES() {
 
   // Dump SDD1 High-type ROM
   else if ((romType == HI) && (romChips == 69)) {
-    println_Msg(F("Dumping SDD1 HiRom"));
-    display_Update();
+    ui->printlnMsg(F("Dumping SDD1 HiRom"));
+    ui->flushOutput();
     controlIn_SNES();
     byte initialSOMap = readBank_SNES(0, 18439);
 
@@ -1200,7 +1159,7 @@ void readROM_SNES() {
       controlIn_SNES();
 
       readHiRomBanks( 240, 256, outputFile);
-      if (currMemmap == 2) display_Clear();  // need more space for the progress bars
+      if (currMemmap == 2) ui->clearOutput();  // need more space for the progress bars
     }
 
     dataOut();
@@ -1214,12 +1173,12 @@ void readROM_SNES() {
 
   // Dump SPC7110 High-type ROM
   else if ((romType == HI) && ((romChips == 245) || (romChips == 249))) {
-    println_Msg(F("Dumping SPC7110 HiRom"));
-    display_Update();
+    ui->printlnMsg(F("Dumping SPC7110 HiRom"));
+    ui->flushOutput();
 
     // 0xC00000-0xDFFFFF
-    //print_Msg(F("Part 1"));
-    display_Update();
+    //ui->printMsg(F("Part 1"));
+    ui->flushOutput();
     readHiRomBanks( 192, 224, outputFile);
 
     if (numBanks > 32) {
@@ -1232,14 +1191,14 @@ void readROM_SNES() {
       controlIn_SNES();
 
       // 0xE00000-0xEFFFFF
-      //print_Msg(F(" 2"));
-      display_Update();
+      //ui->printMsg(F(" 2"));
+      ui->flushOutput();
       readHiRomBanks( 224, 240, outputFile);
 
       if (numBanks > 48) {
         // 0xF00000-0xFFFFFF
-        //print_Msg(F(" 3"));
-        display_Update();
+        //ui->printMsg(F(" 3"));
+        ui->flushOutput();
         readHiRomBanks( 240, 256, outputFile);
 
         dataOut();
@@ -1252,12 +1211,12 @@ void readROM_SNES() {
         controlIn_SNES();
 
         // 0xF00000-0xFFFFFF
-        //print_Msg(F(" 4"));
-        display_Update();
+        //ui->printMsg(F(" 4"));
+        ui->flushOutput();
         readHiRomBanks( 240, 256, outputFile);
       }
-      //println_Msg(F(""));
-      display_Clear();  // need more space due to the 4 progress bars
+      //ui->printlnMsg(F(""));
+      ui->clearOutput();  // need more space due to the 4 progress bars
 
       // Return mapping registers to initial settings...
       dataOut();
@@ -1273,8 +1232,8 @@ void readROM_SNES() {
 
   // Dump standard High-type ROM
   else if ((romType == HI) || (romType == SA) || (romType == EX)) {
-    println_Msg(F("Dumping HiRom..."));
-    display_Update();
+    ui->printlnMsg(F("Dumping HiRom..."));
+    ui->flushOutput();
 
     readHiRomBanks( 192, numBanks + 192, outputFile);
   }
@@ -1287,20 +1246,9 @@ void readROM_SNES() {
   SNES SRAM Functions
 *****************************************/
 // Write file to SRAM
-void writeSRAM (boolean browseFile) {
-  if (browseFile) {
-    filePath[0] = '\0';
-    chdir("/");
-    fileBrowser(F("Select srm file"));
-    // Create filepath
-    sprintf(filePath, "%s/%s", filePath, fileName);
-    display_Clear();
-  }
-  else
-    sprintf(filePath, "%s", fileName);
-
+void writeSRAM(const String &inputFilePath) {
   //open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   // Set pins to output
   dataOut();
@@ -1446,30 +1394,16 @@ void writeSRAM (boolean browseFile) {
 
   // Close the file:
   inputFile.close();
-  println_Msg(F("SRAM writing finished"));
-  display_Update();
+  ui->printlnMsg(F("SRAM writing finished"));
+  ui->flushOutput();
 }
 
-void readSRAM () {
+void readSRAM(const String &outputFilePath) {
   // set control
   controlIn_SNES();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".srm");
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "SNES/SAVE/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
-
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
   int sramBanks = 0;
   if (romType == LO) {
     // Sram size
@@ -1574,15 +1508,14 @@ void readSRAM () {
   outputFile.close();
 
   // Signal end of process
-  display_Clear();
-  print_Msg(F("Saved to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
+  ui->clearOutput();
+  ui->printMsg(F("Saved to "));
+  ui->printlnMsg(outputFilePath);
+  ui->flushOutput();
 }
 
 // Check if the SRAM was written without any error
-unsigned long verifySRAM() {
+unsigned long verifySRAM(const String &filePath) {
   //open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
@@ -1757,22 +1690,22 @@ unsigned long verifySRAM() {
     // Close the file:
     inputFile.close();
     if (writeErrors == 0) {
-      println_Msg(F("Verified OK"));
+      ui->printlnMsg(F("Verified OK"));
     }
     else {
-      print_Msg(F("Error: "));
-      print_Msg(writeErrors);
-      println_Msg(F(" bytes "));
-      print_Warning(F("did not verify."));
+      ui->printMsg(F("Error: "));
+      ui->printMsg(writeErrors);
+      ui->printlnMsg(F(" bytes "));
+      ui->printError(F("did not verify."));
     }
-    display_Update();
-    wait();
+    ui->flushOutput();
+    ui->waitForUserInput();
 
     stopSnesClocks_resetCic_resetCart();
 
-    display_Clear();
-    print_Msg(F("Resetting..."));
-    display_Update();
+    ui->clearOutput();
+    ui->printMsg(F("Resetting..."));
+    ui->flushOutput();
     delay(3000);  // wait 3 secs
     resetArduino();
   }
@@ -1783,10 +1716,10 @@ unsigned long verifySRAM() {
 
 // Overwrite the entire SRAM
 boolean eraseSRAM (byte b) {
-  print_Msg(F("0x"));
-  print_Msg(b, HEX);
-  print_Msg(F(": "));
-  display_Update();
+  ui->printMsg(F("0x"));
+  ui->printMsg(b, HEX);
+  ui->printMsg(F(": "));
+  ui->flushOutput();
 
   // Set pins to output
   dataOut();
@@ -2070,14 +2003,14 @@ boolean eraseSRAM (byte b) {
     }
   }
   if (writeErrors == 0) {
-    println_Msg(F("OK"));
+    ui->printlnMsg(F("OK"));
     return 1;
   }
   else {
-    println_Msg(F("ERROR"));
+    ui->printlnMsg(F("ERROR"));
     return 0;
   }
-  display_Update();
+  ui->flushOutput();
 }
 
 //******************************************

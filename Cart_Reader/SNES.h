@@ -3,16 +3,16 @@
 
 #include <Arduino.h>
 
-void snsMenu();
 void snesMenu();
 
-void readSRAM();
+String getNextSnesSRAMOutputFilePathAndPrintMessage(const String &romName);
+void readSRAM(const String &outputFilePath);
 
 // Write file to SRAM
-void writeSRAM (boolean browseFile);
+void writeSRAM(const String &inputFilePath);
 
-unsigned long verifySRAM();
-boolean compare_checksum();
+unsigned long verifySRAM(const String &filePath);
+boolean compare_checksum(const String &filePath);
 void checkAltConf();
 
 // Switch control pins to write
