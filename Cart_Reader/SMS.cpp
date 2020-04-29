@@ -27,39 +27,33 @@ void readROM_SMS();
 /******************************************
    Menu
  *****************************************/
-// MD menu items
-static const char SMSMenuItem1[] PROGMEM = "Read Rom";
-static const char SMSMenuItem2[] PROGMEM = "Reset";
-static const char* const menuOptionsSMS[] PROGMEM = {SMSMenuItem1, SMSMenuItem2};
-
 void smsMenu() {
-  // create menu with title and 2 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsSMS, 2);
-  mainMenu = question_box(F("Sega Master System"), menuOptions, 2, 0);
+  while (true) {
+    const __FlashStringHelper *item_Read = F("Read Rom");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_Read,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    case 0:
-      display_Clear();
-      mode = mode_SMS;
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Sega Master System"), menu, ARRAY_LENGTH(menu), item_Read);
+
+    if (answer == item_Read) {
+      ui->clearOutput();
+      mode = CartReaderMode::SMS;
       setup_SMS();
-      // Change working dir to root
-      chdir("/");
       readROM_SMS();
+    }
+    else if (answer == item_Back) {
       break;
+    }
 
-    case 1:
-      // Reset
-      asm volatile ("  jmp 0");
-      break;
+    ui->printlnMsg(F(""));
+    ui->printlnMsg(F("Press Button..."));
+    ui->flushOutput();
+    ui->waitForUserInput();
   }
-  println_Msg(F(""));
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
 }
 
 /******************************************
@@ -226,56 +220,36 @@ void getCartInfo_SMS() {
   }
   romName[8] = '\0';
 
-  display_Clear();
-  println_Msg(F("Cart Info"));
-  println_Msg(F(" "));
-  print_Msg(F("Name: "));
-  println_Msg(romName);
-  print_Msg(F("Size: "));
-  print_Msg(cartSize / 1024);
-  println_Msg(F("KB"));
-  println_Msg(F(" "));
+  ui->clearOutput();
+  ui->printlnMsg(F("Cart Info"));
+  ui->printlnMsg(F(" "));
+  ui->printMsg(F("Name: "));
+  ui->printlnMsg(romName);
+  ui->printMsg(F("Size: "));
+  ui->printMsg(cartSize / 1024);
+  ui->printlnMsg(F("KB"));
+  ui->printlnMsg(F(" "));
 
   if (strcmp(romName, "TMR SEGA") != 0) {
-    print_Warning(F("Not working yet"));
+    ui->printError(F("Not working yet"));
     sprintf(romName, "ERROR");
     cartSize =  48 * 1024UL;
   }
 
   // Wait for user input
-#ifdef enable_OLED
-  println_Msg(F("Press Button..."));
-  display_Update();
-  wait();
-#endif
+  ui->printlnMsg(F("Press Button..."));
+  ui->flushOutput();
+  ui->waitForUserInput();
   // Turn off LED
   rgb.setColor(0, 0, 0);
 }
 
 // Read rom and save to the SD card
 void readROM_SMS() {
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, romName);
-  strcat(fileName, ".SMS");
-
-  // create a new folder
-  foldern = loadFolderNumber();
-  sprintf(folder, "SMS/ROM/%s/%d", romName, foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  display_Clear();
-  print_Msg(F("Saving to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextOutputPathWithNumberedFolderAndPrintMessage(F("SMS"), F("ROM"), romName, F(".SMS"));
 
   // Open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
   word bankSize = 16 * 1024UL;
   for (byte currBank = 0x0; currBank < (cartSize / bankSize); currBank++) {
     // Write current 16KB bank to slot 2 register 0xFFFF
