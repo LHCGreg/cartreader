@@ -390,6 +390,7 @@ String getNextMDBramOutputPathAndPrintMessage() {
   saveFolderNumber(folderNumber + 1);
 
   printSavingMessage(outputFilePath);
+  return outputFilePath;
 }
 
 String getNextMDRealtecOutputPathAndPrintMessage(const String &romName) {

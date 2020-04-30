@@ -1105,7 +1105,7 @@ void controllerTest() {
                     }
 
                 } //results
-                ui->printN64BenchmarkResults(anastick, upx, upy, uprightx, uprightx, rightx, righty, downrightx, downrighty,
+                ui->printN64BenchmarkResults(anastick, upx, upy, uprightx, uprighty, rightx, righty, downrightx, downrighty,
                                              downx, downy, downleftx, downlefty, leftx, lefty, upleftx, uplefty);
                 
                 break;
