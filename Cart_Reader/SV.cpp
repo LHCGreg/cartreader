@@ -37,76 +37,58 @@ void eraseAll_SV(void);
    Function prototypes
  *****************************************/
 void readSRAM_SV();
-void writeSRAM_SV();
-unsigned long verifySRAM_SV();
+void writeSRAM_SV(const String &inputfilePath);
+unsigned long verifySRAM_SV(const String &filePath);
 
 /******************************************
   Menu
 *****************************************/
-// SV flash menu items
-static const char svFlashMenuItem1[] PROGMEM = "Read Memory Pack";
-static const char svFlashMenuItem2[] PROGMEM = "Write Memory Pack";
-static const char svFlashMenuItem3[] PROGMEM = "Read BS-X Sram";
-static const char svFlashMenuItem4[] PROGMEM = "Write BS-X Sram";
-static const char svFlashMenuItem5[] PROGMEM = "Back";
-static const char* const menuOptionsSVFlash[] PROGMEM = {svFlashMenuItem1, svFlashMenuItem2, svFlashMenuItem3, svFlashMenuItem4, svFlashMenuItem5};
-
-
 void svMenu() {
-  // create menu with title and 3 options to choose from
-  unsigned char mainMenu;
-  // Copy menuOptions out of progmem
-  convertPgm(menuOptionsSVFlash, 5);
-  mainMenu = question_box(F("Satellaview 8M Memory"), menuOptions, 5, 0);
+  while (true) {
+    const __FlashStringHelper *item_ReadMemPack = F("Read Memory Pack");
+    const __FlashStringHelper *item_WriteMemPack = F("Write Memory Pack");
+    const __FlashStringHelper *item_ReadSRAM = F("Read BS-X Sram");
+    const __FlashStringHelper *item_WriteSRAM = F("Write BS-X Sram");
+    const __FlashStringHelper *item_Back = F("Back");
+    const __FlashStringHelper *menu[] = {
+      item_ReadMemPack,
+      item_WriteMemPack,
+      item_ReadSRAM,
+      item_WriteSRAM,
+      item_Back,
+    };
 
-  // wait for user choice to come back from the question box menu
-  switch (mainMenu)
-  {
-    // Read memory pack
-    case 0:
-      // Change working dir to root
-      chdir("/");
+    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+      F("Satellaview 8M Memory"), menu, ARRAY_LENGTH(menu), item_ReadMemPack);
+
+    if (answer == item_ReadMemPack) {
       readROM_SV();
-      break;
-
-    // Write memory pack
-    case 1:
-      // Change working dir to root
-      chdir("/");
+    }
+    else if (answer == item_WriteMemPack) {
       writeROM_SV();
-      break;
-
-    // Read BS-X Sram
-    case 2:
-      // Change working dir to root
-      chdir("/");
+    }
+    else if (answer == item_ReadSRAM) {
       readSRAM_SV();
-      break;
-
-    // Write BS-X Sram
-    case 3:
-      // Change working dir to root
-      chdir("/");
-      writeSRAM_SV();
-      unsigned long wrErrors;
-      wrErrors = verifySRAM_SV();
-      if (wrErrors == 0) {
-        println_Msg(F("Verified OK"));
-        display_Update();
+    }
+    else if (answer == item_WriteSRAM) {
+      String inputFilePath = fileBrowser(F("Select srm file"));
+      writeSRAM_SV(inputFilePath);
+      uint32_t writeErrors = verifySRAM_SV(inputFilePath);
+      if (writeErrors == 0) {
+        ui->printlnMsg(F("Verified OK"));
+        ui->flushOutput();
       }
       else {
-        print_Msg(F("Error: "));
-        print_Msg(wrErrors);
-        println_Msg(F(" bytes "));
-        print_Warning(F("did not verify."));
+        ui->printMsg(F("Error: "));
+        ui->printMsg(writeErrors);
+        ui->printlnMsg(F(" bytes "));
+        ui->printError(F("did not verify."));
       }
-      wait();
+      ui->waitForUserInput();
+    }
+    else if (answer == item_Back) {
       break;
-
-    // Reset
-    case 4:
-      resetArduino();
-      break;
+    }
   }
 }
 
@@ -238,21 +220,10 @@ void readSRAM_SV () {
   // set control
   controlIn_SNES();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, "BSX.srm");
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "SNES/SAVE/BSX/%d", foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextOutputPathWithNumberedFolder(F("SNES"), F("SAVE"), F("BSX"), F(".srm"));
 
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   readBank_SV(0x10, 0); // Preconfigure to fix corrupt 1st byte
 
@@ -270,25 +241,20 @@ void readSRAM_SV () {
   outputFile.close();
 
   // Signal end of process
-  display_Clear();
-  print_Msg(F("Saved to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
-  wait();
+  ui->clearOutput();
+  ui->printMsg(F("Saved to "));
+  ui->printMsg(outputFilePath);
+  ui->printlnMsg(F("..."));
+  ui->flushOutput();
+  ui->waitForUserInput();
 }
 
-void writeSRAM_SV() {
-  filePath[0] = '\0';
-  chdir("/");
-  fileBrowser(F("Select srm file"));
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
+void writeSRAM_SV(const String &inputFilePath) {
   //clear the screen
-  display_Clear();
+  ui->clearOutput();
 
   //open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   // Set pins to output
   dataOut();
@@ -296,8 +262,8 @@ void writeSRAM_SV() {
   // Set RST RD WR to High and CS to Low
   controlOut_SNES();
 
-  println_Msg(F("Writing sram..."));
-  display_Update();
+  ui->printlnMsg(F("Writing sram..."));
+  ui->flushOutput();
 
   // Write to sram bank
   for (byte currBank = 0x10; currBank < 0x18; currBank++) {
@@ -309,23 +275,23 @@ void writeSRAM_SV() {
         writeBank_SV(currBank, currByte + c, sdBuffer[c]);
       }
     }
-    draw_progressbar(((currBank - 0x10) * 0x1000), 32768);
+    ui->drawProgressBar(((currBank - 0x10) * 0x1000), 32768);
   }
   // Finish progressbar
-  draw_progressbar(32768, 32768);
+  ui->drawProgressBar(32768, 32768);
   delay(100);
   // Set pins to input
   dataIn();
 
   // Close the file:
   inputFile.close();
-  println_Msg("");
-  println_Msg(F("SRAM writing finished"));
-  display_Update();
+  ui->printlnMsg("");
+  ui->printlnMsg(F("SRAM writing finished"));
+  ui->flushOutput();
 }
 
 // Check if the SRAM was written without any error
-unsigned long verifySRAM_SV() {
+unsigned long verifySRAM_SV(const String &filePath) {
   //open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
@@ -362,50 +328,32 @@ void readROM_SV() {
   dataIn();
   controlIn_SNES();
 
-  // Get name, add extension and convert to char array for sd lib
-  strcpy(fileName, "MEMPACK.bs");
-
-  // create a new folder for the save file
-  foldern = loadFolderNumber();
-  sprintf(folder, "SNES/ROM/%s/%d", "MEMPACK", foldern);
-  mkdir(folder, true);
-  chdir(folder);
-
-  //clear the screen
-  display_Clear();
-  print_Msg(F("Saving to "));
-  print_Msg(folder);
-  println_Msg(F("/..."));
-  display_Update();
-
-  // write new folder number back to eeprom
-  foldern = foldern + 1;
-  saveFolderNumber(foldern);
+  String outputFilePath = getNextOutputPathWithNumberedFolderAndPrintMessage(F("SNES"), F("ROM"), F("MEMPACK"), F(".bs"));
 
   //open file on sd card
-  SafeSDFile outputFile = SafeSDFile::openForCreating(fileName);
+  SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
   // Read Banks
   for (int currBank = 0x40; currBank < 0x50; currBank++) {
     // Dump the bytes to SD 512B at a time
     for (long currByte = 0; currByte < 65536; currByte += 512) {
-      draw_progressbar((currBank - 0x40) * 0x10000 + currByte, 0x100000);
+      ui->drawProgressBar((currBank - 0x40) * 0x10000 + currByte, 0x100000);
       for (int c = 0; c < 512; c++) {
         sdBuffer[c] = readBank_SV(currBank, currByte + c);
       }
       outputFile.write(sdBuffer, 512);
     }
   }
-  draw_progressbar(0x100000, 0x100000); //Finish drawing progress bar
+  ui->drawProgressBar(0x100000, 0x100000); //Finish drawing progress bar
 
   // Close the file:
   outputFile.close();
-  println_Msg(F("Read pack completed"));
-  display_Update();
-  wait();
+  ui->printlnMsg(F("Read pack completed"));
+  ui->flushOutput();
+  ui->waitForUserInput();
 }
 
-void writeROM_SV (void) {
+void writeROM_SV(void) {
   // Get Checksum as string to make sure that BS-X cart is inserted
   dataIn();
   controlIn_SNES();
@@ -414,27 +362,21 @@ void writeROM_SV (void) {
   //if CRC is not 8B86, BS-X cart is not inserted. Display error and reset
   if (strcmp("8B86", checksumStr) != 0)
   {
-    display_Clear();
-    print_Error(F("Error: Must use BS-X cart"));
+    ui->printErrorAndAbort(F("Error: Must use BS-X cart"), true);
   }
 
   //Display file Browser and wait user to select a file. Size must be 1MB.
-  filePath[0] = '\0';
-  chdir("/");
-  fileBrowser(F("Select BS file"));
-  // Create filepath
-  sprintf(filePath, "%s/%s", filePath, fileName);
-  display_Clear();
+  String inputFilePath = fileBrowser(F("Select BS file"));
 
   //open file on sd card
-  SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
+  SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   fileSize = inputFile.fileSize();
   if (fileSize != 0x100000) {
-    println_Msg(F("File must be 1MB"));
-    display_Update();
+    ui->printlnMsg(F("File must be 1MB"));
+    ui->flushOutput();
     inputFile.close();
-    wait();
+    ui->waitForUserInput();
     return;
   }
 
@@ -445,39 +387,39 @@ void writeROM_SV (void) {
   writeBank_SV(0x0E, 0x5000, 0x80); //Commit register modification
 
   //Erase memory pack
-  println_Msg(F("Erasing pack..."));
-  display_Update();
+  ui->printlnMsg(F("Erasing pack..."));
+  ui->flushOutput();
   eraseAll_SV();
 
   //Blank check
   //Set pins to input
   dataIn();
   controlIn_SNES();
-  println_Msg(F("Blank check..."));
-  display_Update();
+  ui->printlnMsg(F("Blank check..."));
+  ui->flushOutput();
   for (int currBank = 0xC0; currBank < 0xD0; currBank++) {
-    draw_progressbar(((currBank - 0xC0) * 0x10000), 0x100000);
+    ui->drawProgressBar(((currBank - 0xC0) * 0x10000), 0x100000);
     for (long currByte = 0; currByte < 65536; currByte++) {
       if (0xFF != readBank_SV(currBank, currByte))
       {
-        println_Msg(F(""));
-        println_Msg(F("Erase failed"));
-        display_Update();
+        ui->printlnMsg(F(""));
+        ui->printlnMsg(F("Erase failed"));
+        ui->flushOutput();
         inputFile.close();
-        wait();
+        ui->waitForUserInput();
         return;
       }
     }
   }
-  draw_progressbar(0x100000, 0x100000);
+  ui->drawProgressBar(0x100000, 0x100000);
 
   //Write memory pack
   dataOut();
   controlOut_SNES();
-  println_Msg(F("Writing pack..."));
-  display_Update();
+  ui->printlnMsg(F("Writing pack..."));
+  ui->flushOutput();
   for (int currBank = 0xC0; currBank < 0xD0; currBank++) {
-    draw_progressbar(((currBank - 0xC0) * 0x10000), 0x100000);
+    ui->drawProgressBar(((currBank - 0xC0) * 0x10000), 0x100000);
     for (long currByte = 0; currByte < 65536; currByte++) {
 
       writeBank_SV(0xC0, 0x0000, 0x10); //Program Byte
@@ -490,25 +432,25 @@ void writeROM_SV (void) {
   writeBank_SV(0xC0, 0x0000, 0x70); //Status Mode
   writeCheck_SV();
   writeBank_SV(0xC0, 0x0000, 0xFF); //Terminate write
-  draw_progressbar(0x100000, 0x100000);
+  ui->drawProgressBar(0x100000, 0x100000);
 
 
   //Verify
   dataIn();    //Set pins to input
   controlIn_SNES();
   inputFile.seekSet(0);    // Go back to file beginning
-  println_Msg(F("Verifying..."));
-  display_Update();
+  ui->printlnMsg(F("Verifying..."));
+  ui->flushOutput();
   for (int currBank = 0xC0; currBank < 0xD0; currBank++) {
-    draw_progressbar(((currBank - 0xC0) * 0x10000), 0x100000);
+    ui->drawProgressBar(((currBank - 0xC0) * 0x10000), 0x100000);
     for (long currByte = 0; currByte < 65536; currByte++) {
       if (inputFile.readByteOrDie() != readBank_SV(currBank, currByte))
       {
-        println_Msg(F(""));
-        println_Msg(F("Verify failed"));
-        display_Update();
+        ui->printlnMsg(F(""));
+        ui->printlnMsg(F("Verify failed"));
+        ui->flushOutput();
         inputFile.close();
-        wait();
+        ui->waitForUserInput();
         return;
       }
     }
@@ -516,10 +458,10 @@ void writeROM_SV (void) {
 
   // Close the file:
   inputFile.close();
-  draw_progressbar(0x100000, 0x100000);
-  println_Msg(F("Finished successfully"));
-  display_Update();
-  wait();
+  ui->drawProgressBar(0x100000, 0x100000);
+  ui->printlnMsg(F("Finished successfully"));
+  ui->flushOutput();
+  ui->waitForUserInput();
 }
 
 void eraseCheck_SV(void) {
