@@ -12,6 +12,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "PCE.h"
 #include "filebrowser.h"
 #include "ui.h"

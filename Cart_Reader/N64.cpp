@@ -3,6 +3,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "N64.h"
 #include "filebrowser.h"
 #include "RGB_LED.h"
@@ -625,6 +626,7 @@ static word addrCRC(word address) {
    N64 Controller Protocol Functions
  *****************************************/
 void N64_send(unsigned char *buffer, char length) {
+#if !defined(UNIT_TEST) // assembly instructions won't be valid for a computer
   // Send these bytes
   char bits;
 
@@ -721,6 +723,7 @@ inner_loop:
       goto outer_loop;
     } // fall out of outer loop
   }
+#endif // #if !defined(UNIT_TEST)
 }
 
 void N64_stop() {
@@ -740,7 +743,9 @@ void N64_stop() {
 void N64_get(word bitcount) {
   // listen for the expected bitcount/8 bytes of data back from the controller and
   // blast it out to the N64_raw_dump array, one bit per byte for extra speed.
+#if !defined(UNIT_TEST)
   asm volatile (";Starting to listen");
+#endif
   unsigned char timeout;
   char *bitbin = N64_raw_dump;
 

@@ -3,6 +3,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "GB.h"
 #include "filebrowser.h"
 #include "GBA.h"

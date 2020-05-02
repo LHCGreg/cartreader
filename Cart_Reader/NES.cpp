@@ -6,6 +6,8 @@
 // Pinout changes: LED and CIRAM_A10
 
 #include <Arduino.h>
+#include <avr/io.h>
+#include <util/delay.h>
 #include "NES.h"
 #include "filebrowser.h"
 #include "ui.h"

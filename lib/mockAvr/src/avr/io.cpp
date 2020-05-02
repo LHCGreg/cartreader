@@ -3,14 +3,25 @@
 
 uint8_t DDRA;
 uint8_t DDRC;
+uint8_t DDRE;
 uint8_t DDRF;
+uint8_t DDRG;
+uint8_t DDRH;
+uint8_t DDRJ;
 uint8_t DDRK;
 uint8_t DDRL;
 uint8_t PORTA;
 uint8_t PORTB;
 uint8_t PORTC;
+uint8_t PORTE;
 uint8_t PORTF;
+uint8_t PORTG;
 uint8_t PORTH;
+uint8_t PORTJ;
 uint8_t PORTK;
 uint8_t PORTL;
+uint8_t PINA;
+uint8_t PINC;
+uint8_t PINF;
+uint8_t PINH;
 uint8_t PINK;

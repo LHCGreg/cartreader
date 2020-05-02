@@ -34,7 +34,7 @@ void MockUserInterface::displaySDInfo(uint32_t capacityGB, uint8_t FATType) {
   ;
 }
 
-void MockUserInterface::updateN64ButtonTest(const String &currentButton, char stickX, char stickY) {
+void MockUserInterface::updateN64ButtonTest(const String &currentButton, int8_t stickX, int8_t stickY) {
   ;
 }
 

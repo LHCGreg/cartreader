@@ -17,7 +17,7 @@ class MockUserInterface : public UserInterface {
   void displayAbout(const String &aboutMessage) override final;
   bool supportsSDInfoDisplay() override final;
   void displaySDInfo(uint32_t capacityGB, uint8_t FATType) override final;
-  void updateN64ButtonTest(const String &currentButton, char stickX, char stickY) override final;
+  void updateN64ButtonTest(const String &currentButton, int8_t stickX, int8_t stickY) override final;
   bool supportsN64RangeTest() override final;
   void updateN64RangeTest(int8_t stickX, int8_t stickY, int8_t mode) override final;
   bool supportsN64SkippingTest() override final;

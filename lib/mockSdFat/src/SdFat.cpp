@@ -20,8 +20,28 @@ bool FatFile::openNext(FatFile *dirFile, oflag_t oflag) {
   return false;
 }
 
+bool FatFile::rename(const char *newPath) {
+  return false;
+}
+
+bool FatFile::remove() {
+  return false;
+}
+
 bool FatFile::getName(char *name, size_t size) {
   return false;
+}
+
+bool FatFile::seekCur(int32_t offset) {
+  return false;
+}
+
+bool FatFile::seekSet(uint32_t pos) {
+  return false;
+}
+
+bool FatFile::isFile() const {
+  return true;
 }
 
 bool FatFile::isDir() const {
@@ -30,6 +50,18 @@ bool FatFile::isDir() const {
 
 bool FatFile::isHidden() const {
   return false;
+}
+
+bool FatFile::isOpen() const {
+  return false;
+}
+
+uint32_t FatFile::fileSize() const {
+  return 123;
+}
+
+uint32_t FatFile::available() {
+  return 123;
 }
 
 uint8_t FatFile::getError() {
@@ -60,10 +92,20 @@ FatVolume *SdFat::vol() {
   return &mockVolume;
 }
 
+FatFile mockFile;
+
+FatFile *SdFat::vwd() {
+  return &mockFile;
+}
+
 bool SdFat::mkdir(const char *path, bool pFlag) {
   return false;
 }
 
 bool SdFat::chdir(const char *path, bool set_cwd) {
+  return false;
+}
+
+bool SdFat::exists(const char *path) {
   return false;
 }

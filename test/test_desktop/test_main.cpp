@@ -1,12 +1,6 @@
 #include <unity.h>
 #include <utils.h>
 
-void setUp() {
-}
-
-void tearDown() {
-}
-
 void testStringToNumber() {
   const char *normalTest = "12345678";
   int8_t errorCode;

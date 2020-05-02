@@ -3,6 +3,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "SNES.h"
 #include "NP.h"
 #include "SV.h"
@@ -918,7 +919,7 @@ boolean checkcart_SNES() {
   romVersion = snesHeader[0xFFDB - headerStart];
 
   // Test if checksum is equal to reverse checksum
-  if (((word(snesHeader[0xFFDC - headerStart]) + (word(snesHeader[0xFFDD - headerStart]) * 256)) + (word(snesHeader[0xFFDE - headerStart]) + (word(snesHeader[0xFFDF - headerStart]) * 256))) == 65535 ) {
+  if (((static_cast<word>(snesHeader[0xFFDC - headerStart]) + (static_cast<word>(snesHeader[0xFFDD - headerStart]) * 256)) + (static_cast<word>(snesHeader[0xFFDE - headerStart]) + (static_cast<word>(snesHeader[0xFFDF - headerStart]) * 256))) == 65535) {
     if (strcmp("0000", checksumStr) == 0) {
       return 0;
     }

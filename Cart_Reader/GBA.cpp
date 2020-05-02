@@ -3,6 +3,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "GBA.h"
 #include "filebrowser.h"
 #include "ui.h"

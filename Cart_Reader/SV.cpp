@@ -5,6 +5,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "SV.h"
 #include "SNES.h"
 #include "filebrowser.h"

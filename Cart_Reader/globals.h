@@ -1,6 +1,7 @@
 #ifndef cartreader_globals_h
 #define cartreader_globals_h
 
+#include <Arduino.h>
 #include <si5351.h>
 
 extern char ver[5];

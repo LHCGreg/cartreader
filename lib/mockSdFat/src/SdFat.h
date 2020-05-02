@@ -31,9 +31,17 @@ class FatFile {
   int read(void *buf, size_t nbyte);
   int write(void *buf, size_t nbyte);
   bool openNext(FatFile *dirFile, oflag_t oflag = O_RDONLY);
+  bool rename(const char *newPath);
+  bool remove();
   bool getName(char *name, size_t size);
+  bool seekCur(int32_t offset);
+  bool seekSet(uint32_t pos);
+  bool isFile() const;
   bool isDir() const;
   bool isHidden() const;
+  bool isOpen() const;
+  uint32_t fileSize() const;
+  uint32_t available();
   uint8_t getError();
   bool close();
 };
@@ -52,8 +60,10 @@ class SdFat {
   bool begin(uint8_t csPin = 53, SPISettings spiSettings = SPI_FULL_SPEED);
   SdSpiCard *card();
   FatVolume *vol();
+  FatFile *vwd();
   bool mkdir(const char *path, bool pFlag = true);
   bool chdir(const char *path, bool set_cwd = false);
+  bool exists(const char *path);
 };
 
 #endif

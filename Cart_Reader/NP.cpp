@@ -4,6 +4,7 @@
 //  (GB Memory starts at around line 1740)
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "NP.h"
 #include "SNES.h"
 #include "FLASH.h"
@@ -845,7 +846,7 @@ boolean checkcart_SFM() {
   romVersion = readBank_SFM(0, 65499);
 
   // Test if checksum is equal to reverse checksum
-  if (((word(readBank_SFM(0, 65500)) + (word(readBank_SFM(0, 65501)) * 256)) + (word(readBank_SFM(0, 65502)) + (word(readBank_SFM(0, 65503)) * 256))) == 65535 ) {
+  if (((static_cast<word>(readBank_SFM(0, 65500)) + (static_cast<word>(readBank_SFM(0, 65501)) * 256)) + (static_cast<word>(readBank_SFM(0, 65502)) + (static_cast<word>(readBank_SFM(0, 65503)) * 256))) == 65535) {
     if (strcmp("0000", checksumStr) == 0) {
       return 0;
     }

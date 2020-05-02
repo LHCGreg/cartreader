@@ -4,6 +4,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "GBSmart.h"
 #include "GB.h"
 #include "filebrowser.h"

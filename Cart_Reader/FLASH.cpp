@@ -3,6 +3,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "FLASH.h"
 #include "filebrowser.h"
 #include "ui.h"
@@ -17,7 +18,6 @@
 unsigned long flashSize;
 byte flashromType;
 byte secondID = 1;
-unsigned long time;
 unsigned long blank;
 unsigned long sectorSize;
 uint16_t bufferSize;
@@ -139,6 +139,8 @@ void flashromMenu8() {
 
     const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Flashrom Writer 8"), menu, ARRAY_LENGTH(menu), item_BlankCheck);
+
+    unsigned long time;
 
     if (answer == item_BlankCheck) {
       ui.clearOutput();
@@ -292,6 +294,8 @@ void flashromMenu16() {
     const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Flashrom Writer 16"), menu, ARRAY_LENGTH(menu), item_BlankCheck);
 
+    unsigned long time;
+
     if (answer == item_BlankCheck) {
       ui.clearOutput();
       ui.printlnMsg(F("Blankcheck"));
@@ -390,6 +394,8 @@ void epromMenu() {
 
     const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Eprom Writer"), menu, ARRAY_LENGTH(menu), item_BlankCheck);
+
+    unsigned long time;
 
     if (answer == item_BlankCheck) {
       ui.clearOutput();

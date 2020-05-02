@@ -23,6 +23,7 @@
 // C47         : CLK (384KHz on WS)
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "WS.h"
 #include "filebrowser.h"
 #include "ui.h"
@@ -1130,6 +1131,7 @@ boolean unlockMMC2003_WS()
 // doing a L->H on CLK(PE3) pin
 void pulseCLK_WS(uint8_t count)
 {
+#if !defined(UNIT_TEST)
   register uint8_t tic;
 
   // about 384KHz, 50% duty cycle
@@ -1153,6 +1155,7 @@ void pulseCLK_WS(uint8_t count)
    : [tic] "=a" (tic)
    : [count] "a" (count), [porte] "I" (_SFR_IO_ADDR(PORTE))
   );
+#endif // #if !defined(UNIT_TEST)
 }
 
 void dataIn_WS()

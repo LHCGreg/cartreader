@@ -3,6 +3,7 @@
 //******************************************
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "SMS.h"
 #include "RGB_LED.h"
 #include "ui.h"

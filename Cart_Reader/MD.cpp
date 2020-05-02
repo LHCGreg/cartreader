@@ -4,6 +4,7 @@
 // Writes to Sega CD Backup RAM Cart require an extra wire from MRES (B02) to VRES (B27)
 
 #include <Arduino.h>
+#include <avr/io.h>
 #include "MD.h"
 #include "filebrowser.h"
 #include "FLASH.h"
@@ -85,7 +86,6 @@ static const word PROGMEM eepid [] = {
 };
 
 byte eepcount = (sizeof(eepid) / sizeof(eepid[0])) / 2;
-int index;
 word eepdata;
 
 // CD BACKUP RAM
@@ -582,7 +582,7 @@ void getCartInfo_MD() {
 
   // Serial EEPROM Check
   for (int i = 0; i < eepcount; i++) {
-    index = i * 2;
+    int index = i * 2;
     word eepcheck = pgm_read_word(eepid + index);
     if (eepcheck == chksum) {
       eepdata = pgm_read_word(eepid + index + 1);
