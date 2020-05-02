@@ -8,14 +8,14 @@
 *****************************************/
 
 String fileBrowser(const __FlashStringHelper *browserTitle) {
-  String folderPath = F("/");
+  String folderPath = "/";
   while (true) {
     SDFolderPagedAnswerSource answerSource(folderPath);
     String fileChoice = ui.askQuestionWithPagedAnswers(browserTitle, answerSource);
 
     // If user chose to go back, set folder to root
     if (fileChoice.length() == 0) {
-      folderPath = F("/");
+      folderPath = "/";
     }
     else if (fileChoice[0] == '/') {
       // append everything after the leading / that directories get returned with

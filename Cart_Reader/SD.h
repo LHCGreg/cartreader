@@ -83,10 +83,6 @@ void copyFile(SafeSDFile &sourceFile, SafeSDFile &destFile, byte *buffer, size_t
 void mkdir(const char *path, bool createParentDirectories);
 void mkdir(const String &path, bool createParentDirectories);
 
-void chdirToRoot();
-void chdir(const char *path);
-void chdir(const String &path);
-
 bool fileExists(const char *path);
 bool fileExists(const String &path);
 

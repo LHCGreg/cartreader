@@ -197,8 +197,8 @@ void regularSNESMenu() {
         ui.printlnMsg(F("Warning:"));
         ui.printlnMsg(F("This can erase"));
         ui.printlnMsg(F("your save games"));
-        ui.printlnMsg(F(""));
-        ui.printlnMsg(F(""));
+        ui.printlnMsg("");
+        ui.printlnMsg("");
         ui.printlnMsg(F("Press any button to"));
         ui.printlnMsg(F("start sram testing"));
         ui.flushOutput();
@@ -248,7 +248,7 @@ void regularSNESMenu() {
       break;
     }
 
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.printlnMsg(F("Press Button..."));
     ui.flushOutput();
     ui.waitForUserInput();
@@ -605,8 +605,8 @@ void getCartInfo_SNES() {
     ui.printlnMsg(F("ERROR"));
     ui.printlnMsg(F("Rom header corrupt"));
     ui.printlnMsg(F("or missing"));
-    ui.printlnMsg(F(""));
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
+    ui.printlnMsg("");
     ui.printlnMsg(F("Press button for"));
     ui.printlnMsg(F("manual configuration"));
     ui.printlnMsg(F("or powercycle if SA1"));
@@ -1066,7 +1066,7 @@ boolean compare_checksum(const String &filePath) {
   else {
     ui.printMsg(F("Checksum Error: "));
     ui.printlnMsg(calcsumStr);
-    ui.printError(F(""));
+    ui.printError("");
     ui.flushOutput();
     return 0;
   }

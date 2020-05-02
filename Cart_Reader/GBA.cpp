@@ -145,7 +145,7 @@ void gbaMenu() {
       String outputFilePath = getNextGBARomOutputPathAndPrintMessage(romName);
       readROM_GBA(outputFilePath);
       compare_checksum_GBA(outputFilePath);
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button..."));
       ui.flushOutput();
       ui.waitForUserInput();
@@ -210,7 +210,7 @@ void gbaMenu() {
           break;
         }
       }
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button..."));
       ui.flushOutput();
       ui.waitForUserInput();
@@ -715,9 +715,9 @@ void getCartInfo_GBA() {
   if (logoChecksum != 0x4B1B) {
     ui.printError(F("CARTRIDGE ERROR"));
     strcpy(romName, "ERROR");
-    ui.printlnMsg(F(""));
-    ui.printlnMsg(F(""));
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
+    ui.printlnMsg("");
+    ui.printlnMsg("");
     ui.printlnMsg(F("Press Button to"));
     ui.printlnMsg(F("ignore or powercycle"));
     ui.printlnMsg(F("to try again"));

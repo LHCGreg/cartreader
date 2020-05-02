@@ -180,7 +180,7 @@ void gbSmartGameOptions() {
     }
 
     if (answer != item_SwitchGame) {
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button..."));
       ui.flushOutput();
       ui.waitForUserInput();
@@ -253,7 +253,7 @@ void gbSmartFlashMenu() {
       ui.printlnMsg(F("Attention"));
       ui.printlnMsg(F("This will erase your"));
       ui.printlnMsg(F("GB Smart Cartridge."));
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button"));
       ui.printlnMsg(F("to continue"));
       ui.flushOutput();
@@ -267,7 +267,7 @@ void gbSmartFlashMenu() {
       break;
     }
 
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.printlnMsg(F("Press Button..."));
     ui.flushOutput();
     ui.waitForUserInput();

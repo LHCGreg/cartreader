@@ -612,7 +612,7 @@ void outputNES(const String &outputFolderPath) {
   cartFile.close();
 
   ui.printlnMsg(F("NES FILE OUTPUT!"));
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   ui.flushOutput();
 
   calcCRC(cartFilePath, (prg + chr) * 1024);
@@ -850,7 +850,7 @@ void checkStatus_NES() {
   ui.clearOutput();
   ui.printlnMsg(F("NES CART READER"));
   ui.printlnMsg(F("CURRENT SETTINGS"));
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   ui.printMsg(F("MAPPER:   "));
   ui.printlnMsg(mapper);
   ui.printMsg(F("PRG SIZE: "));
@@ -1408,7 +1408,7 @@ void readPRG(const String &outputFolderPath) {
   prgFile.close();
 
   ui.printlnMsg(F("PRG FILE DUMPED!"));
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   ui.flushOutput();
 
   calcCRC(prgFilePath, prg * 1024);
@@ -1966,7 +1966,7 @@ void readCHR(const String &outputFolderPath) {
     chrFile.close();
 
     ui.printlnMsg(F("CHR FILE DUMPED!"));
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.flushOutput();
 
     calcCRC(chrFilePath, chr * 1024);
@@ -2155,7 +2155,7 @@ void readRAM(const String &outputFolderPath) {
     ramFile.close();
 
     ui.printlnMsg(F("RAM FILE DUMPED!"));
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.flushOutput();
 
     if ((mapper == 16) || (mapper == 159))
@@ -2387,7 +2387,7 @@ void writeRAM() {
     ramFile.close();
     LED_GREEN_ON;
 
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.printlnMsg(F("RAM FILE WRITTEN!"));
     ui.flushOutput();
   }
@@ -2652,9 +2652,9 @@ void writeFLASH() {
   else {
     ui.printMsg(F("Flash ID: "));
     ui.printlnMsg(flashID);
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.printlnMsg(F("NESmaker Flash Found"));
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.flushOutput();
     delay(100);
 
@@ -2703,14 +2703,14 @@ void writeFLASH() {
 
       ui.printMsg(F("*"));
       if ((i + 1) % 16 == 0) {
-        ui.printlnMsg(F(""));
+        ui.printlnMsg("");
       }
       ui.flushOutput();
     }
     flashFile.close();
     LED_GREEN_ON;
 
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.printlnMsg(F("FLASH FILE WRITTEN!"));
     ui.flushOutput();
   }

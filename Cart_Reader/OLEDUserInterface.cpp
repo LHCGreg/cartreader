@@ -311,10 +311,10 @@ void OLEDUserInterface::displayAbout(const String &aboutMessage) {
   // Draw the Logo
   m_display.drawBitmap(0, 0, sig, 128, 64, 1);
   printlnMsg(aboutMessage);
-  printlnMsg(F(""));
-  printlnMsg(F(""));
-  printlnMsg(F(""));
-  printlnMsg(F(""));
+  printlnMsg("");
+  printlnMsg("");
+  printlnMsg("");
+  printlnMsg("");
   printlnMsg(F("Press Button"));
   flushOutput();
 
@@ -798,7 +798,7 @@ String OLEDUserInterface::askQuestionWithPagedAnswers(const String &question, Pa
     }
 
     if (answer == ANSWER_GO_BACK) {
-      return String(F(""));
+      return String("");
     }
     else if (answer == ANSWER_NEXT_PAGE) {
       continue;
@@ -1006,7 +1006,7 @@ void OLEDUserInterface::printlnMsg(byte message, int outputFormat) {
 }
 
 void OLEDUserInterface::forceReset() {
-  printlnMsg(F(""));
+  printlnMsg("");
   printlnMsg(F("Press Button..."));
   flushOutput();
   waitForUserInput();

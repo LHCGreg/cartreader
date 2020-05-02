@@ -81,12 +81,12 @@ String pathGetDir(const String &path) {
 
   if (!processedNonSlashChar) {
     // This refers to the root dir
-    return String(F("/"));
+    return String("/");
   }
   else if (!lastSlashFound || lastSlashIndex == 0) {
     // Only one path component. return empty string is relative path or / if absolute path
     if (path[0] == '/') {
-      return String(F("/"));
+      return String("/");
     }
     else {
       return String();
@@ -112,7 +112,7 @@ String getNextOutputPathWithNumberedFolder(const String &console, const String &
 
   int16_t folderNumber = loadFolderNumber();
 
-  String outputFilePath(F("/"));
+  String outputFilePath("/");
 
   if (console.length() > 0) {
     pathJoinInPlace(outputFilePath, console);
@@ -140,7 +140,7 @@ String getNextOutputPathWithNumberedFolderAndPrintMessage(const String &console,
 String getNextOutputPathWithNumberedFilename(const String &fileType, const String &fileNamePrefix, const String &extension) {
   int16_t folderNumber = loadFolderNumber();
 
-  String outputFilePath = F("/");
+  String outputFilePath = "/";
   pathJoinInPlace(outputFilePath, fileType);
 
   String fileName = fileNamePrefix;

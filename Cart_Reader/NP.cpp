@@ -150,7 +150,7 @@ void sfmGameMenu() {
           ui.printMsg(gameSubMenu + 0x80, HEX);
           ui.printlnMsg(F(" Timeout"));
           ui.printlnMsg(readBank_SFM(0, 0x2400), HEX);
-          ui.printlnMsg(F(""));
+          ui.printlnMsg("");
           ui.printErrorAndAbort(F("Powercycle SFM cart"), false);
         }
       }
@@ -234,7 +234,7 @@ void sfmGameOptions() {
     }
 
     if (answer != item_SwitchGame) {
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button..."));
       ui.flushOutput();
       ui.waitForUserInput();
@@ -642,8 +642,8 @@ void setup_SFM() {
     // Abort, something is wrong
     if (timeout == 5) {
       ui.printlnMsg(F("Hirom All Timeout"));
-      ui.printlnMsg(F(""));
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
+      ui.printlnMsg("");
       ui.printErrorAndAbort(F("Powercycle SFM cart"), false);
     }
   }

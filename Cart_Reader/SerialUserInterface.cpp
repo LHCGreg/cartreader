@@ -198,7 +198,7 @@ String SerialUserInterface::askQuestionWithPagedAnswers(const String &question, 
         break;
       }
       else if (command == F("b")) {
-        return String(F(""));
+        return String("");
       }
       else {
         int8_t errorCode;

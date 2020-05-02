@@ -189,7 +189,7 @@ void mdMenu() {
       verifyFlash_MD(inputFilePath);
       // Set CS(PH3) HIGH
       PORTH |= (1 << 3);
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button..."));
       ui.flushOutput();
       ui.waitForUserInput();
@@ -315,7 +315,7 @@ void mdCartMenu() {
       break;
     }
 
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.printlnMsg(F("Press Button..."));
     ui.flushOutput();
     ui.waitForUserInput();
@@ -767,7 +767,7 @@ void getCartInfo_MD() {
   ui.printMsg(F("ChkS: "));
   ui.printMsg((chksum >> 8), HEX);
   ui.printMsg((chksum & 0x00ff), HEX);
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   if (saveType == 4) {
     ui.printMsg(F("Serial EEPROM: "));
     ui.printMsg(eepSize * 8 / 1024);
@@ -931,7 +931,7 @@ void readROM_MD() {
     char calcsumStr[5];
     sprintf(calcsumStr, "%04X", calcCKS);
     ui.printlnMsg(calcsumStr);
-    ui.printError(F(""));
+    ui.printError("");
     ui.flushOutput();
   }
 }
@@ -1768,7 +1768,7 @@ void readEEP_MD() {
   }
   // Close the file:
   outputFile.close();
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   ui.clearOutput();
   ui.printMsg(F("Saved to "));
   ui.printMsg(outputFilePath);
@@ -1809,7 +1809,7 @@ void writeEEP_MD(const String &inputFilePath) {
   }
   // Close the file:
   inputFile.close();
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   ui.clearOutput();
   ui.printlnMsg(F("Done"));
   ui.flushOutput();
@@ -1837,7 +1837,7 @@ void readBram_MD() {
 
   // Close the file:
   outputFile.close();
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   ui.clearOutput();
   ui.printMsg(F("Saved to "));
   ui.printMsg(outputFilePath);
@@ -1867,7 +1867,7 @@ void writeBram_MD(const String &inputFilePath) {
   writeWord_MD(0x380000, 0); // Disable BRAM Writes
   // Close the file:
   inputFile.close();
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   ui.clearOutput();
   ui.printlnMsg(F("Done"));
   ui.flushOutput();

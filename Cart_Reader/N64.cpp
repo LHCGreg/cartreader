@@ -189,7 +189,7 @@ void n64ControllerMenu() {
       ui.clearOutput();
       ui.flushOutput();
       readMPK();
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button."));
       ui.flushOutput();
       ui.waitForUserInput();
@@ -203,7 +203,7 @@ void n64ControllerMenu() {
       ui.flushOutput();
       writeMPK(inputFilePath);
       verifyMPK(inputFilePath);
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button."));
       ui.flushOutput();
       ui.waitForUserInput();
@@ -258,7 +258,7 @@ void n64CartMenu() {
       else {
         ui.printError(F("Savetype Error"));
       }
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.printlnMsg(F("Press Button..."));
       ui.flushOutput();
       ui.waitForUserInput();
@@ -1432,7 +1432,7 @@ void printCartInfo_N64() {
   // Print start page
   if (cartSize != 0) {
     ui.printlnMsg(F("N64 Cartridge Info"));
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.printMsg(F("Name: "));
     ui.printlnMsg(romName);
     ui.printMsg(F("ID: "));
@@ -2472,7 +2472,7 @@ readn64rom:
   ui.printMsg(F("Done ("));
   ui.printMsg(timeElapsed); // include elapsed time
   ui.printlnMsg(F("s)"));
-  ui.printlnMsg(F(""));
+  ui.printlnMsg("");
   ui.printlnMsg(F("Press Button..."));
   ui.flushOutput();
   ui.waitForUserInput();

@@ -402,7 +402,7 @@ void writeROM_SV(void) {
     for (long currByte = 0; currByte < 65536; currByte++) {
       if (0xFF != readBank_SV(currBank, currByte))
       {
-        ui.printlnMsg(F(""));
+        ui.printlnMsg("");
         ui.printlnMsg(F("Erase failed"));
         ui.flushOutput();
         inputFile.close();
@@ -446,7 +446,7 @@ void writeROM_SV(void) {
     for (long currByte = 0; currByte < 65536; currByte++) {
       if (inputFile.readByteOrDie() != readBank_SV(currBank, currByte))
       {
-        ui.printlnMsg(F(""));
+        ui.printlnMsg("");
         ui.printlnMsg(F("Verify failed"));
         ui.flushOutput();
         inputFile.close();

@@ -48,7 +48,7 @@ void smsMenu() {
       break;
     }
 
-    ui.printlnMsg(F(""));
+    ui.printlnMsg("");
     ui.printlnMsg(F("Press Button..."));
     ui.flushOutput();
     ui.waitForUserInput();

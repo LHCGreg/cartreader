@@ -22,7 +22,7 @@ String SDFolderPagedAnswerSource::GetNextAnswer() {
       // only return the file if its name length is not greater than the max. Otherwise skip it.
       if (fileName.length() <= MAX_FILENAME_LENGTH) {
         if (dirEntry.isDir()) {
-          fileName = String(F("/")) + fileName;
+          fileName = String("/") + fileName;
         }
         return fileName;
       }
@@ -30,7 +30,7 @@ String SDFolderPagedAnswerSource::GetNextAnswer() {
   }
 
   // If we reach the end, return empty string
-  return F("");
+  return String("");
 }
 
 SDFolderPagedAnswerSource::~SDFolderPagedAnswerSource() {

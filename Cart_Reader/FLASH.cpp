@@ -235,9 +235,9 @@ void flashromMenu8() {
           break;
       }
 
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       printFlash(40);
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.flushOutput();
 
       resetFlash8();
@@ -339,9 +339,9 @@ void flashromMenu16() {
       ui.clearOutput();
       ui.printlnMsg(F("ID Flashrom"));
       idFlash16();
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       printFlash16(40);
-      ui.printlnMsg(F(""));
+      ui.printlnMsg("");
       ui.flushOutput();
       resetFlash16();
     }
