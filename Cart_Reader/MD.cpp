@@ -136,30 +136,30 @@ void mdMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Select MD device"), menu, ARRAY_LENGTH(menu), item_Game);
 
     if (answer == item_Game) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_MD();
       mode = CartReaderMode::MDCart;
       mdCartMenu();
     }
     else if (answer == item_RamCart) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_MD();
       mode = CartReaderMode::SegaCD;
       segaCDMenu();
     }
     else if (answer == item_FlashRepro) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_MD();
       mode = CartReaderMode::MDCart;
       String inputFilePath = fileBrowser(F("Select file"));
-      ui->clearOutput();
+      ui.clearOutput();
       // Setting CS(PH3) LOW
       PORTH &= ~(1 << 3);
 
@@ -167,16 +167,16 @@ void mdMenu() {
       resetFlash_MD();
       idFlash_MD();
       resetFlash_MD();
-      ui->printMsg(F("Flash ID: "));
-      ui->printlnMsg(flashid);
+      ui.printMsg(F("Flash ID: "));
+      ui.printlnMsg(flashid);
       if (strcmp(flashid, "C2F1") == 0) {
-        ui->printlnMsg(F("MX29F1610 detected"));
+        ui.printlnMsg(F("MX29F1610 detected"));
         flashSize = 2097152;
       }
       else {
-        ui->printErrorAndAbort(F("Error: Unknown flashrom"), false);
+        ui.printErrorAndAbort(F("Error: Unknown flashrom"), false);
       }
-      ui->flushOutput();
+      ui.flushOutput();
 
       eraseFlash_MD();
       resetFlash_MD();
@@ -189,10 +189,10 @@ void mdMenu() {
       verifyFlash_MD(inputFilePath);
       // Set CS(PH3) HIGH
       PORTH |= (1 << 3);
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
     else if (answer == item_Back) {
       break;
@@ -219,11 +219,11 @@ void mdCartMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("MEGA DRIVE Reader"), menu, ARRAY_LENGTH(menu), item_ReadROM);
 
     if (answer == item_ReadROM) {
-      ui->clearOutput();
+      ui.clearOutput();
 
       // common ROM read fail state: no cart inserted - tends to report impossibly large cartSize
       // largest known game so far is supposedly "Paprium" at 10MB, so cap sanity check at 16MB
@@ -235,67 +235,67 @@ void mdCartMenu() {
         //compare_checksum_MD();
       }
       else {
-        ui->printError(F("Cart has no ROM"));
+        ui.printError(F("Cart has no ROM"));
       }
     }
     else if (answer == item_ReadSRAM) {
-      ui->clearOutput();
+      ui.clearOutput();
       // Does cartridge have SRAM
       if ((saveType == 1) || (saveType == 2) || (saveType == 3)) {
-        ui->printlnMsg(F("Reading Sram..."));
-        ui->flushOutput();
+        ui.printlnMsg(F("Reading Sram..."));
+        ui.flushOutput();
         enableSram_MD(1);
         readSram_MD();
         enableSram_MD(0);
       }
       else {
-        ui->printError(F("Cart has no Sram"));
+        ui.printError(F("Cart has no Sram"));
       }
     }
     else if (answer == item_WriteSRAM) {
-      ui->clearOutput();
+      ui.clearOutput();
       // Does cartridge have SRAM
       if ((saveType == 1) || (saveType == 2) || (saveType == 3)) {
         // Launch file browser
         String inputFilePath = fileBrowser(F("Select srm file"));
-        ui->clearOutput();
+        ui.clearOutput();
         enableSram_MD(1);
         writeSram_MD(inputFilePath);
         uint32_t writeErrors = verifySram_MD(inputFilePath);
         enableSram_MD(0);
         if (writeErrors == 0) {
-          ui->printlnMsg(F("Sram verified OK"));
-          ui->flushOutput();
+          ui.printlnMsg(F("Sram verified OK"));
+          ui.flushOutput();
         }
         else {
-          ui->printMsg(F("Error: "));
-          ui->printMsg(writeErrors);
-          ui->printlnMsg(F(" bytes "));
-          ui->printError(F("did not verify."));
+          ui.printMsg(F("Error: "));
+          ui.printMsg(writeErrors);
+          ui.printlnMsg(F(" bytes "));
+          ui.printError(F("did not verify."));
         }
       }
       else {
-        ui->printError(F("Cart has no Sram"));
+        ui.printError(F("Cart has no Sram"));
       }
     }
     else if (answer == item_ReadEEPROM) {
-      ui->clearOutput();
+      ui.clearOutput();
       if (saveType == 4)
         readEEP_MD();
       else {
-        ui->printError(F("Cart has no EEPROM"));
+        ui.printError(F("Cart has no EEPROM"));
       }
     }
     else if (answer == item_WriteEEPROM) {
-      ui->clearOutput();
+      ui.clearOutput();
       if (saveType == 4) {
         // Launch file browser
         String inputFilePath = fileBrowser(F("Select eep file"));
-        ui->clearOutput();
+        ui.clearOutput();
         writeEEP_MD(inputFilePath);
       }
       else {
-        ui->printError(F("Cart has no EEPROM"));
+        ui.printError(F("Cart has no EEPROM"));
       }
     }
     else if (answer == item_CycleCart) {
@@ -305,9 +305,9 @@ void mdCartMenu() {
       // Switch RST(PH0) to LOW
       PORTH &= ~(1 << 0);
 
-      ui->clearOutput();
-      ui->printMsg(F("Resetting..."));
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.printMsg(F("Resetting..."));
+      ui.flushOutput();
       delay(3000); // wait 3 secs to switch to next game
       resetArduino();
     }
@@ -315,10 +315,10 @@ void mdCartMenu() {
       break;
     }
 
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
 }
 
@@ -333,37 +333,37 @@ void segaCDMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("SEGA CD RAM"), menu, ARRAY_LENGTH(menu), item_Read);
 
     if (answer == item_Read) {
-      ui->clearOutput();
+      ui.clearOutput();
       if (bramSize > 0)
         readBram_MD();
       else {
-        ui->printError(F("Not CD Backup RAM Cart"));
+        ui.printError(F("Not CD Backup RAM Cart"));
       }
     }
     else if (answer == item_Write) {
-      ui->clearOutput();
+      ui.clearOutput();
       if (bramSize > 0) {
         // Launch file browser
         String inputFilePath = fileBrowser(F("Select brm file"));
-        ui->clearOutput();
+        ui.clearOutput();
         writeBram_MD(inputFilePath);
       }
       else {
-        ui->printError(F("Not CD Backup RAM Cart"));
+        ui.printError(F("Not CD Backup RAM Cart"));
       }
     }
     else if (answer == item_Back) {
       break;
     }
 
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
 }
 
@@ -654,7 +654,7 @@ void getCartInfo_MD() {
           sramBase = sramBase / 2;
         }
         else
-          ui->printErrorAndAbort(F("Unknown Sram Base"), false);
+          ui.printErrorAndAbort(F("Unknown Sram Base"), false);
       }
       else if (sramType == 0xE020) { // SRAM BOTH BYTES
         // Get sram start and end
@@ -672,7 +672,7 @@ void getCartInfo_MD() {
           sramBase = sramBase >> 1;
         }
         else
-          ui->printErrorAndAbort(F("Unknown Sram Base"), false);
+          ui.printErrorAndAbort(F("Unknown Sram Base"), false);
       }
     }
     else {
@@ -756,37 +756,37 @@ void getCartInfo_MD() {
     cartSize = 0x80000;
   }
 
-  ui->clearOutput();
-  ui->printlnMsg(F("Cart Info"));
-  ui->printlnMsg(F(" "));
-  ui->printMsg(F("Name: "));
-  ui->printlnMsg(romName);
-  ui->printMsg(F("Size: "));
-  ui->printMsg(cartSize * 8 / 1024 / 1024 );
-  ui->printlnMsg(F(" MBit"));
-  ui->printMsg(F("ChkS: "));
-  ui->printMsg((chksum >> 8), HEX);
-  ui->printMsg((chksum & 0x00ff), HEX);
-  ui->printlnMsg(F(""));
+  ui.clearOutput();
+  ui.printlnMsg(F("Cart Info"));
+  ui.printlnMsg(F(" "));
+  ui.printMsg(F("Name: "));
+  ui.printlnMsg(romName);
+  ui.printMsg(F("Size: "));
+  ui.printMsg(cartSize * 8 / 1024 / 1024 );
+  ui.printlnMsg(F(" MBit"));
+  ui.printMsg(F("ChkS: "));
+  ui.printMsg((chksum >> 8), HEX);
+  ui.printMsg((chksum & 0x00ff), HEX);
+  ui.printlnMsg(F(""));
   if (saveType == 4) {
-    ui->printMsg(F("Serial EEPROM: "));
-    ui->printMsg(eepSize * 8 / 1024);
-    ui->printlnMsg(F(" KBit"));
+    ui.printMsg(F("Serial EEPROM: "));
+    ui.printMsg(eepSize * 8 / 1024);
+    ui.printlnMsg(F(" KBit"));
   }
   else {
-    ui->printMsg(F("Sram: "));
+    ui.printMsg(F("Sram: "));
     if (sramSize > 0) {
-      ui->printMsg(sramSize * 8 / 1024);
-      ui->printlnMsg(F(" KBit"));
+      ui.printMsg(sramSize * 8 / 1024);
+      ui.printlnMsg(F(" KBit"));
     }
     else
-      ui->printlnMsg(F("None"));
+      ui.printlnMsg(F("None"));
   }
-  ui->printlnMsg(F(" "));
+  ui.printlnMsg(F(" "));
 
-  ui->printlnMsg(F("Press Button..."));
-  ui->flushOutput();
-  ui->waitForUserInput();
+  ui.printlnMsg(F("Press Button..."));
+  ui.flushOutput();
+  ui.waitForUserInput();
 }
 
 void writeSSF2Map(unsigned long myAddress, word myData) {
@@ -852,7 +852,7 @@ void readROM_MD() {
   //Initialize progress bar
   uint32_t processedProgressBar = 0;
   uint32_t totalProgressBar = (uint32_t)(cartSize);
-  ui->drawProgressBar(0, totalProgressBar);
+  ui.drawProgressBar(0, totalProgressBar);
 
   for (unsigned long currBuffer = 0; currBuffer < cartSize / 2; currBuffer += 512) {
     // Blink led
@@ -904,7 +904,7 @@ void readROM_MD() {
 
     // update progress bar
     processedProgressBar += 1024;
-    ui->drawProgressBar(processedProgressBar, totalProgressBar);
+    ui.drawProgressBar(processedProgressBar, totalProgressBar);
   }
   // Close the file:
   outputFile.close();
@@ -916,23 +916,23 @@ void readROM_MD() {
   }
 
   // print elapsed time
-  ui->printMsg(F("Time elapsed: "));
-  ui->printMsg((millis() - startTime) / 1000);
-  ui->printlnMsg(F("s"));
-  ui->flushOutput();
+  ui.printMsg(F("Time elapsed: "));
+  ui.printMsg((millis() - startTime) / 1000);
+  ui.printlnMsg(F("s"));
+  ui.flushOutput();
 
   // print Checksum
   if (chksum == calcCKS) {
-    ui->printlnMsg(F("Checksum OK"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Checksum OK"));
+    ui.flushOutput();
   }
   else {
-    ui->printMsg(F("Checksum Error: "));
+    ui.printMsg(F("Checksum Error: "));
     char calcsumStr[5];
     sprintf(calcsumStr, "%04X", calcCKS);
-    ui->printlnMsg(calcsumStr);
-    ui->printError(F(""));
-    ui->flushOutput();
+    ui.printlnMsg(calcsumStr);
+    ui.printError(F(""));
+    ui.flushOutput();
   }
 }
 
@@ -960,9 +960,9 @@ void enableSram_MD(boolean enableSram) {
 void writeSram_MD(const String &inputFilePath) {
   dataOut_MD();
 
-  ui->printlnMsg(F("Writing..."));
-  ui->printlnMsg(inputFilePath);
-  ui->flushOutput();
+  ui.printlnMsg(F("Writing..."));
+  ui.printlnMsg(inputFilePath);
+  ui.flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -979,12 +979,12 @@ void writeSram_MD(const String &inputFilePath) {
     }
   }
   else
-    ui->printError(F("Unknown save type"));
+    ui.printError(F("Unknown save type"));
 
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F("Done"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Done"));
+  ui.flushOutput();
   dataIn_MD();
 }
 
@@ -1021,9 +1021,9 @@ void readSram_MD() {
   }
   // Close the file:
   outputFile.close();
-  ui->printMsg(F("Saved to "));
-  ui->printlnMsg(outputFilePath);
-  ui->flushOutput();
+  ui.printMsg(F("Saved to "));
+  ui.printlnMsg(outputFilePath);
+  ui.flushOutput();
 }
 
 unsigned long verifySram_MD(const String &filePath) {
@@ -1076,17 +1076,17 @@ void resetFlash_MD() {
 }
 
 void write29F1610_MD(const String &inputFilePath) {
-  ui->printMsg(F("Flashing file "));
-  ui->printMsg(inputFilePath);
-  ui->printlnMsg(F("..."));
-  ui->flushOutput();
+  ui.printMsg(F("Flashing file "));
+  ui.printMsg(inputFilePath);
+  ui.printlnMsg(F("..."));
+  ui.flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
   // Get rom size from file
   fileSize = inputFile.fileSize();
   if (fileSize > flashSize) {
-    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+    ui.printErrorAndAbort(F("File size exceeds flash size."), false);
   }
   // Set data pins to output
   dataOut_MD();
@@ -1189,7 +1189,7 @@ void blankcheck_MD() {
     }
   }
   if (!blank) {
-    ui->printError(F("Error: Not blank"));
+    ui.printError(F("Error: Not blank"));
   }
 }
 
@@ -1199,7 +1199,7 @@ void verifyFlash_MD(const String &filePath) {
   // Get rom size from file
   fileSize = inputFile.fileSize();
   if (fileSize > flashSize) {
-    ui->printErrorAndAbort(F("File size exceeds flash size."), false);
+    ui.printErrorAndAbort(F("File size exceeds flash size."), false);
   }
 
   blank = 0;
@@ -1221,14 +1221,14 @@ void verifyFlash_MD(const String &filePath) {
     d = 0;
   }
   if (blank == 0) {
-    ui->printlnMsg(F("Flashrom verified OK"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Flashrom verified OK"));
+    ui.flushOutput();
   }
   else {
-    ui->printMsg(F("Error: "));
-    ui->printMsg(blank);
-    ui->printlnMsg(F(" bytes "));
-    ui->printError(F("did not verify."));
+    ui.printMsg(F("Error: "));
+    ui.printMsg(blank);
+    ui.printlnMsg(F(" bytes "));
+    ui.printError(F("did not verify."));
   }
   // Close the file:
   inputFile.close();
@@ -1748,8 +1748,8 @@ void readEEP_MD() {
   SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
   if (eepSize > 0x100) { // 24C04+
     for (word currByte = 0; currByte < eepSize; currByte += 256) {
-      ui->printMsg(F("*"));
-      ui->flushOutput();
+      ui.printMsg(F("*"));
+      ui.flushOutput();
       for (int i = 0; i < 256; i++) {
         readEepromByte(currByte + i);
       }
@@ -1759,8 +1759,8 @@ void readEEP_MD() {
   else { // 24C01/24C02
     for (word currByte = 0; currByte < eepSize; currByte++) {
       if ((currByte != 0) && ((currByte + 1) % 16 == 0)) {
-        ui->printMsg(F("*"));
-        ui->flushOutput();
+        ui.printMsg(F("*"));
+        ui.flushOutput();
       }
       readEepromByte(currByte);
     }
@@ -1768,20 +1768,20 @@ void readEEP_MD() {
   }
   // Close the file:
   outputFile.close();
-  ui->printlnMsg(F(""));
-  ui->clearOutput();
-  ui->printMsg(F("Saved to "));
-  ui->printMsg(outputFilePath);
+  ui.printlnMsg(F(""));
+  ui.clearOutput();
+  ui.printMsg(F("Saved to "));
+  ui.printMsg(outputFilePath);
 
-  ui->flushOutput();
+  ui.flushOutput();
 }
 
 void writeEEP_MD(const String &inputFilePath) {
   dataOut_MD();
 
-  ui->printlnMsg(F("Writing..."));
-  ui->printlnMsg(inputFilePath);
-  ui->flushOutput();
+  ui.printlnMsg(F("Writing..."));
+  ui.printlnMsg(inputFilePath);
+  ui.flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -1793,26 +1793,26 @@ void writeEEP_MD(const String &inputFilePath) {
         writeEepromByte(currByte + i);
         delay(50); // DELAY NEEDED
       }
-      ui->printMsg(F("."));
-      ui->flushOutput();
+      ui.printMsg(F("."));
+      ui.flushOutput();
     }
   }
   else { // 24C01/24C02
     inputFile.read(sdBuffer, eepSize);
     for (word currByte = 0; currByte < eepSize; currByte++) {
       writeEepromByte(currByte);
-      ui->printMsg(F("."));
+      ui.printMsg(F("."));
       if ((currByte != 0) && ((currByte + 1) % 64 == 0))
-        ui->printlnMsg(F(""));
-      ui->flushOutput(); // ON SERIAL = delay(100)
+        ui.printlnMsg(F(""));
+      ui.flushOutput(); // ON SERIAL = delay(100)
     }
   }
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F(""));
-  ui->clearOutput();
-  ui->printlnMsg(F("Done"));
-  ui->flushOutput();
+  ui.printlnMsg(F(""));
+  ui.clearOutput();
+  ui.printlnMsg(F("Done"));
+  ui.flushOutput();
 
   dataIn_MD();
 }
@@ -1837,20 +1837,20 @@ void readBram_MD() {
 
   // Close the file:
   outputFile.close();
-  ui->printlnMsg(F(""));
-  ui->clearOutput();
-  ui->printMsg(F("Saved to "));
-  ui->printMsg(outputFilePath);
+  ui.printlnMsg(F(""));
+  ui.clearOutput();
+  ui.printMsg(F("Saved to "));
+  ui.printMsg(outputFilePath);
 
-  ui->flushOutput();
+  ui.flushOutput();
 }
 
 void writeBram_MD(const String &inputFilePath) {
   dataOut_MD();
 
-  ui->printlnMsg(F("Writing..."));
-  ui->printlnMsg(inputFilePath);
-  ui->flushOutput();
+  ui.printlnMsg(F("Writing..."));
+  ui.printlnMsg(inputFilePath);
+  ui.flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -1867,10 +1867,10 @@ void writeBram_MD(const String &inputFilePath) {
   writeWord_MD(0x380000, 0); // Disable BRAM Writes
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F(""));
-  ui->clearOutput();
-  ui->printlnMsg(F("Done"));
-  ui->flushOutput();
+  ui.printlnMsg(F(""));
+  ui.clearOutput();
+  ui.printlnMsg(F("Done"));
+  ui.flushOutput();
   dataIn_MD();
 }
 

@@ -120,27 +120,27 @@ void n64Menu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Select N64 device"), menu, ARRAY_LENGTH(menu), item_Cart);
 
     if (answer == item_Cart) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_N64_Cart();
       printCartInfo_N64();
       mode = CartReaderMode::N64Cart;
       n64CartMenu();
     }
     else if (answer == item_Controller) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_N64_Controller();
       mode = CartReaderMode::N64Controller;
       n64ControllerMenu();
     }
     else if (answer == item_FlashRepro) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_N64_Cart();
       flashRepro_N64();
       printCartInfo_N64();
@@ -148,8 +148,8 @@ void n64Menu() {
       n64CartMenu();
     }
     else if (answer == item_FlashGameshark) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_N64_Cart();
       flashGameshark_N64();
       printCartInfo_N64();
@@ -176,37 +176,37 @@ void n64ControllerMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("N64 Controller"), menu, ARRAY_LENGTH(menu), item_TestController);
 
     if (answer == item_TestController) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       controllerTest();
       quit = 1;
     }
     else if (answer == item_ReadControllerPak) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       readMPK();
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
     else if (answer == item_WriteControllerPak) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       // Launch file browser
       String inputFilePath = fileBrowser(F("Select mpk file"));
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       writeMPK(inputFilePath);
       verifyMPK(inputFilePath);
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
     else if (answer == item_Back) {
       break;
@@ -230,104 +230,104 @@ void n64CartMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("N64 Cart Reader"), menu, ARRAY_LENGTH(menu), item_ReadROM);
 
     if (answer == item_ReadROM) {
       readRom_N64();
     }
     else if (answer == item_ReadSave) {
-      ui->clearOutput();
+      ui.clearOutput();
 
       if (saveType == 1) {
-        ui->printlnMsg(F("Reading Sram..."));
-        ui->flushOutput();
+        ui.printlnMsg(F("Reading Sram..."));
+        ui.flushOutput();
         readSram(32768, 1);
       }
       else if (saveType == 4) {
         getFramType();
-        ui->printlnMsg(F("Reading Flashram..."));
-        ui->flushOutput();
+        ui.printlnMsg(F("Reading Flashram..."));
+        ui.flushOutput();
         readFram(flashramType);
       }
       else if ((saveType == 5) || (saveType == 6)) {
-        ui->printlnMsg(F("Reading Eep..."));
-        ui->flushOutput();
+        ui.printlnMsg(F("Reading Eep..."));
+        ui.flushOutput();
         readEeprom();
       }
       else {
-        ui->printError(F("Savetype Error"));
+        ui.printError(F("Savetype Error"));
       }
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
     else if (answer == item_WriteSave) {
       if (saveType == 1) {
         // Launch file browser
         String inputFilePath = fileBrowser(F("Select sra file"));
-        ui->clearOutput();
+        ui.clearOutput();
 
         writeSram(inputFilePath, 32768);
         uint32_t writeErrors = verifySram(inputFilePath, 32768, 1);
         if (writeErrors == 0) {
-          ui->printlnMsg(F("Sram verified OK"));
-          ui->flushOutput();
+          ui.printlnMsg(F("Sram verified OK"));
+          ui.flushOutput();
         }
         else {
-          ui->printMsg(F("Error: "));
-          ui->printMsg(writeErrors);
-          ui->printlnMsg(F(" bytes "));
-          ui->printError(F("did not verify."));
+          ui.printMsg(F("Error: "));
+          ui.printMsg(writeErrors);
+          ui.printlnMsg(F(" bytes "));
+          ui.printError(F("did not verify."));
         }
       }
       else if (saveType == 4) {
         // Launch file browser
         String inputFilePath = fileBrowser(F("Select fla file"));
-        ui->clearOutput();
+        ui.clearOutput();
         getFramType();
         writeFram(inputFilePath, flashramType);
-        ui->printMsg(F("Verifying..."));
-        ui->flushOutput();
+        ui.printMsg(F("Verifying..."));
+        ui.flushOutput();
         uint32_t writeErrors = verifyFram(inputFilePath, flashramType);
         if (writeErrors == 0) {
-          ui->printlnMsg(F("OK"));
-          ui->flushOutput();
+          ui.printlnMsg(F("OK"));
+          ui.flushOutput();
         }
         else {
-          ui->printlnMsg("");
-          ui->printMsg(F("Error: "));
-          ui->printMsg(writeErrors);
-          ui->printlnMsg(F(" bytes "));
-          ui->printError(F("did not verify."));
+          ui.printlnMsg("");
+          ui.printMsg(F("Error: "));
+          ui.printMsg(writeErrors);
+          ui.printlnMsg(F(" bytes "));
+          ui.printError(F("did not verify."));
         }
       }
       else if ((saveType == 5) || (saveType == 6)) {
         // Launch file browser
         String inputFilePath = fileBrowser(F("Select eep file"));
-        ui->clearOutput();
+        ui.clearOutput();
 
         writeEeprom(inputFilePath);
         uint32_t writeErrors = verifyEeprom(inputFilePath);
         if (writeErrors == 0) {
-          ui->printlnMsg(F("Eeprom verified OK"));
-          ui->flushOutput();
+          ui.printlnMsg(F("Eeprom verified OK"));
+          ui.flushOutput();
         }
         else {
-          ui->printMsg(F("Error: "));
-          ui->printMsg(writeErrors);
-          ui->printlnMsg(F(" bytes "));
-          ui->printError(F("did not verify."));
+          ui.printMsg(F("Error: "));
+          ui.printMsg(writeErrors);
+          ui.printlnMsg(F(" bytes "));
+          ui.printError(F("did not verify."));
         }
       }
       else {
-        ui->clearOutput();
-        ui->printError(F("Savetype Error"));
+        ui.clearOutput();
+        ui.printError(F("Savetype Error"));
       }
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
     else if (answer == item_ForceSaveType) {
       const __FlashStringHelper *saveItem_None = F("None");
@@ -343,7 +343,7 @@ void n64CartMenu() {
         saveItem_Flash,
       };
 
-      const __FlashStringHelper *saveAnswer = ui->askMultipleChoiceQuestion(
+      const __FlashStringHelper *saveAnswer = ui.askMultipleChoiceQuestion(
         F("Select save type"), saveMenu, ARRAY_LENGTH(saveMenu), saveItem_None);
 
       if (saveAnswer == saveItem_None) {
@@ -387,7 +387,7 @@ String getNextN64SramOutputPath(const String &romName, uint8_t saveType) {
     extension = F(".sra");
   }
   else {
-    ui->printErrorAndAbort(F("Savetype Error"), true);
+    ui.printErrorAndAbort(F("Savetype Error"), true);
   }
 
   return getNextOutputPathWithNumberedFolder(F("N64"), F("SAVE"), romName, extension);
@@ -409,11 +409,11 @@ String getNextN64GamesharkBackupOutputPathAndPrintMessage() {
 
   saveFolderNumber(folderNumber + 1);
 
-  ui->clearOutput();
-  ui->printMsg(F("Saving to "));
-  ui->printMsg(outputFilePath);
-  ui->printlnMsg(F("..."));
-  ui->flushOutput();
+  ui.clearOutput();
+  ui.printMsg(F("Saving to "));
+  ui.printMsg(outputFilePath);
+  ui.printlnMsg(F("..."));
+  ui.flushOutput();
 
   return outputFilePath;
 }
@@ -956,7 +956,7 @@ void controllerTest() {
     {
       case 1:
         {
-          ui->updateN64ButtonTest(button, N64_status.stick_x, N64_status.stick_y);
+          ui.updateN64ButtonTest(button, N64_status.stick_x, N64_status.stick_y);
 
           // go to next screen
           if (button.length() == 0 && lastbutton == F("START"))
@@ -964,11 +964,11 @@ void controllerTest() {
             // reset button
             lastbutton = F("N/A");
 
-            ui->clearOutput();
-            if (ui->supportsN64RangeTest()) {
+            ui.clearOutput();
+            if (ui.supportsN64RangeTest()) {
               startscreen = 2;
             }
-            else if (ui->supportsN64SkippingTest()) {
+            else if (ui.supportsN64SkippingTest()) {
               startscreen = 3;
             }
             else {
@@ -980,7 +980,7 @@ void controllerTest() {
         }
       case 2:
         {
-          ui->updateN64RangeTest(N64_status.stick_x, N64_status.stick_y, mode);
+          ui.updateN64RangeTest(N64_status.stick_x, N64_status.stick_y, mode);
 
           // switch mode
           if (button.length() == 0 && lastbutton == F("Z"))
@@ -988,12 +988,12 @@ void controllerTest() {
             if (mode == 0)
             {
               mode = 1;
-              ui->clearOutput();
+              ui.clearOutput();
             }
             else
             {
               mode = 0;
-              ui->clearOutput();
+              ui.clearOutput();
             }
           }
 
@@ -1003,8 +1003,8 @@ void controllerTest() {
             // reset button
             lastbutton = F("N/A");
 
-            ui->clearOutput();
-            if (ui->supportsN64SkippingTest()) {
+            ui.clearOutput();
+            if (ui.supportsN64SkippingTest()) {
               startscreen = 3;
             }
             else {
@@ -1016,7 +1016,7 @@ void controllerTest() {
         }
       case 3:
         {
-          ui->updateN64SkippingTest(prevStickX, N64_status.stick_x);
+          ui.updateN64SkippingTest(prevStickX, N64_status.stick_x);
 
           if (N64_status.stick_x > 0) {
             prevStickX = N64_status.stick_x;
@@ -1026,14 +1026,14 @@ void controllerTest() {
             // reset button
             lastbutton = F("N/A");
 
-            ui->clearOutput();
+            ui.clearOutput();
           }
           // go to next screen
           if (button.length() == 0 && lastbutton == F("START")) {
             // reset button
             lastbutton = F("N/A");
 
-            ui->clearOutput();
+            ui.clearOutput();
           }
 
           break;
@@ -1105,7 +1105,7 @@ void controllerTest() {
                     }
 
                 } //results
-                ui->printN64BenchmarkResults(anastick, upx, upy, uprightx, uprighty, rightx, righty, downrightx, downrighty,
+                ui.printN64BenchmarkResults(anastick, upx, upy, uprightx, uprighty, rightx, righty, downrightx, downrighty,
                                              downx, downy, downleftx, downlefty, leftx, lefty, upleftx, uplefty);
                 
                 break;
@@ -1113,7 +1113,7 @@ void controllerTest() {
 
             case 1:// +y Up
               {
-                ui->printN64BenchmarkPrompt(test);
+                ui.printN64BenchmarkPrompt(test);
 
                 if (button.length() == 0 && lastbutton == F("A"))
                 {
@@ -1122,7 +1122,7 @@ void controllerTest() {
                   // reset button
                   lastbutton = F("N/A");
 
-                  ui->clearOutput();
+                  ui.clearOutput();
                   test = 2;
                 }
                 break;
@@ -1130,7 +1130,7 @@ void controllerTest() {
 
             case 2:// +y+x Up-Right
               {
-                ui->printN64BenchmarkPrompt(test);
+                ui.printN64BenchmarkPrompt(test);
 
                 if (button.length() == 0 && lastbutton == F("A"))
                 {
@@ -1140,14 +1140,14 @@ void controllerTest() {
                   // reset button
                   lastbutton = F("N/A");
 
-                  ui->clearOutput();
+                  ui.clearOutput();
                 }
                 break;
               }
 
             case 3:// +x Right
               {
-                ui->printN64BenchmarkPrompt(test);
+                ui.printN64BenchmarkPrompt(test);
 
                 if (button.length() == 0 && lastbutton == F("A"))
                 {
@@ -1157,14 +1157,14 @@ void controllerTest() {
                   // reset button
                   lastbutton = F("N/A");
 
-                  ui->clearOutput();
+                  ui.clearOutput();
                 }
                 break;
               }
 
             case 4:// -y+x Down-Right
               {
-                ui->printN64BenchmarkPrompt(test);
+                ui.printN64BenchmarkPrompt(test);
 
                 if (button.length() == 0 && lastbutton == F("A"))
                 {
@@ -1174,14 +1174,14 @@ void controllerTest() {
                   // reset button
                   lastbutton = F("N/A");
 
-                  ui->clearOutput();
+                  ui.clearOutput();
                 }
                 break;
               }
 
             case 5:// -y Down
               {
-                ui->printN64BenchmarkPrompt(test);
+                ui.printN64BenchmarkPrompt(test);
 
                 if (button.length() == 0 && lastbutton == F("A"))
                 {
@@ -1191,14 +1191,14 @@ void controllerTest() {
                   // reset button
                   lastbutton = F("N/A");
 
-                  ui->clearOutput();
+                  ui.clearOutput();
                 }
                 break;
               }
 
             case 6:// -y-x Down-Left
               {
-                ui->printN64BenchmarkPrompt(test);
+                ui.printN64BenchmarkPrompt(test);
 
                 if (button.length() == 0 && lastbutton == F("A"))
                 {
@@ -1208,14 +1208,14 @@ void controllerTest() {
                   // reset button
                   lastbutton = F("N/A");
 
-                  ui->clearOutput();
+                  ui.clearOutput();
                 }
                 break;
               }
 
             case 7:// -x Left
               {
-                ui->printN64BenchmarkPrompt(test);
+                ui.printN64BenchmarkPrompt(test);
 
                 if (button.length() == 0 && lastbutton == F("A"))
                 {
@@ -1225,14 +1225,14 @@ void controllerTest() {
                   // reset button
                   lastbutton = F("N/A");
 
-                  ui->clearOutput();
+                  ui.clearOutput();
                 }
                 break;
               }
 
             case 8:// +y+x Up-Left
               {
-                ui->printN64BenchmarkPrompt(test);
+                ui.printN64BenchmarkPrompt(test);
 
                 if (button.length() == 0 && lastbutton == F("A"))
                 {
@@ -1242,19 +1242,19 @@ void controllerTest() {
                   // reset button
                   lastbutton = F("N/A");
 
-                  ui->clearOutput();
+                  ui.clearOutput();
                 }
                 break;
               }
           }
-          ui->flushOutput();
+          ui.flushOutput();
           // go to next screen
           if (button.length() == 0 && lastbutton == F("START"))
           {
             // reset button
             lastbutton = F("N/A");
 
-            ui->clearOutput();
+            ui.clearOutput();
 
             startscreen = 1;
             test = 1;
@@ -1329,8 +1329,8 @@ void readMPK() {
   //open file on sd card
   SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
 
-  ui->printlnMsg(F("Please wait..."));
-  ui->flushOutput();
+  ui.printlnMsg(F("Please wait..."));
+  ui.flushOutput();
 
   // Controller paks, which all have 32kB of space, are mapped between 0x0000 – 0x7FFF
   for (word i = 0x0000; i < 0x8000; i += 32) {
@@ -1341,15 +1341,15 @@ void readMPK() {
   }
   // Close the file:
   outputFile.close();
-  ui->printMsg(F("Saved as "));
-  ui->printlnMsg(outputFilePath);
-  ui->flushOutput();
+  ui.printMsg(F("Saved as "));
+  ui.printlnMsg(outputFilePath);
+  ui.flushOutput();
 }
 
 void writeMPK(const String &inputFilePath) {
-  ui->printlnMsg(F("Writing..."));
-  ui->printlnMsg(inputFilePath);
-  ui->flushOutput();
+  ui.printlnMsg(F("Writing..."));
+  ui.printlnMsg(inputFilePath);
+  ui.flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -1382,16 +1382,16 @@ void writeMPK(const String &inputFilePath) {
   }
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F("Done"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Done"));
+  ui.flushOutput();
 }
 
 // verifies if write was successful
 void verifyMPK(const String &filePath) {
   writeErrors = 0;
 
-  ui->printlnMsg(F("Verifying..."));
-  ui->flushOutput();
+  ui.printlnMsg(F("Verifying..."));
+  ui.flushOutput();
 
   //open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
@@ -1411,14 +1411,14 @@ void verifyMPK(const String &filePath) {
   // Close the file:
   inputFile.close();
   if (writeErrors == 0) {
-    ui->printlnMsg(F("OK"));
-    ui->flushOutput();
+    ui.printlnMsg(F("OK"));
+    ui.flushOutput();
   }
   else {
-    ui->printMsg(F("Error: "));
-    ui->printMsg(writeErrors);
-    ui->printlnMsg(F(" bytes "));
-    ui->printError(F("did not verify."));
+    ui.printMsg(F("Error: "));
+    ui.printMsg(writeErrors);
+    ui.printlnMsg(F(" bytes "));
+    ui.printError(F("did not verify."));
   }
 }
 
@@ -1431,58 +1431,58 @@ void printCartInfo_N64() {
 
   // Print start page
   if (cartSize != 0) {
-    ui->printlnMsg(F("N64 Cartridge Info"));
-    ui->printlnMsg(F(""));
-    ui->printMsg(F("Name: "));
-    ui->printlnMsg(romName);
-    ui->printMsg(F("ID: "));
-    ui->printMsg(cartID);
-    ui->printMsg(F(" Size: "));
-    ui->printMsg(cartSize);
-    ui->printlnMsg(F("MB"));
-    ui->printMsg(F("Save: "));
+    ui.printlnMsg(F("N64 Cartridge Info"));
+    ui.printlnMsg(F(""));
+    ui.printMsg(F("Name: "));
+    ui.printlnMsg(romName);
+    ui.printMsg(F("ID: "));
+    ui.printMsg(cartID);
+    ui.printMsg(F(" Size: "));
+    ui.printMsg(cartSize);
+    ui.printlnMsg(F("MB"));
+    ui.printMsg(F("Save: "));
     switch (saveType) {
       case 1:
-        ui->printlnMsg(F("Sram"));
+        ui.printlnMsg(F("Sram"));
         break;
       case 4:
-        ui->printlnMsg(F("Flashram"));
+        ui.printlnMsg(F("Flashram"));
         break;
       case 5:
-        ui->printlnMsg(F("4K Eeprom"));
+        ui.printlnMsg(F("4K Eeprom"));
         eepPages = 64;
         break;
       case 6:
-        ui->printlnMsg(F("16K Eeprom"));
+        ui.printlnMsg(F("16K Eeprom"));
         eepPages = 256;
         break;
       default:
-        ui->printlnMsg(F("unknown"));
+        ui.printlnMsg(F("unknown"));
         break;
     }
-    ui->printMsg(F("Version: 1."));
-    ui->printlnMsg(romVersion);
+    ui.printMsg(F("Version: 1."));
+    ui.printlnMsg(romVersion);
 
     // Wait for user input
-    ui->printlnMsg(F(" "));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(" "));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
   else {
     // Display error
-    ui->printlnMsg(F("GAMEPAK ERROR"));
-    ui->printlnMsg("");
-    ui->printMsg(F("Name: "));
-    ui->printlnMsg(romName);
-    ui->printMsg(F("ID: "));
-    ui->printlnMsg(cartID);
-    ui->printlnMsg("");
-    ui->flushOutput();
+    ui.printlnMsg(F("GAMEPAK ERROR"));
+    ui.printlnMsg("");
+    ui.printMsg(F("Name: "));
+    ui.printlnMsg(romName);
+    ui.printMsg(F("ID: "));
+    ui.printlnMsg(cartID);
+    ui.printlnMsg("");
+    ui.flushOutput();
 
     strcpy(romName, "GPERROR");
-    ui->printError(F("Cartridge unknown"));
-    ui->waitForUserInput();
+    ui.printError(F("Cartridge unknown"));
+    ui.waitForUserInput();
 
     // Set cartsize manually
     // Set cartsize manually
@@ -1501,7 +1501,7 @@ void printCartInfo_N64() {
       romItem_64MB,
     };
 
-    const __FlashStringHelper *romAnswer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *romAnswer = ui.askMultipleChoiceQuestion(
       F("Select ROM size"), romMenu, ARRAY_LENGTH(romMenu), romItem_4MB);
 
     if (romAnswer == romItem_4MB) {
@@ -1732,9 +1732,9 @@ void readData() {
 // Write Eeprom to cartridge
 void writeEeprom(const String &inputFilePath) {
   if ((saveType == 5) || (saveType == 6)) {
-    ui->printlnMsg(F("Writing..."));
-    ui->printlnMsg(inputFilePath);
-    ui->flushOutput();
+    ui.printlnMsg(F("Writing..."));
+    ui.printlnMsg(inputFilePath);
+    ui.flushOutput();
 
     // Open file on sd card
     SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -1766,12 +1766,12 @@ void writeEeprom(const String &inputFilePath) {
 
     // Close the file:
     inputFile.close();
-    ui->printlnMsg(F("Done"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Done"));
+    ui.flushOutput();
     delay(600);
   }
   else {
-    ui->printErrorAndAbort(F("Savetype Error"), false);
+    ui.printErrorAndAbort(F("Savetype Error"), false);
   }
 }
 
@@ -1821,13 +1821,13 @@ void readEeprom() {
     // Close the file:
     outputFile.close();
     //clear the screen
-    ui->clearOutput();
-    ui->printMsg(F("Saved to "));
-    ui->printlnMsg(outputFilePath);
-    ui->flushOutput();
+    ui.clearOutput();
+    ui.printMsg(F("Saved to "));
+    ui.printlnMsg(outputFilePath);
+    ui.flushOutput();
   }
   else {
-    ui->printErrorAndAbort(F("Savetype Error"), false);
+    ui.printErrorAndAbort(F("Savetype Error"), false);
   }
 }
 
@@ -1839,10 +1839,10 @@ unsigned long verifyEeprom(const String &filePath) {
     // Wait 50ms or eeprom might lock up
     pulseClock_N64(26000);
 
-    ui->clearOutput();
-    ui->printMsg(F("Verifying against "));
-    ui->printlnMsg(filePath);
-    ui->flushOutput();
+    ui.clearOutput();
+    ui.printMsg(F("Verifying against "));
+    ui.printlnMsg(filePath);
+    ui.flushOutput();
 
     // Open file on sd card
     SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
@@ -1889,7 +1889,7 @@ unsigned long verifyEeprom(const String &filePath) {
     return writeErrors;
   }
   else {
-    ui->printErrorAndAbort(F("Savetype Error"), false);
+    ui.printErrorAndAbort(F("Savetype Error"), false);
   }
 }
 
@@ -1899,9 +1899,9 @@ unsigned long verifyEeprom(const String &filePath) {
 // Write sram to cartridge
 void writeSram(const String &inputFilePath, unsigned long sramSize) {
   if (saveType == 1) {
-    ui->printlnMsg(F("Writing..."));
-    ui->printlnMsg(inputFilePath);
-    ui->flushOutput();
+    ui.printlnMsg(F("Writing..."));
+    ui.printlnMsg(inputFilePath);
+    ui.flushOutput();
 
     // Open file on sd card
     SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -1923,12 +1923,12 @@ void writeSram(const String &inputFilePath, unsigned long sramSize) {
     }
     // Close the file:
     inputFile.close();
-    ui->printlnMsg(F("Done"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Done"));
+    ui.flushOutput();
 
   }
   else {
-    ui->printErrorAndAbort(F("Savetype Error"), false);
+    ui.printErrorAndAbort(F("Savetype Error"), false);
   }
 }
 
@@ -1964,9 +1964,9 @@ void readSram(unsigned long sramSize, byte flashramType) {
   }
   // Close the file:
   outputFile.close();
-  ui->printMsg(F("Saved to "));
-  ui->printlnMsg(outputFilePath);
-  ui->flushOutput();
+  ui.printMsg(F("Saved to "));
+  ui.printlnMsg(outputFilePath);
+  ui.flushOutput();
 }
 
 unsigned long verifySram(const String &filePath, unsigned long sramSize, byte flashramType) {
@@ -2040,7 +2040,7 @@ void initFram() {
 
 void writeFram(const String &inputFilePath, byte flashramType) {
   if (saveType != 4) {
-    ui->printErrorAndAbort(F("Savetype Error"), true);
+    ui.printErrorAndAbort(F("Savetype Error"), true);
   }
   
   // Erase fram
@@ -2048,17 +2048,17 @@ void writeFram(const String &inputFilePath, byte flashramType) {
 
   // Check if empty
   if (blankcheck_N64(flashramType) == 0) {
-    ui->printlnMsg(F("OK"));
-    ui->flushOutput();
+    ui.printlnMsg(F("OK"));
+    ui.flushOutput();
   }
   else {
-    ui->printlnMsg("FAIL");
-    ui->flushOutput();
+    ui.printlnMsg("FAIL");
+    ui.flushOutput();
   }
 
-  ui->printMsg(F("Writing "));
-  ui->printlnMsg(inputFilePath);
-  ui->flushOutput();
+  ui.printMsg(F("Writing "));
+  ui.printlnMsg(inputFilePath);
+  ui.flushOutput();
 
   // Open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -2067,11 +2067,11 @@ void writeFram(const String &inputFilePath, byte flashramType) {
   initFram();
 
   // Write all 8 fram banks
-  ui->printMsg(F("Bank "));
+  ui.printMsg(F("Bank "));
   for (byte bank = 0; bank < 8; bank++) {
-    ui->printMsg(bank);
-    ui->printMsg(F(" "));
-    ui->flushOutput();
+    ui.printMsg(bank);
+    ui.printMsg(F(" "));
+    ui.flushOutput();
 
     // Write one bank of 128*128 bytes
     for (byte offset = 0; offset < 128; offset++) {
@@ -2108,7 +2108,7 @@ void writeFram(const String &inputFilePath, byte flashramType) {
     // Delay between banks
     delay(20);
   }
-  ui->printlnMsg("");
+  ui.printlnMsg("");
   // Close the file:
   inputFile.close();
 }
@@ -2116,11 +2116,11 @@ void writeFram(const String &inputFilePath, byte flashramType) {
 // Delete all 8 flashram banks
 void eraseFram() {
   if (saveType != 4) {
-    ui->printErrorAndAbort(F("Savetype Error"), true);
+    ui.printErrorAndAbort(F("Savetype Error"), true);
   }
 
-  ui->printMsg(F("Erasing..."));
-  ui->flushOutput();
+  ui.printMsg(F("Erasing..."));
+  ui.flushOutput();
 
   // Init fram
   initFram();
@@ -2144,7 +2144,7 @@ void eraseFram() {
 // Read flashram
 void readFram(byte flashramType) {
   if (saveType != 4) {
-    ui->printErrorAndAbort(F("Savetype Error"), true);
+    ui.printErrorAndAbort(F("Savetype Error"), true);
   }
 
   // Put flashram into read mode
@@ -2282,38 +2282,38 @@ void getFramType() {
   //MX29L1100
   if (sdBuffer[7] == 0x1e ) {
     flashramType = 2;
-    ui->printlnMsg(F("Type: MX29L1100"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Type: MX29L1100"));
+    ui.flushOutput();
   }
   //MX29L1101
   else if (sdBuffer[7] == 0x1d )  {
     flashramType = 1;
     MN63F81MPN = false;
-    ui->printlnMsg(F("Type: MX29L1101"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Type: MX29L1101"));
+    ui.flushOutput();
   }
   //MN63F81MPN
   else if (sdBuffer[7] == 0xf1 )  {
     flashramType = 1;
     MN63F81MPN = true;
-    ui->printlnMsg(F("Type: MN63F81MPN"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Type: MN63F81MPN"));
+    ui.flushOutput();
   }
   // 29L1100KC-15B0 compat MX29L1101
   else if ((sdBuffer[7] == 0x8e ) || (sdBuffer[7] == 0x84 )) {
     flashramType = 1;
     MN63F81MPN = false;
-    ui->printlnMsg(F("Type: 29L1100KC-15B0"));
-    ui->printlnMsg(F("(compat. MX29L1101)"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Type: 29L1100KC-15B0"));
+    ui.printlnMsg(F("(compat. MX29L1101)"));
+    ui.flushOutput();
   }
   // Type unknown
   else {
     for (byte c = 0; c < 8; c++) {
-      ui->printMsg(sdBuffer[c], HEX);
-      ui->printMsg(F(", "));
+      ui.printMsg(sdBuffer[c], HEX);
+      ui.printMsg(F(", "));
     }
-    ui->printErrorAndAbort(F("Flashram unknown"), false);
+    ui.printErrorAndAbort(F("Flashram unknown"), false);
   }
 }
 
@@ -2336,7 +2336,7 @@ readn64rom:
   //Initialize progress bar
   uint32_t processedProgressBar = 0;
   uint32_t totalProgressBar = (uint32_t)(cartSize) * 1024 * 1024;
-  ui->drawProgressBar(0, totalProgressBar);
+  ui.drawProgressBar(0, totalProgressBar);
 
   // prepare crc32
   uint32_t oldcrc32 = 0xFFFFFFFF;
@@ -2405,7 +2405,7 @@ readn64rom:
     }
 
     processedProgressBar += 1024;
-    ui->drawProgressBar(processedProgressBar, totalProgressBar);
+    ui.drawProgressBar(processedProgressBar, totalProgressBar);
     // write out 1024 bytes to file
     outputFile.write(buffer, 1024);
   }
@@ -2415,19 +2415,19 @@ readn64rom:
 
   unsigned long timeElapsed = (millis() - startTime) / 1000; // seconds
 
-  ui->printMsg(F("CRC: "));
-  ui->flushOutput();
+  ui.printMsg(F("CRC: "));
+  ui.flushOutput();
   // convert checksum to string
   char crcStr[9];
   sprintf(crcStr, "%08lx", ~oldcrc32);
   // Print checksum
-  ui->printlnMsg(crcStr);
-  ui->flushOutput();
+  ui.printlnMsg(crcStr);
+  ui.flushOutput();
 
   // Search n64.txt for crc
   if (searchCRC(crcStr)) {
     // Dump was a known good rom
-    ui->printlnMsg(F("Checksum matches"));
+    ui.printlnMsg(F("Checksum matches"));
   }
   else {
     // Dump was bad or unknown
@@ -2445,7 +2445,7 @@ readn64rom:
       crcItem_Reset,
     };
 
-    const __FlashStringHelper *crcAnswer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *crcAnswer = ui.askMultipleChoiceQuestion(
       F("CRC ERROR"), crcMenu, ARRAY_LENGTH(crcMenu), crcItem_Redump);
 
     if (crcAnswer == crcItem_Redump) {
@@ -2453,9 +2453,9 @@ readn64rom:
       SafeSDFile oldFile = SafeSDFile::openForWriting(outputFilePath);
       oldFile.remove();
       // Dump again
-      ui->clearOutput();
-      ui->printlnMsg(F("Reading Rom..."));
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.printlnMsg(F("Reading Rom..."));
+      ui.flushOutput();
       rgb.setColor(0, 0, 0);
       goto readn64rom;
     }
@@ -2467,15 +2467,15 @@ readn64rom:
       resetArduino();
     }
   }
-  ui->flushOutput();
+  ui.flushOutput();
 
-  ui->printMsg(F("Done ("));
-  ui->printMsg(timeElapsed); // include elapsed time
-  ui->printlnMsg(F("s)"));
-  ui->printlnMsg(F(""));
-  ui->printlnMsg(F("Press Button..."));
-  ui->flushOutput();
-  ui->waitForUserInput();
+  ui.printMsg(F("Done ("));
+  ui.printMsg(timeElapsed); // include elapsed time
+  ui.printlnMsg(F("s)"));
+  ui.printlnMsg(F(""));
+  ui.printlnMsg(F("Press Button..."));
+  ui.flushOutput();
+  ui.waitForUserInput();
 }
 
 /******************************************
@@ -2489,63 +2489,63 @@ void flashRepro_N64() {
   if (cartSize != 0) {
     // Print flashrom name
     if ((strcmp(flashid, "227E") == 0)  && (strcmp(cartID, "2201") == 0)) {
-      ui->printMsg(F("Spansion S29GL256N"));
+      ui.printMsg(F("Spansion S29GL256N"));
       if (cartSize == 64)
-        ui->printlnMsg(F(" x2"));
+        ui.printlnMsg(F(" x2"));
       else
-        ui->printlnMsg("");
+        ui.printlnMsg("");
     }
     else if ((strcmp(flashid, "227E") == 0)  && (strcmp(cartID, "2101") == 0)) {
-      ui->printMsg(F("Spansion S29GL128N"));
+      ui.printMsg(F("Spansion S29GL128N"));
     }
     else if ((strcmp(flashid, "22C9") == 0) || (strcmp(flashid, "22CB") == 0)) {
-      ui->printMsg(F("Macronix MX29LV640"));
+      ui.printMsg(F("Macronix MX29LV640"));
       if (cartSize == 16)
-        ui->printlnMsg(F(" x2"));
+        ui.printlnMsg(F(" x2"));
       else
-        ui->printlnMsg("");
+        ui.printlnMsg("");
     }
     else if (strcmp(flashid, "8816") == 0)
-      ui->printlnMsg(F("Intel 4400L0ZDQ0"));
+      ui.printlnMsg(F("Intel 4400L0ZDQ0"));
     else if (strcmp(flashid, "7E7E") == 0)
-      ui->printlnMsg(F("Fujitsu MSP55LV100S"));
+      ui.printlnMsg(F("Fujitsu MSP55LV100S"));
     else if ((strcmp(flashid, "227E") == 0) && (strcmp(cartID, "2301") == 0))
-      ui->printlnMsg(F("Fujitsu MSP55LV512"));
+      ui.printlnMsg(F("Fujitsu MSP55LV512"));
     else if ((strcmp(flashid, "227E") == 0) && (strcmp(cartID, "3901") == 0))
-      ui->printlnMsg(F("Intel 512M29EW"));
+      ui.printlnMsg(F("Intel 512M29EW"));
 
     // Print info
-    ui->printMsg(F("ID: "));
-    ui->printMsg(flashid);
-    ui->printMsg(F(" Size: "));
-    ui->printMsg(cartSize);
-    ui->printlnMsg(F("MB"));
-    ui->printlnMsg("");
-    ui->printlnMsg(F("This will erase your"));
-    ui->printlnMsg(F("Repro Cartridge."));
-    ui->printlnMsg(F("Attention: Use 3.3V!"));
-    ui->printlnMsg("");
-    ui->printlnMsg(F("Press Button"));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printMsg(F("ID: "));
+    ui.printMsg(flashid);
+    ui.printMsg(F(" Size: "));
+    ui.printMsg(cartSize);
+    ui.printlnMsg(F("MB"));
+    ui.printlnMsg("");
+    ui.printlnMsg(F("This will erase your"));
+    ui.printlnMsg(F("Repro Cartridge."));
+    ui.printlnMsg(F("Attention: Use 3.3V!"));
+    ui.printlnMsg("");
+    ui.printlnMsg(F("Press Button"));
+    ui.flushOutput();
+    ui.waitForUserInput();
 
     // Launch file browser
     String inputFilePath = fileBrowser(F("Select z64 file"));
-    ui->clearOutput();
-    ui->flushOutput();
+    ui.clearOutput();
+    ui.flushOutput();
 
     // Open file on sd card
     SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
     // Get rom size from file
     fileSize = inputFile.fileSize();
-    ui->printMsg(F("File size: "));
-    ui->printMsg(fileSize / 1048576);
-    ui->printlnMsg(F("MB"));
-    ui->flushOutput();
+    ui.printMsg(F("File size: "));
+    ui.printMsg(fileSize / 1048576);
+    ui.printlnMsg(F("MB"));
+    ui.flushOutput();
 
     // Compare file size to flashrom size
     if ((fileSize / 1048576) > cartSize) {
-      ui->printErrorAndAbort(F("File too big"), false);
+      ui.printErrorAndAbort(F("File too big"), false);
     }
 
     // Erase needed sectors
@@ -2570,10 +2570,10 @@ void flashRepro_N64() {
     // Check if erase was successful
     if (blankcheckFlashrom_N64()) {
       // Write flashrom
-      ui->printlnMsg(F("OK"));
-      ui->printMsg(F("Writing "));
-      ui->printlnMsg(inputFilePath);
-      ui->flushOutput();
+      ui.printlnMsg(F("OK"));
+      ui.printMsg(F("Writing "));
+      ui.printlnMsg(inputFilePath);
+      ui.flushOutput();
 
 
       if ((strcmp(cartID, "3901") == 0) && (strcmp(flashid, "227E") == 0)) {
@@ -2602,41 +2602,41 @@ void flashRepro_N64() {
       inputFile.close();
 
       // Verify
-      ui->printMsg(F("Verifying..."));
-      ui->flushOutput();
+      ui.printMsg(F("Verifying..."));
+      ui.flushOutput();
       writeErrors = verifyFlashrom_N64(inputFilePath);
       if (writeErrors == 0) {
-        ui->printlnMsg(F("OK"));
-        ui->flushOutput();
+        ui.printlnMsg(F("OK"));
+        ui.flushOutput();
       }
       else {
-        ui->printMsg(writeErrors);
-        ui->printMsg(F(" bytes "));
-        ui->printError(F("did not verify."));
+        ui.printMsg(writeErrors);
+        ui.printMsg(F(" bytes "));
+        ui.printError(F("did not verify."));
       }
     }
     else {
       // Close the file
       inputFile.close();
-      ui->printError(F("failed"));
+      ui.printError(F("failed"));
     }
   }
   // If the ID is unknown show error message
   else {
-    ui->printMsg(F("Vendor: "));
-    ui->printlnMsg(vendorID);
-    ui->printMsg(F("ID: "));
-    ui->printMsg(flashid);
-    ui->printMsg(F(" "));
-    ui->printlnMsg(cartID);
-    ui->printError(F("Unknown flashrom"));
+    ui.printMsg(F("Vendor: "));
+    ui.printlnMsg(vendorID);
+    ui.printMsg(F("ID: "));
+    ui.printMsg(flashid);
+    ui.printMsg(F(" "));
+    ui.printlnMsg(cartID);
+    ui.printError(F("Unknown flashrom"));
   }
 
-  ui->printlnMsg(F("Press Button..."));
-  ui->flushOutput();
-  ui->waitForUserInput();
-  ui->clearOutput();
-  ui->flushOutput();
+  ui.printlnMsg(F("Press Button..."));
+  ui.flushOutput();
+  ui.waitForUserInput();
+  ui.clearOutput();
+  ui.flushOutput();
 }
 
 // Reset to read mode
@@ -2825,8 +2825,8 @@ void idFlashrom_N64() {
 void eraseIntel4400_N64() {
   unsigned long flashBase = romBase;
 
-  ui->printMsg(F("Erasing..."));
-  ui->flushOutput();
+  ui.printMsg(F("Erasing..."));
+  ui.flushOutput();
 
   // If the game is smaller than 32Mbit only erase the needed blocks
   unsigned long lastBlock = 0x1FFFFFF;
@@ -2939,8 +2939,8 @@ void eraseMSP55LV100_N64() {
   unsigned long flashBase = romBase;
   unsigned long sectorSize = 0x20000;
 
-  ui->printMsg(F("Erasing..."));
-  ui->flushOutput();
+  ui.printMsg(F("Erasing..."));
+  ui.flushOutput();
 
   for (unsigned long currSector = 0; currSector < fileSize; currSector += sectorSize) {
     // Blink led
@@ -2982,8 +2982,8 @@ void eraseMSP55LV100_N64() {
 void eraseFlashrom_N64(unsigned long sectorSize) {
   unsigned long flashBase = romBase;
 
-  ui->printMsg(F("Erasing..."));
-  ui->flushOutput();
+  ui.printMsg(F("Erasing..."));
+  ui.flushOutput();
 
   for (unsigned long currSector = 0; currSector < fileSize; currSector += sectorSize) {
     // Blink led
@@ -3277,7 +3277,7 @@ unsigned long verifyFlashrom_N64(const String &filePath) {
           writeErrors++;
           // Abord if too many errors
           if (writeErrors > 20) {
-            ui->printMsg(F("More than "));
+            ui.printMsg(F("More than "));
             // Close the file:
             inputFile.close();
             return writeErrors;
@@ -3301,74 +3301,74 @@ void flashGameshark_N64() {
   // Check for SST 29LE010
   if (strcmp(flashid, "0808") == 0) {
     backupGameshark_N64();
-    ui->printlnMsg("");
-    ui->printlnMsg(F("This will erase your"));
-    ui->printlnMsg(F("Gameshark cartridge"));
-    ui->printlnMsg(F("Attention: Use 3.3V!"));
-    ui->printlnMsg("");
-    ui->printlnMsg(F("Press Button"));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg("");
+    ui.printlnMsg(F("This will erase your"));
+    ui.printlnMsg(F("Gameshark cartridge"));
+    ui.printlnMsg(F("Attention: Use 3.3V!"));
+    ui.printlnMsg("");
+    ui.printlnMsg(F("Press Button"));
+    ui.flushOutput();
+    ui.waitForUserInput();
 
     // Launch file browser
     String inputFilePath = fileBrowser(F("Select z64 file"));
-    ui->clearOutput();
-    ui->flushOutput();
+    ui.clearOutput();
+    ui.flushOutput();
 
     // Open file on sd card
     SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
     // Get rom size from file
     fileSize = inputFile.fileSize();
-    ui->printMsg(F("File size: "));
-    ui->printMsg(fileSize / 1024);
-    ui->printlnMsg(F("KB"));
-    ui->flushOutput();
+    ui.printMsg(F("File size: "));
+    ui.printMsg(fileSize / 1024);
+    ui.printlnMsg(F("KB"));
+    ui.flushOutput();
 
     // Compare file size to flashrom size
     if (fileSize > 262144) {
-      ui->printErrorAndAbort(F("File too big"), false);
+      ui.printErrorAndAbort(F("File too big"), false);
     }
 
     // SST 29LE010, chip erase not needed as this eeprom automaticly erases during the write cycle
     eraseGameshark_N64();
 
     // Write flashrom
-    ui->printMsg(F("Writing "));
-    ui->printlnMsg(inputFilePath);
-    ui->flushOutput();
+    ui.printMsg(F("Writing "));
+    ui.printlnMsg(inputFilePath);
+    ui.flushOutput();
     writeGameshark_N64(inputFile);
 
     // Close the file:
     inputFile.close();
 
     // Verify
-    ui->printMsg(F("Verifying..."));
-    ui->flushOutput();
+    ui.printMsg(F("Verifying..."));
+    ui.flushOutput();
     writeErrors = verifyGameshark_N64(inputFilePath);
 
     if (writeErrors == 0) {
-      ui->printlnMsg(F("OK"));
-      ui->flushOutput();
+      ui.printlnMsg(F("OK"));
+      ui.flushOutput();
     }
     else {
-      ui->printMsg(writeErrors);
-      ui->printMsg(F(" bytes "));
-      ui->printError(F("did not verify."));
+      ui.printMsg(writeErrors);
+      ui.printMsg(F(" bytes "));
+      ui.printError(F("did not verify."));
     }
   }
   // If the ID is unknown show error message
   else {
-    ui->printMsg(F("ID: "));
-    ui->printlnMsg(flashid);
-    ui->printError(F("Unknown flashrom"));
+    ui.printMsg(F("ID: "));
+    ui.printlnMsg(flashid);
+    ui.printError(F("Unknown flashrom"));
   }
 
-  ui->printlnMsg(F("Press Button..."));
-  ui->flushOutput();
-  ui->waitForUserInput();
-  ui->clearOutput();
-  ui->flushOutput();
+  ui.printlnMsg(F("Press Button..."));
+  ui.flushOutput();
+  ui.waitForUserInput();
+  ui.clearOutput();
+  ui.flushOutput();
 }
 
 
@@ -3436,8 +3436,8 @@ void backupGameshark_N64() {
 
 // Send chip erase to the two SST29LE010 inside the Gameshark
 void eraseGameshark_N64() {
-  ui->printlnMsg(F("Erasing..."));
-  ui->flushOutput();
+  ui.printlnMsg(F("Erasing..."));
+  ui.flushOutput();
 
   //Sending erase command according to datasheet
   setAddress_N64(romBase + 0xAAAA);

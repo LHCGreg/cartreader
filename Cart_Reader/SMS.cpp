@@ -35,11 +35,11 @@ void smsMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Sega Master System"), menu, ARRAY_LENGTH(menu), item_Read);
 
     if (answer == item_Read) {
-      ui->clearOutput();
+      ui.clearOutput();
       mode = CartReaderMode::SMS;
       setup_SMS();
       readROM_SMS();
@@ -48,10 +48,10 @@ void smsMenu() {
       break;
     }
 
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
 }
 
@@ -219,26 +219,26 @@ void getCartInfo_SMS() {
   }
   romName[8] = '\0';
 
-  ui->clearOutput();
-  ui->printlnMsg(F("Cart Info"));
-  ui->printlnMsg(F(" "));
-  ui->printMsg(F("Name: "));
-  ui->printlnMsg(romName);
-  ui->printMsg(F("Size: "));
-  ui->printMsg(cartSize / 1024);
-  ui->printlnMsg(F("KB"));
-  ui->printlnMsg(F(" "));
+  ui.clearOutput();
+  ui.printlnMsg(F("Cart Info"));
+  ui.printlnMsg(F(" "));
+  ui.printMsg(F("Name: "));
+  ui.printlnMsg(romName);
+  ui.printMsg(F("Size: "));
+  ui.printMsg(cartSize / 1024);
+  ui.printlnMsg(F("KB"));
+  ui.printlnMsg(F(" "));
 
   if (strcmp(romName, "TMR SEGA") != 0) {
-    ui->printError(F("Not working yet"));
+    ui.printError(F("Not working yet"));
     sprintf(romName, "ERROR");
     cartSize =  48 * 1024UL;
   }
 
   // Wait for user input
-  ui->printlnMsg(F("Press Button..."));
-  ui->flushOutput();
-  ui->waitForUserInput();
+  ui.printlnMsg(F("Press Button..."));
+  ui.flushOutput();
+  ui.waitForUserInput();
   // Turn off LED
   rgb.setColor(0, 0, 0);
 }

@@ -5,12 +5,9 @@
 #include "options.h"
 
 #ifdef UNIT_TEST
-MockUserInterface mockInterface;
-UserInterface *ui = &mockInterface;
+MockUserInterface ui;
 #elif defined(enable_OLED)
-OLEDUserInterface oledInterface;
-UserInterface *ui = &oledInterface;
+OLEDUserInterface ui;
 #else
-SerialUserInterface serialInterface;
-UserInterface *ui = &serialInterface;
+SerialUserInterface ui;
 #endif

@@ -67,47 +67,47 @@ void snesMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Select Cart Type"), menu, ARRAY_LENGTH(menu), item_Regular);
 
     if (answer == item_Regular) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_Snes();
       mode = CartReaderMode::SNES;
       regularSNESMenu();
     }
     else if (answer == item_NP) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_SFM();
       mode = CartReaderMode::SFM;
       sfmMenu();
     }
     else if (answer == item_SV) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       setup_SV();
       mode = CartReaderMode::SV;
       svMenu();
     }
     else if (answer == item_HiROMRepro) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       hiROM = 1;
       setup_Flash8();
       id_Flash8();
-      ui->waitForUserInput();
+      ui.waitForUserInput();
       mode = CartReaderMode::FLASH8;
       flashromMenu8();
     }
     else if (answer == item_LoROMRepro) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       hiROM = 0;
       setup_Flash8();
       id_Flash8();
-      ui->waitForUserInput();
+      ui.waitForUserInput();
       mode = CartReaderMode::FLASH8;
       flashromMenu8();
     }
@@ -135,12 +135,12 @@ void regularSNESMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("SNES Cart Reader"), menu, ARRAY_LENGTH(menu), item_ReadROM);
 
     if (answer == item_ReadROM) {
       if (numBanks > 0) {
-        ui->clearOutput();
+        ui.clearOutput();
         // get current time
         unsigned long startTime = millis();
         // start reading from cart
@@ -148,62 +148,62 @@ void regularSNESMenu() {
         readROM_SNES(outputFilePath);
         compare_checksum(outputFilePath);
         // print elapsed time
-        ui->printMsg(F("Time elapsed: "));
-        ui->printMsg((millis() - startTime) / 1000);
-        ui->printlnMsg(F("s"));
-        ui->flushOutput();
+        ui.printMsg(F("Time elapsed: "));
+        ui.printMsg((millis() - startTime) / 1000);
+        ui.printlnMsg(F("s"));
+        ui.flushOutput();
       }
       else {
-        ui->clearOutput();
-        ui->printError(F("Does not have ROM"));
+        ui.clearOutput();
+        ui.printError(F("Does not have ROM"));
       }
     }
     else if (answer == item_ReadSave) {
       if (sramSize > 0) {
-        ui->clearOutput();
+        ui.clearOutput();
         String outputFilePath = getNextSnesSRAMOutputFilePathAndPrintMessage(romName);
         readSRAM(outputFilePath);
       }
       else {
-        ui->clearOutput();
-        ui->printError(F("Does not have SRAM"));
+        ui.clearOutput();
+        ui.printError(F("Does not have SRAM"));
       }
     }
     else if (answer == item_WriteSave) {
       if (sramSize > 0) {
-        ui->clearOutput();
+        ui.clearOutput();
         String inputFilePath = fileBrowser(F("Select srm file"));
         writeSRAM(inputFilePath);
         uint32_t writeErrors = verifySRAM(inputFilePath);
         if (writeErrors == 0) {
-          ui->printlnMsg(F("Verified OK"));
-          ui->flushOutput();
+          ui.printlnMsg(F("Verified OK"));
+          ui.flushOutput();
         }
         else {
-          ui->printMsg(F("Error: "));
-          ui->printMsg(writeErrors);
-          ui->printlnMsg(F(" bytes "));
-          ui->printError(F("did not verify."));
+          ui.printMsg(F("Error: "));
+          ui.printMsg(writeErrors);
+          ui.printlnMsg(F(" bytes "));
+          ui.printError(F("did not verify."));
         }
       }
       else {
-        ui->clearOutput();
-        ui->printError(F("Does not have SRAM"));
+        ui.clearOutput();
+        ui.printError(F("Does not have SRAM"));
       }
     }
     else if (answer == item_TestSRAM) {
       if (sramSize > 0) {
-        ui->clearOutput();
-        ui->printlnMsg(F("Warning:"));
-        ui->printlnMsg(F("This can erase"));
-        ui->printlnMsg(F("your save games"));
-        ui->printlnMsg(F(""));
-        ui->printlnMsg(F(""));
-        ui->printlnMsg(F("Press any button to"));
-        ui->printlnMsg(F("start sram testing"));
-        ui->flushOutput();
-        ui->waitForUserInput();
-        ui->clearOutput();
+        ui.clearOutput();
+        ui.printlnMsg(F("Warning:"));
+        ui.printlnMsg(F("This can erase"));
+        ui.printlnMsg(F("your save games"));
+        ui.printlnMsg(F(""));
+        ui.printlnMsg(F(""));
+        ui.printlnMsg(F("Press any button to"));
+        ui.printlnMsg(F("start sram testing"));
+        ui.flushOutput();
+        ui.waitForUserInput();
+        ui.clearOutput();
         String outputFilePath = getNextSnesSRAMOutputFilePathAndPrintMessage(romName);
         readSRAM(outputFilePath);
         eraseSRAM(0x00);
@@ -211,19 +211,19 @@ void regularSNESMenu() {
         writeSRAM(outputFilePath);
         uint32_t writeErrors = verifySRAM(outputFilePath);
         if (writeErrors == 0) {
-          ui->printlnMsg(F("Restored OK"));
-          ui->flushOutput();
+          ui.printlnMsg(F("Restored OK"));
+          ui.flushOutput();
         }
         else {
-          ui->printMsg(F("Error: "));
-          ui->printMsg(writeErrors);
-          ui->printlnMsg(F(" bytes "));
-          ui->printError(F("did not verify."));
+          ui.printMsg(F("Error: "));
+          ui.printMsg(writeErrors);
+          ui.printlnMsg(F(" bytes "));
+          ui.printError(F("did not verify."));
         }
       }
       else {
-        ui->clearOutput();
-        ui->printError(F("Does not have SRAM"));
+        ui.clearOutput();
+        ui.printError(F("Does not have SRAM"));
       }
     }
     else if (answer == item_CycleCart) {
@@ -237,9 +237,9 @@ void regularSNESMenu() {
       // But if that's false, uncomment this:
       // stopSnesClocks_resetCic_resetCart();
 
-      ui->clearOutput();
-      ui->printMsg(F("Resetting..."));
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.printMsg(F("Resetting..."));
+      ui.flushOutput();
       delay(3000); // wait 3 secs to switch to next game
       resetArduino();
     }
@@ -248,10 +248,10 @@ void regularSNESMenu() {
       break;
     }
 
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
 }
 
@@ -271,7 +271,7 @@ void confMenuManual() {
       item_Reset,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Choose mapping"), menu, ARRAY_LENGTH(menu), item_Header);
 
     if (answer == item_Header) {
@@ -485,7 +485,7 @@ void readLoRomBanks( unsigned int start, unsigned int total, SafeSDFile &file)
   //Initialize progress bar
   uint32_t processedProgressBar = 0;
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
-  ui->drawProgressBar(0, totalProgressBar);
+  ui.drawProgressBar(0, totalProgressBar);
 
   for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
@@ -518,7 +518,7 @@ void readLoRomBanks( unsigned int start, unsigned int total, SafeSDFile &file)
 
     // update progress bar
     processedProgressBar += 1024;
-    ui->drawProgressBar(processedProgressBar, totalProgressBar);
+    ui.drawProgressBar(processedProgressBar, totalProgressBar);
   }
 }
 
@@ -532,7 +532,7 @@ void readHiRomBanks( unsigned int start, unsigned int total, SafeSDFile &file)
   //Initialize progress bar
   uint32_t processedProgressBar = 0;
   uint32_t totalProgressBar = (uint32_t)(total - start) * 1024;
-  ui->drawProgressBar(0, totalProgressBar);
+  ui.drawProgressBar(0, totalProgressBar);
 
   for (unsigned int currBank = start; currBank < total; currBank++) {
     PORTL = currBank;
@@ -565,7 +565,7 @@ void readHiRomBanks( unsigned int start, unsigned int total, SafeSDFile &file)
 
     // update progress bar
     processedProgressBar += 1024;
-    ui->drawProgressBar(processedProgressBar, totalProgressBar);
+    ui.drawProgressBar(processedProgressBar, totalProgressBar);
   }
 }
 
@@ -601,109 +601,109 @@ void getCartInfo_SNES() {
     errorLvl = 1;
     rgb.setColor(255, 0, 0);
 
-    ui->clearOutput();
-    ui->printlnMsg(F("ERROR"));
-    ui->printlnMsg(F("Rom header corrupt"));
-    ui->printlnMsg(F("or missing"));
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press button for"));
-    ui->printlnMsg(F("manual configuration"));
-    ui->printlnMsg(F("or powercycle if SA1"));
-    ui->flushOutput();
-    ui->waitForUserInput();
-    // ui->waitForUserInput() clears errors but in this case we still have an error
+    ui.clearOutput();
+    ui.printlnMsg(F("ERROR"));
+    ui.printlnMsg(F("Rom header corrupt"));
+    ui.printlnMsg(F("or missing"));
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press button for"));
+    ui.printlnMsg(F("manual configuration"));
+    ui.printlnMsg(F("or powercycle if SA1"));
+    ui.flushOutput();
+    ui.waitForUserInput();
+    // ui.waitForUserInput() clears errors but in this case we still have an error
     errorLvl = 1;
   }
 
-  ui->clearOutput();
-  ui->printMsg(F("Name: "));
-  ui->printlnMsg(romName);
+  ui.clearOutput();
+  ui.printMsg(F("Name: "));
+  ui.printlnMsg(romName);
 
-  ui->printMsg(F("Type: "));
+  ui.printMsg(F("Type: "));
   if (romType == HI)
-    ui->printMsg(F("HiROM"));
+    ui.printMsg(F("HiROM"));
   else if (romType == LO)
-    ui->printMsg(F("LoROM"));
+    ui.printMsg(F("LoROM"));
   else if (romType == EX)
-    ui->printMsg(F("ExHiRom"));
+    ui.printMsg(F("ExHiRom"));
   else
-    ui->printMsg(romType);
-  ui->printMsg(F(" "));
+    ui.printMsg(romType);
+  ui.printMsg(F(" "));
   if (romSpeed == 0)
-    ui->printlnMsg(F("SlowROM"));
+    ui.printlnMsg(F("SlowROM"));
   else if (romSpeed == 2)
-    ui->printlnMsg(F("SlowROM"));
+    ui.printlnMsg(F("SlowROM"));
   else if (romSpeed == 3)
-    ui->printlnMsg(F("FastROM"));
+    ui.printlnMsg(F("FastROM"));
   else
-    ui->printlnMsg(romSpeed);
+    ui.printlnMsg(romSpeed);
 
-  ui->printMsg(F("ICs: ROM "));
+  ui.printMsg(F("ICs: ROM "));
   if (romChips == 0)
-    ui->printlnMsg(F("ONLY"));
+    ui.printlnMsg(F("ONLY"));
   else if (romChips == 1)
-    ui->printlnMsg(F("RAM"));
+    ui.printlnMsg(F("RAM"));
   else if (romChips == 2)
-    ui->printlnMsg(F("SAVE"));
+    ui.printlnMsg(F("SAVE"));
   else if (romChips == 3)
-    ui->printlnMsg(F("DSP1"));
+    ui.printlnMsg(F("DSP1"));
   else if (romChips == 4)
-    ui->printlnMsg(F("DSP1 RAM"));
+    ui.printlnMsg(F("DSP1 RAM"));
   else if (romChips == 5)
-    ui->printlnMsg(F("DSP1 SAVE"));
+    ui.printlnMsg(F("DSP1 SAVE"));
   else if ((romChips == 19) || (romChips == 20) || (romChips == 21) || (romChips == 26))
-    ui->printlnMsg(F("SuperFX"));
+    ui.printlnMsg(F("SuperFX"));
   else if (romChips == 52) {
-    ui->printlnMsg(F("SA1 RAM"));
+    ui.printlnMsg(F("SA1 RAM"));
     romType = SA;
   }
   else if (romChips == 53) {
-    ui->printlnMsg(F("SA1 RAM BATT"));
+    ui.printlnMsg(F("SA1 RAM BATT"));
     romType = SA;
   }
   else if (romChips == 69) {
-    ui->printlnMsg(F("SDD1 BATT"));
+    ui.printlnMsg(F("SDD1 BATT"));
   }
   else if (romChips == 227)
-    ui->printlnMsg(F("RAM GBoy"));
+    ui.printlnMsg(F("RAM GBoy"));
   else if (romChips == 243)
-    ui->printlnMsg(F("CX4"));
+    ui.printlnMsg(F("CX4"));
   else if (romChips == 246)
-    ui->printlnMsg(F("DSP2"));
+    ui.printlnMsg(F("DSP2"));
   else if (romChips == 245)
-    ui->printlnMsg(F("SPC RAM BATT"));
+    ui.printlnMsg(F("SPC RAM BATT"));
   else if (romChips == 249)
-    ui->printlnMsg(F("SPC RAM RTC"));
+    ui.printlnMsg(F("SPC RAM RTC"));
   else
-    ui->printlnMsg(F(""));
+    ui.printlnMsg(F(""));
 
-  ui->printMsg(F("Rom Size: "));
-  ui->printMsg(romSize);
-  ui->printlnMsg(F("Mbit"));
+  ui.printMsg(F("Rom Size: "));
+  ui.printMsg(romSize);
+  ui.printlnMsg(F("Mbit"));
 
-  ui->printMsg(F("Banks: "));
-  ui->printMsg(numBanks);
-  ui->printMsg(F(" Chips: "));
-  ui->printlnMsg(romChips);
+  ui.printMsg(F("Banks: "));
+  ui.printMsg(numBanks);
+  ui.printMsg(F(" Chips: "));
+  ui.printlnMsg(romChips);
 
-  ui->printMsg(F("Sram Size: "));
-  ui->printMsg(sramSize);
-  ui->printlnMsg(F("Kbit"));
+  ui.printMsg(F("Sram Size: "));
+  ui.printMsg(sramSize);
+  ui.printlnMsg(F("Kbit"));
 
-  ui->printMsg(F("ROM Version: 1."));
-  ui->printlnMsg(romVersion);
+  ui.printMsg(F("ROM Version: 1."));
+  ui.printlnMsg(romVersion);
 
-  ui->printMsg(F("Checksum: "));
-  ui->printlnMsg(checksumStr);
-  ui->flushOutput();
+  ui.printMsg(F("Checksum: "));
+  ui.printlnMsg(checksumStr);
+  ui.flushOutput();
 
   // Wait for user input
-  ui->printlnMsg(F(" "));
-  ui->printlnMsg(F(" "));
-  ui->printlnMsg(F("Press Button..."));
-  ui->flushOutput();
-  ui->waitForUserInput();
+  ui.printlnMsg(F(" "));
+  ui.printlnMsg(F(" "));
+  ui.printlnMsg(F("Press Button..."));
+  ui.flushOutput();
+  ui.waitForUserInput();
 
   // Start manual config
   if (manualConfig == 1) {
@@ -1051,23 +1051,23 @@ unsigned int calc_checksum(const String &filePath) {
 }
 
 boolean compare_checksum(const String &filePath) {
-  ui->printlnMsg(F("Calculating Checksum"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Calculating Checksum"));
+  ui.flushOutput();
 
   char calcsumStr[5];
   sprintf(calcsumStr, "%04X", calc_checksum(filePath));
 
   if (strcmp(calcsumStr, checksumStr) == 0) {
-    ui->printMsg(F("Checksum OK: "));
-    ui->printlnMsg(calcsumStr);
-    ui->flushOutput();
+    ui.printMsg(F("Checksum OK: "));
+    ui.printlnMsg(calcsumStr);
+    ui.flushOutput();
     return 1;
   }
   else {
-    ui->printMsg(F("Checksum Error: "));
-    ui->printlnMsg(calcsumStr);
-    ui->printError(F(""));
-    ui->flushOutput();
+    ui.printMsg(F("Checksum Error: "));
+    ui.printlnMsg(calcsumStr);
+    ui.printError(F(""));
+    ui.flushOutput();
     return 0;
   }
 }
@@ -1143,8 +1143,8 @@ void readROM_SNES(const String &outputFilePath) {
 
   // Dump SDD1 High-type ROM
   else if ((romType == HI) && (romChips == 69)) {
-    ui->printlnMsg(F("Dumping SDD1 HiRom"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Dumping SDD1 HiRom"));
+    ui.flushOutput();
     controlIn_SNES();
     byte initialSOMap = readBank_SNES(0, 18439);
 
@@ -1159,7 +1159,7 @@ void readROM_SNES(const String &outputFilePath) {
       controlIn_SNES();
 
       readHiRomBanks( 240, 256, outputFile);
-      if (currMemmap == 2) ui->clearOutput();  // need more space for the progress bars
+      if (currMemmap == 2) ui.clearOutput();  // need more space for the progress bars
     }
 
     dataOut();
@@ -1173,12 +1173,12 @@ void readROM_SNES(const String &outputFilePath) {
 
   // Dump SPC7110 High-type ROM
   else if ((romType == HI) && ((romChips == 245) || (romChips == 249))) {
-    ui->printlnMsg(F("Dumping SPC7110 HiRom"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Dumping SPC7110 HiRom"));
+    ui.flushOutput();
 
     // 0xC00000-0xDFFFFF
-    //ui->printMsg(F("Part 1"));
-    ui->flushOutput();
+    //ui.printMsg(F("Part 1"));
+    ui.flushOutput();
     readHiRomBanks( 192, 224, outputFile);
 
     if (numBanks > 32) {
@@ -1191,14 +1191,14 @@ void readROM_SNES(const String &outputFilePath) {
       controlIn_SNES();
 
       // 0xE00000-0xEFFFFF
-      //ui->printMsg(F(" 2"));
-      ui->flushOutput();
+      //ui.printMsg(F(" 2"));
+      ui.flushOutput();
       readHiRomBanks( 224, 240, outputFile);
 
       if (numBanks > 48) {
         // 0xF00000-0xFFFFFF
-        //ui->printMsg(F(" 3"));
-        ui->flushOutput();
+        //ui.printMsg(F(" 3"));
+        ui.flushOutput();
         readHiRomBanks( 240, 256, outputFile);
 
         dataOut();
@@ -1211,12 +1211,12 @@ void readROM_SNES(const String &outputFilePath) {
         controlIn_SNES();
 
         // 0xF00000-0xFFFFFF
-        //ui->printMsg(F(" 4"));
-        ui->flushOutput();
+        //ui.printMsg(F(" 4"));
+        ui.flushOutput();
         readHiRomBanks( 240, 256, outputFile);
       }
-      //ui->printlnMsg(F(""));
-      ui->clearOutput();  // need more space due to the 4 progress bars
+      //ui.printlnMsg(F(""));
+      ui.clearOutput();  // need more space due to the 4 progress bars
 
       // Return mapping registers to initial settings...
       dataOut();
@@ -1232,8 +1232,8 @@ void readROM_SNES(const String &outputFilePath) {
 
   // Dump standard High-type ROM
   else if ((romType == HI) || (romType == SA) || (romType == EX)) {
-    ui->printlnMsg(F("Dumping HiRom..."));
-    ui->flushOutput();
+    ui.printlnMsg(F("Dumping HiRom..."));
+    ui.flushOutput();
 
     readHiRomBanks( 192, numBanks + 192, outputFile);
   }
@@ -1394,8 +1394,8 @@ void writeSRAM(const String &inputFilePath) {
 
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F("SRAM writing finished"));
-  ui->flushOutput();
+  ui.printlnMsg(F("SRAM writing finished"));
+  ui.flushOutput();
 }
 
 void readSRAM(const String &outputFilePath) {
@@ -1508,10 +1508,10 @@ void readSRAM(const String &outputFilePath) {
   outputFile.close();
 
   // Signal end of process
-  ui->clearOutput();
-  ui->printMsg(F("Saved to "));
-  ui->printlnMsg(outputFilePath);
-  ui->flushOutput();
+  ui.clearOutput();
+  ui.printMsg(F("Saved to "));
+  ui.printlnMsg(outputFilePath);
+  ui.flushOutput();
 }
 
 // Check if the SRAM was written without any error
@@ -1690,22 +1690,22 @@ unsigned long verifySRAM(const String &filePath) {
     // Close the file:
     inputFile.close();
     if (writeErrors == 0) {
-      ui->printlnMsg(F("Verified OK"));
+      ui.printlnMsg(F("Verified OK"));
     }
     else {
-      ui->printMsg(F("Error: "));
-      ui->printMsg(writeErrors);
-      ui->printlnMsg(F(" bytes "));
-      ui->printError(F("did not verify."));
+      ui.printMsg(F("Error: "));
+      ui.printMsg(writeErrors);
+      ui.printlnMsg(F(" bytes "));
+      ui.printError(F("did not verify."));
     }
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.flushOutput();
+    ui.waitForUserInput();
 
     stopSnesClocks_resetCic_resetCart();
 
-    ui->clearOutput();
-    ui->printMsg(F("Resetting..."));
-    ui->flushOutput();
+    ui.clearOutput();
+    ui.printMsg(F("Resetting..."));
+    ui.flushOutput();
     delay(3000);  // wait 3 secs
     resetArduino();
   }
@@ -1716,10 +1716,10 @@ unsigned long verifySRAM(const String &filePath) {
 
 // Overwrite the entire SRAM
 boolean eraseSRAM (byte b) {
-  ui->printMsg(F("0x"));
-  ui->printMsg(b, HEX);
-  ui->printMsg(F(": "));
-  ui->flushOutput();
+  ui.printMsg(F("0x"));
+  ui.printMsg(b, HEX);
+  ui.printMsg(F(": "));
+  ui.flushOutput();
 
   // Set pins to output
   dataOut();
@@ -2003,14 +2003,14 @@ boolean eraseSRAM (byte b) {
     }
   }
   if (writeErrors == 0) {
-    ui->printlnMsg(F("OK"));
+    ui.printlnMsg(F("OK"));
     return 1;
   }
   else {
-    ui->printlnMsg(F("ERROR"));
+    ui.printlnMsg(F("ERROR"));
     return 0;
   }
-  ui->flushOutput();
+  ui.flushOutput();
 }
 
 //******************************************

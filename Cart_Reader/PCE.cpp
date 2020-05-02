@@ -68,20 +68,20 @@ void pcsMenu(void) {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Select device"), menu, ARRAY_LENGTH(menu), item_Hucard);
 
     if (answer == item_Hucard) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       pce_internal_mode = HUCARD;
       setup_cart_PCE();
       mode = CartReaderMode::PCE;
       hucardMenu();
     }
     else if (answer == item_Turbochip) {
-      ui->clearOutput();
-      ui->flushOutput();
+      ui.clearOutput();
+      ui.flushOutput();
       pce_internal_mode = TURBOCHIP;
       setup_cart_PCE();
       mode = CartReaderMode::PCE;
@@ -106,29 +106,29 @@ void hucardMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("PCE HuCARD menu"), menu, ARRAY_LENGTH(menu), item_ReadROM);
 
     if (answer == item_ReadROM) {
-      ui->clearOutput();
+      ui.clearOutput();
       read_rom_PCE();
     }
     else if (answer == item_ReadTennokoe) {
-      ui->clearOutput();
+      ui.clearOutput();
       read_tennokoe_bank_PCE();
     }
     else if (answer == item_WriteTennokoe) {
-      ui->clearOutput();
+      ui.clearOutput();
       write_tennokoe_bank_PCE();
     }
     else if (answer == item_Back) {
       break;
     }
 
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
 }
 
@@ -141,21 +141,21 @@ void turbochipMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("TG TurboChip menu"), menu, ARRAY_LENGTH(menu), item_ReadROM);
 
     if (answer == item_ReadROM) {
-      ui->clearOutput();
+      ui.clearOutput();
       read_rom_PCE();
     }
     else if (answer == item_Back) {
       break;
     }
 
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
 }
 
@@ -388,7 +388,7 @@ uint32_t detect_rom_size_PCE(void)
 
   //debug
   //sprintf(fileName, "%d %d %d %d", detect_128, detect_256, detect_512, detect_768); //using filename global variable as string. Initialzed in below anyways.
-  //ui->printlnMsg(fileName);
+  //ui.printlnMsg(fileName);
 
   //ROM size detection by result
   if (detect_128 == DETECTION_SIZE)
@@ -446,7 +446,7 @@ void read_bank_PCE(uint32_t address_start, uint32_t address_end, uint32_t *proce
     }
     outputFile.write(sdBuffer, 512);
     *processed_size += 512;
-    ui->drawProgressBar(*processed_size, total_size);
+    ui.drawProgressBar(*processed_size, total_size);
   }
 }
 
@@ -530,21 +530,21 @@ void crc_search(const String &tempOutputFilePath, uint32_t rom_size)
     //Initialize flag as error
     flag = CHKSUM_ERROR;
     crc = 0xFFFFFFFFUL; //Initialize CRC
-    ui->clearOutput();
-    ui->printlnMsg(F("Calculating chksum..."));
+    ui.clearOutput();
+    ui.printlnMsg(F("Calculating chksum..."));
     processedsize = 0;
-    ui->drawProgressBar(0, rom_size * 1024UL); //Initialize progress bar
+    ui.drawProgressBar(0, rom_size * 1024UL); //Initialize progress bar
 
     while (rom.bytesAvailable() > 0)
     {
       r = rom.read(sdBuffer, 512);
       crc = calculate_crc32(r, sdBuffer, crc);
       processedsize += r;
-      ui->drawProgressBar(processedsize, rom_size * 1024UL);
+      ui.drawProgressBar(processedsize, rom_size * 1024UL);
     }
 
     crc = crc ^ 0xFFFFFFFFUL; //Finish CRC calculation and progress bar
-    ui->drawProgressBar(rom_size * 1024UL, rom_size * 1024UL);
+    ui.drawProgressBar(rom_size * 1024UL, rom_size * 1024UL);
 
     //Display calculated CRC
     sprintf(crc_file, "%08lX", crc);
@@ -570,10 +570,10 @@ void crc_search(const String &tempOutputFilePath, uint32_t rom_size)
 
         rom.rename(pathToMoveTo);
 
-        ui->printMsg(F("Chksum OK "));
-        ui->printlnMsg(crc_file);
-        ui->printMsg(F("Saved to "));
-        ui->printMsg(pathToMoveTo);
+        ui.printMsg(F("Chksum OK "));
+        ui.printlnMsg(crc_file);
+        ui.printMsg(F("Saved to "));
+        ui.printMsg(pathToMoveTo);
         flag = CHKSUM_OK;
         break;
       }
@@ -585,15 +585,15 @@ void crc_search(const String &tempOutputFilePath, uint32_t rom_size)
 
   if (flag == CHKSUM_SKIP)
   {
-    ui->printMsg(F("Saved to "));
-    ui->printMsg(tempOutputFilePath);
+    ui.printMsg(F("Saved to "));
+    ui.printMsg(tempOutputFilePath);
   }
   else if (flag == CHKSUM_ERROR)
   {
-    ui->printMsg(F("Chksum Error "));
-    ui->printlnMsg(crc_file);
-    ui->printMsg(F("Saved to "));
-    ui->printMsg(tempOutputFilePath);
+    ui.printMsg(F("Chksum Error "));
+    ui.printlnMsg(crc_file);
+    ui.printMsg(F("Saved to "));
+    ui.printMsg(tempOutputFilePath);
   }
 }
 
@@ -605,14 +605,14 @@ void read_tennokoe_bank_PCE(void)
   uint8_t verify_flag = 1;
 
   //clear the screen
-  ui->clearOutput();
+  ui.clearOutput();
 
-  ui->printlnMsg(F("RAM size: 8KB"));
+  ui.printlnMsg(F("RAM size: 8KB"));
 
   String outputFilePath = getNextOutputPathWithNumberedFolder(F("PCE"), F("ROM"), F("BANKRAM"), F(".sav"));
 
-  ui->printlnMsg(F("Saving RAM..."));
-  ui->flushOutput();
+  ui.printlnMsg(F("Saving RAM..."));
+  ui.flushOutput();
 
   //open file on sd card
   SafeSDFile outputFile = SafeSDFile::openForCreating(outputFilePath);
@@ -620,7 +620,7 @@ void read_tennokoe_bank_PCE(void)
   pin_read_write_PCE();
 
   //Initialize progress bar by setting processed size as 0
-  ui->drawProgressBar(0, 8 * 1024UL);
+  ui.drawProgressBar(0, 8 * 1024UL);
 
   //Unlock Tennokoe Bank RAM
   write_byte_PCE(0x0D0000, 0x68); //Unlock RAM sequence 1 Bank 68
@@ -641,20 +641,20 @@ void read_tennokoe_bank_PCE(void)
     if (outputFile.readByteOrDie() != read_byte_PCE(verify_loop + 0x080000))
     {
       verify_flag = 0;
-      ui->drawProgressBar(8 * 1024UL, 8 * 1024UL);
+      ui.drawProgressBar(8 * 1024UL, 8 * 1024UL);
       break;
     }
-    ui->drawProgressBar(verify_loop, 8 * 1024UL);
+    ui.drawProgressBar(verify_loop, 8 * 1024UL);
   }
 
   //If verify flag is 0, verify failed
   if (verify_flag == 1)
   {
-    ui->printlnMsg(F("Verify OK..."));
+    ui.printlnMsg(F("Verify OK..."));
   }
   else
   {
-    ui->printlnMsg(F("Verify failed..."));
+    ui.printlnMsg(F("Verify failed..."));
   }
 
   //Lock Tennokoe Bank RAM
@@ -675,17 +675,17 @@ void write_tennokoe_bank_PCE(void)
 
   //Display file Browser and wait user to select a file. Size must be 8KB.
   String inputFilePath = fileBrowser(F("Select RAM file"));
-  ui->clearOutput();
+  ui.clearOutput();
 
   //open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
   fileSize = inputFile.fileSize();
   if (fileSize != 8 * 1024UL) {
-    ui->printlnMsg(F("File must be 1MB"));
-    ui->flushOutput();
+    ui.printlnMsg(F("File must be 1MB"));
+    ui.flushOutput();
     inputFile.close();
-    ui->waitForUserInput();
+    ui.waitForUserInput();
     return;
   }
 
@@ -702,7 +702,7 @@ void write_tennokoe_bank_PCE(void)
   for (readwrite_loop = 0; readwrite_loop < 8 * 1024UL; readwrite_loop++)
   {
     write_byte_PCE(0x080000 + readwrite_loop, inputFile.readByteOrDie());
-    ui->drawProgressBar(readwrite_loop, 8 * 1024UL);
+    ui.drawProgressBar(readwrite_loop, 8 * 1024UL);
   }
 
   inputFile.seekSet(0);    // Go back to file beginning
@@ -711,21 +711,21 @@ void write_tennokoe_bank_PCE(void)
   {
     if (inputFile.readByteOrDie() != read_byte_PCE(verify_loop + 0x080000))
     {
-      ui->drawProgressBar(2 * 1024UL, 8 * 1024UL);
+      ui.drawProgressBar(2 * 1024UL, 8 * 1024UL);
       verify_flag = 0;
       break;
     }
-    ui->drawProgressBar(verify_loop, 8 * 1024UL);
+    ui.drawProgressBar(verify_loop, 8 * 1024UL);
   }
 
   //If verify flag is 0, verify failed
   if (verify_flag == 1)
   {
-    ui->printlnMsg(F("Verify OK..."));
+    ui.printlnMsg(F("Verify OK..."));
   }
   else
   {
-    ui->printlnMsg(F("Verify failed..."));
+    ui.printlnMsg(F("Verify failed..."));
   }
 
   //Lock Tennokoe Bank RAM
@@ -737,9 +737,9 @@ void write_tennokoe_bank_PCE(void)
 
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F("Finished"));
-  ui->flushOutput();
-  ui->waitForUserInput();
+  ui.printlnMsg(F("Finished"));
+  ui.flushOutput();
+  ui.waitForUserInput();
 }
 
 void read_rom_PCE(void)
@@ -748,17 +748,17 @@ void read_rom_PCE(void)
   uint32_t processed_size = 0;
 
   //clear the screen
-  ui->clearOutput();
+  ui.clearOutput();
   rom_size = detect_rom_size_PCE();
 
-  ui->printMsg(F("Detected size: "));
-  ui->printMsg(rom_size);
-  ui->printlnMsg(F("KB"));
+  ui.printMsg(F("Detected size: "));
+  ui.printMsg(rom_size);
+  ui.printlnMsg(F("KB"));
 
   String tempOutputFilePath = getNextOutputPathWithNumberedFilename(F("PCE/ROM"), F("PCEROM"), F(".pce"));
 
-  ui->printlnMsg(F("Saving ROM..."));
-  ui->flushOutput();
+  ui.printlnMsg(F("Saving ROM..."));
+  ui.flushOutput();
 
   //open file on sd card
   SafeSDFile outputFile = SafeSDFile::openForCreating(tempOutputFilePath);
@@ -766,7 +766,7 @@ void read_rom_PCE(void)
   pin_read_write_PCE();
 
   //Initialize progress bar by setting processed size as 0
-  ui->drawProgressBar(0, rom_size * 1024UL);
+  ui.drawProgressBar(0, rom_size * 1024UL);
 
   if (rom_size == 384)
   {

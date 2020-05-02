@@ -95,8 +95,8 @@ void setup_GBSmart()
   hasMenu = true;
   numGames = 0;
 
-  ui->clearOutput();
-  ui->flushOutput();
+  ui.clearOutput();
+  ui.flushOutput();
 }
 
 void gbSmartMenu() {
@@ -110,7 +110,7 @@ void gbSmartMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("GB Smart"), menu, ARRAY_LENGTH(menu), item_GameMenu);
 
     if (answer == item_GameMenu) {
@@ -142,33 +142,33 @@ void gbSmartGameOptions() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("GB Smart Game Menu"), menu, ARRAY_LENGTH(menu), item_ReadGame);
 
     if (answer == item_ReadGame) {
-      ui->clearOutput();
+      ui.clearOutput();
       String outputFilePath = getNextGBRomOutputPathAndPrintMessage(romName);
       readROM_GB(outputFilePath);
       compare_checksum_GB(outputFilePath);
     }
     else if (answer == item_ReadSRAM) {
-      ui->clearOutput();
+      ui.clearOutput();
       readSRAM_GB();
     }
     else if (answer == item_WriteSRAM) {
-      ui->clearOutput();
+      ui.clearOutput();
       String inputFilePath = fileBrowser(F("Select sav file"));
       writeSRAM_GB(inputFilePath);
       uint32_t writeErrors = verifySRAM_GB(inputFilePath);
       if (writeErrors == 0) {
-        ui->printlnMsg(F("Verified OK"));
-        ui->flushOutput();
+        ui.printlnMsg(F("Verified OK"));
+        ui.flushOutput();
       }
       else {
-        ui->printMsg(F("Error: "));
-        ui->printMsg(writeErrors);
-        ui->printlnMsg(F(" bytes"));
-        ui->printError(F("did not verify."));
+        ui.printMsg(F("Error: "));
+        ui.printMsg(writeErrors);
+        ui.printlnMsg(F(" bytes"));
+        ui.printError(F("did not verify."));
       }
     }
     else if (answer == item_SwitchGame) {
@@ -180,10 +180,10 @@ void gbSmartGameOptions() {
     }
 
     if (answer != item_SwitchGame) {
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
   }
 }
@@ -207,7 +207,7 @@ gb_smart_load_more_games:
     }
     menuOptionsGBSmartGames[i] = F("...");
 
-    gameSubMenu = ui->askMultipleChoiceQuestion(F("Select Game"), menuOptionsGBSmartGames, i + 1, 0);
+    gameSubMenu = ui.askMultipleChoiceQuestion(F("Select Game"), menuOptionsGBSmartGames, i + 1, 0);
 
     if (gameSubMenu >= i)
       goto gb_smart_load_more_games;
@@ -238,28 +238,28 @@ void gbSmartFlashMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("GB Smart Flash Menu"), menu, ARRAY_LENGTH(menu), item_ReadFlash);
 
     if (answer == item_ReadFlash) {
       // read flash
-      ui->clearOutput();
+      ui.clearOutput();
       String outputFilePath = getNextGbSmartFlashOutputPathAndPrintMessage();
       gbSmartReadFlash(outputFilePath);
     }
     else if (answer == item_WriteFlash) {
-      ui->clearOutput();
+      ui.clearOutput();
 
-      ui->printlnMsg(F("Attention"));
-      ui->printlnMsg(F("This will erase your"));
-      ui->printlnMsg(F("GB Smart Cartridge."));
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button"));
-      ui->printlnMsg(F("to continue"));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F("Attention"));
+      ui.printlnMsg(F("This will erase your"));
+      ui.printlnMsg(F("GB Smart Cartridge."));
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button"));
+      ui.printlnMsg(F("to continue"));
+      ui.flushOutput();
+      ui.waitForUserInput();
 
-      ui->clearOutput();
+      ui.clearOutput();
       String inputFilePath = fileBrowser(F("Select 4MB file"));
       gbSmartWriteFlash(inputFilePath);
     }
@@ -267,10 +267,10 @@ void gbSmartFlashMenu() {
       break;
     }
 
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
 }
 
@@ -408,32 +408,32 @@ void gbSmartReadFlash(const String &outputFilePath)
   writeByte_GB(0x2100, 0x01);
 
   outputFile.close();
-  ui->printlnMsg("");
-  ui->printlnMsg(F("Finished reading"));
-  ui->flushOutput();
+  ui.printlnMsg("");
+  ui.printlnMsg(F("Finished reading"));
+  ui.flushOutput();
 }
 
 void gbSmartWriteFlash(const String &inputFilePath)
 {
   for (unsigned int bank = 0x00; bank < gbSmartBanks; bank += gbSmartBanksPerFlashChip)
   {
-    ui->clearOutput();
+    ui.clearOutput();
 
-    ui->printMsg(F("Erasing..."));
-    ui->flushOutput();
+    ui.printMsg(F("Erasing..."));
+    ui.flushOutput();
 
     gbSmartEraseFlash(bank);
     gbSmartResetFlash(bank);
 
-    ui->printlnMsg(F("Done"));
-    ui->printMsg(F("Blankcheck..."));
-    ui->flushOutput();
+    ui.printlnMsg(F("Done"));
+    ui.printMsg(F("Blankcheck..."));
+    ui.flushOutput();
 
     if (!gbSmartBlankCheckingFlash(bank))
-      ui->printErrorAndAbort(F("Could not erase flash"), false);
+      ui.printErrorAndAbort(F("Could not erase flash"), false);
 
-    ui->printlnMsg(F("Passed"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Passed"));
+    ui.flushOutput();
 
     // write full chip
     gbSmartWriteFlash(inputFilePath, bank);
@@ -442,21 +442,21 @@ void gbSmartWriteFlash(const String &inputFilePath)
     gbSmartWriteFlashByte(0x0000, 0xff);
   }
 
-  ui->printMsg(F("Verifying..."));
-  ui->flushOutput();
+  ui.printMsg(F("Verifying..."));
+  ui.flushOutput();
 
   writeErrors = gbSmartVerifyFlash(inputFilePath);
   if (writeErrors == 0)
   {
-    ui->printlnMsg(F("OK"));
-    ui->flushOutput();
+    ui.printlnMsg(F("OK"));
+    ui.flushOutput();
   }
   else
   {
-    ui->printMsg(F("Error: "));
-    ui->printMsg(writeErrors);
-    ui->printlnMsg(F(" bytes "));
-    ui->printErrorAndAbort(F("did not verify."), false);
+    ui.printMsg(F("Error: "));
+    ui.printMsg(writeErrors);
+    ui.printlnMsg(F(" bytes "));
+    ui.printErrorAndAbort(F("did not verify."), false);
   }
 }
 
@@ -469,10 +469,10 @@ void gbSmartWriteFlash(const String &inputFilePath, uint32_t start_bank)
 
   inputFile.seekCur((start_bank << 14));
 
-  ui->printMsg(F("Writing Bank 0x"));
-  ui->printMsg(start_bank, HEX);
-  ui->printMsg(F("..."));
-  ui->flushOutput();
+  ui.printMsg(F("Writing Bank 0x"));
+  ui.printMsg(start_bank, HEX);
+  ui.printMsg(F("..."));
+  ui.flushOutput();
 
   // handle bank 0x00 on 0x0000
   gbSmartWriteFlashFromMyFile(inputFile, 0x0000);
@@ -487,7 +487,7 @@ void gbSmartWriteFlash(const String &inputFilePath, uint32_t start_bank)
   }
 
   inputFile.close();
-  ui->printlnMsg("");
+  ui.printlnMsg("");
 }
 
 void gbSmartWriteFlashFromMyFile(SafeSDFile &inputFile, uint32_t addr)

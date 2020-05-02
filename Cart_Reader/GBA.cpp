@@ -65,7 +65,7 @@ void gbaMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("GBA Cart Reader"), menu, ARRAY_LENGTH(menu), item_ReadROM);
 
     if (answer == item_ReadROM) {
@@ -87,7 +87,7 @@ void gbaMenu() {
             romItem_32MB,
           };
 
-          const __FlashStringHelper *romAnswer = ui->askMultipleChoiceQuestion(
+          const __FlashStringHelper *romAnswer = ui.askMultipleChoiceQuestion(
             F("Select ROM size"), romMenu, ARRAY_LENGTH(romMenu), romItem_1MB);
 
           if (romAnswer == romItem_1MB) {
@@ -109,7 +109,7 @@ void gbaMenu() {
             cartSize = 0x2000000;
           }
           else {
-            ui->printErrorAndAbort(F("Unknown size"), true);
+            ui.printErrorAndAbort(F("Unknown size"), true);
           }
 
           break;
@@ -140,15 +140,15 @@ void gbaMenu() {
           break;
         }
       }
-      ui->clearOutput();
+      ui.clearOutput();
 
       String outputFilePath = getNextGBARomOutputPathAndPrintMessage(romName);
       readROM_GBA(outputFilePath);
       compare_checksum_GBA(outputFilePath);
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
     else if (answer == item_ReadSave) {
       if (saveType == 0) {
@@ -156,7 +156,7 @@ void gbaMenu() {
       }
       switch (saveType) {
         case 1: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 4K EEPROM
           readEeprom_GBA(4);
           setROM_GBA();
@@ -164,7 +164,7 @@ void gbaMenu() {
         }
 
         case 2: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 64K EEPROM
           readEeprom_GBA(64);
           setROM_GBA();
@@ -172,7 +172,7 @@ void gbaMenu() {
         }
 
         case 3: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 256K SRAM/FRAM
           readSRAM_GBA(32768, 0);
           setROM_GBA();
@@ -180,7 +180,7 @@ void gbaMenu() {
         }
 
         case 4: {
-          ui->clearOutput();
+          ui.clearOutput();
           String outputFilePath = getNextGBAFlashSaveOutputPathAndPrintMessage(romName);
           // 512K FLASH
           readFLASH_GBA(outputFilePath, 65536, 0);
@@ -189,7 +189,7 @@ void gbaMenu() {
         }
 
         case 5: {
-          ui->clearOutput();
+          ui.clearOutput();
           String outputFilePath = getNextGBAFlashSaveOutputPathAndPrintMessage(romName);
           // 1024K FLASH (divided into two banks)
           switchBank_GBA(0x0);
@@ -203,17 +203,17 @@ void gbaMenu() {
         }
 
         case 6: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 512K SRAM/FRAM
           readSRAM_GBA(65536, 0);
           setROM_GBA();
           break;
         }
       }
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
     else if (answer == item_WriteSave) {
       if (saveType == 0) {
@@ -222,74 +222,74 @@ void gbaMenu() {
 
       switch (saveType) {
         case 1: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 4K EEPROM
           String inputFilePath = fileBrowser(F("Select eep file"));
           writeEeprom_GBA(inputFilePath, 4);
           uint32_t writeErrors = verifyEEP_GBA(inputFilePath, 4);
           if (writeErrors == 0) {
-            ui->printlnMsg(F("Verified OK"));
-            ui->flushOutput();
+            ui.printlnMsg(F("Verified OK"));
+            ui.flushOutput();
           }
           else {
-            ui->printMsg(F("Error: "));
-            ui->printMsg(writeErrors);
-            ui->printlnMsg(F(" bytes "));
-            ui->printError(F("did not verify."));
+            ui.printMsg(F("Error: "));
+            ui.printMsg(writeErrors);
+            ui.printlnMsg(F(" bytes "));
+            ui.printError(F("did not verify."));
           }
           setROM_GBA();
           break;
         }
 
         case 2: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 64K EEPROM
           String inputFilePath = fileBrowser(F("Select eep file"));
           writeEeprom_GBA(inputFilePath, 64);
           uint32_t writeErrors = verifyEEP_GBA(inputFilePath, 64);
           if (writeErrors == 0) {
-            ui->printlnMsg(F("Verified OK"));
-            ui->flushOutput();
+            ui.printlnMsg(F("Verified OK"));
+            ui.flushOutput();
           }
           else {
-            ui->printMsg(F("Error: "));
-            ui->printMsg(writeErrors);
-            ui->printlnMsg(F(" bytes "));
-            ui->printError(F("did not verify."));
+            ui.printMsg(F("Error: "));
+            ui.printMsg(writeErrors);
+            ui.printlnMsg(F(" bytes "));
+            ui.printError(F("did not verify."));
           }
           setROM_GBA();
           break;
         }
 
         case 3: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 256K SRAM/FRAM
           String inputFilePath = fileBrowser(F("Select srm file"));
           writeSRAM_GBA(inputFilePath, 32768, 0);
           uint32_t writeErrors = verifySRAM_GBA(inputFilePath, 32768, 0);
           if (writeErrors == 0) {
-            ui->printlnMsg(F("Verified OK"));
-            ui->flushOutput();
+            ui.printlnMsg(F("Verified OK"));
+            ui.flushOutput();
           }
           else {
-            ui->printMsg(F("Error: "));
-            ui->printMsg(writeErrors);
-            ui->printlnMsg(F(" bytes "));
-            ui->printError(F("did not verify."));
+            ui.printMsg(F("Error: "));
+            ui.printMsg(writeErrors);
+            ui.printlnMsg(F(" bytes "));
+            ui.printError(F("did not verify."));
           }
           setROM_GBA();
           break;
         }
 
         case 4: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 512K FLASH
           idFlash_GBA();
           resetFLASH_GBA();
           if (strcmp(flashid, "BFD4") != 0) {
             String errorMessage = F("Flashrom Type not supported\nID: ");
             errorMessage.concat(flashid);
-            ui->printErrorAndAbort(errorMessage, true);
+            ui.printErrorAndAbort(errorMessage, true);
           }
           eraseFLASH_GBA();
           if (blankcheckFLASH_GBA(65536)) {
@@ -298,21 +298,21 @@ void gbaMenu() {
             verifyFLASH_GBA(inputFilePath, 65536, 0);
           }
           else {
-            ui->printError(F("Erase failed"));
+            ui.printError(F("Erase failed"));
           }
           setROM_GBA();
           break;
         }
 
         case 5: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 1M FLASH
           idFlash_GBA();
           resetFLASH_GBA();
           if (strcmp(flashid, "C209") != 0) {
             String errorMessage = F("Flashrom Type not supported\nID: ");
             errorMessage.concat(flashid);
-            ui->printErrorAndAbort(errorMessage, true);
+            ui.printErrorAndAbort(errorMessage, true);
           }
           eraseFLASH_GBA();
           // 131072 bytes are divided into two 65536 byte banks
@@ -325,7 +325,7 @@ void gbaMenu() {
             verifyFLASH_GBA(inputFilePath, 65536, 0);
           }
           else {
-            ui->printError(F("Erase failed"));
+            ui.printError(F("Erase failed"));
           }
           switchBank_GBA(0x1);
           setROM_GBA();
@@ -334,48 +334,48 @@ void gbaMenu() {
             verifyFLASH_GBA(inputFilePath, 65536, 65536);
           }
           else {
-            ui->printError(F("Erase failed"));
+            ui.printError(F("Erase failed"));
           }
           setROM_GBA();
           break;
         }
 
         case 6: {
-          ui->clearOutput();
+          ui.clearOutput();
           // 512K SRAM/FRAM
           String inputFilePath = fileBrowser(F("Select srm file"));
           writeSRAM_GBA(inputFilePath, 65536, 0);
           uint32_t writeErrors = verifySRAM_GBA(inputFilePath, 65536, 0);
           if (writeErrors == 0) {
-            ui->printlnMsg(F("Verified OK"));
-            ui->flushOutput();
+            ui.printlnMsg(F("Verified OK"));
+            ui.flushOutput();
           }
           else {
-            ui->printMsg(F("Error: "));
-            ui->printMsg(writeErrors);
-            ui->printlnMsg(F(" bytes "));
-            ui->printError(F("did not verify."));
+            ui.printMsg(F("Error: "));
+            ui.printMsg(writeErrors);
+            ui.printlnMsg(F(" bytes "));
+            ui.printError(F("did not verify."));
           }
           setROM_GBA();
           break;
         }
       }
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
     else if (answer == item_ForceSaveType) {
       saveType = saveTypeMenu();
-      ui->flushOutput();
+      ui.flushOutput();
     }
     else if (answer == item_FlashRepro) {
-      ui->clearOutput();
+      ui.clearOutput();
       flashRepro_GBA();
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
       resetArduino();
     }
     else if (answer == item_Back) {
@@ -400,7 +400,7 @@ uint8_t saveTypeMenu() {
     item_1MFlashROM,
   };
 
-  const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+  const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
     F("Select save type"), menu, ARRAY_LENGTH(menu), item_4KEEPROM);
 
   if (answer == item_4KEEPROM) {
@@ -422,7 +422,7 @@ uint8_t saveTypeMenu() {
     return 5;
   }
   else {
-    ui->printErrorAndAbort(F("Unknown type"), true);
+    ui.printErrorAndAbort(F("Unknown type"), true);
   }
 }
 
@@ -450,56 +450,56 @@ void setup_GBA() {
 
   // Print start page
   getCartInfo_GBA();
-  ui->clearOutput();
+  ui.clearOutput();
 
-  ui->printMsg(F("Name: "));
-  ui->printlnMsg(romName);
-  ui->printMsg(F("Cart ID: "));
-  ui->printlnMsg(cartID);
-  ui->printMsg(F("Rom Size: "));
+  ui.printMsg(F("Name: "));
+  ui.printlnMsg(romName);
+  ui.printMsg(F("Cart ID: "));
+  ui.printlnMsg(cartID);
+  ui.printMsg(F("Rom Size: "));
   if (cartSize == 0)
-    ui->printlnMsg(F("Unknown"));
+    ui.printlnMsg(F("Unknown"));
   else {
-    ui->printMsg(cartSize);
-    ui->printlnMsg(F("MB"));
+    ui.printMsg(cartSize);
+    ui.printlnMsg(F("MB"));
   }
-  ui->printMsg(F("Save: "));
+  ui.printMsg(F("Save: "));
   switch (saveType)
   {
     case 0:
-      ui->printlnMsg(F("Unknown"));
+      ui.printlnMsg(F("Unknown"));
       break;
 
     case 1:
-      ui->printlnMsg(F("4K Eeprom"));
+      ui.printlnMsg(F("4K Eeprom"));
       break;
 
     case 2:
-      ui->printlnMsg(F("64K Eeprom"));
+      ui.printlnMsg(F("64K Eeprom"));
       break;
 
     case 3:
-      ui->printlnMsg(F("256K Sram"));
+      ui.printlnMsg(F("256K Sram"));
       break;
 
     case 4:
-      ui->printlnMsg(F("512K Flash"));
+      ui.printlnMsg(F("512K Flash"));
       break;
 
     case 5:
-      ui->printlnMsg(F("1024K Flash"));
+      ui.printlnMsg(F("1024K Flash"));
       break;
   }
 
-  ui->printMsg(F("Checksum: "));
-  ui->printlnMsg(checksumStr);
-  ui->printMsg(F("Version: 1."));
-  ui->printlnMsg(romVersion);
+  ui.printMsg(F("Checksum: "));
+  ui.printlnMsg(checksumStr);
+  ui.printMsg(F("Version: 1."));
+  ui.printlnMsg(romVersion);
 
   // Wait for user input
-  ui->printlnMsg(F("Press Button..."));
-  ui->flushOutput();
-  ui->waitForUserInput();
+  ui.printlnMsg(F("Press Button..."));
+  ui.flushOutput();
+  ui.waitForUserInput();
 }
 
 /******************************************
@@ -713,16 +713,16 @@ void getCartInfo_GBA() {
   }
 
   if (logoChecksum != 0x4B1B) {
-    ui->printError(F("CARTRIDGE ERROR"));
+    ui.printError(F("CARTRIDGE ERROR"));
     strcpy(romName, "ERROR");
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button to"));
-    ui->printlnMsg(F("ignore or powercycle"));
-    ui->printlnMsg(F("to try again"));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button to"));
+    ui.printlnMsg(F("ignore or powercycle"));
+    ui.printlnMsg(F("to try again"));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
   else {
     char tempStr2[2];
@@ -805,13 +805,13 @@ void getCartInfo_GBA() {
 
     // Compare checksum
     if (strcmp(calcChecksumStr, checksumStr) != 0) {
-      ui->printMsg(F("Result: "));
-      ui->printlnMsg(calcChecksumStr);
-      ui->printError(F("Checksum Error"));
-      ui->printlnMsg(F(""));
-      ui->printlnMsg(F("Press Button..."));
-      ui->flushOutput();
-      ui->waitForUserInput();
+      ui.printMsg(F("Result: "));
+      ui.printlnMsg(calcChecksumStr);
+      ui.printError(F("Checksum Error"));
+      ui.printlnMsg(F(""));
+      ui.printlnMsg(F("Press Button..."));
+      ui.flushOutput();
+      ui.waitForUserInput();
     }
   }
 }
@@ -843,8 +843,8 @@ void readROM_GBA(const String &outputFilePath) {
 
 // Calculate the checksum of the dumped rom
 boolean compare_checksum_GBA(const String &filePath) {
-  ui->printlnMsg(F("Calculating Checksum"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Calculating Checksum"));
+  ui.flushOutput();
 
   SafeSDFile romFile = SafeSDFile::openForReading(filePath);
   // Read rom header
@@ -862,14 +862,14 @@ boolean compare_checksum_GBA(const String &filePath) {
   sprintf(calcChecksumStr, "%02X", calcChecksum);
 
   if (strcmp(calcChecksumStr, checksumStr) == 0) {
-    ui->printlnMsg(F("Checksum matches"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Checksum matches"));
+    ui.flushOutput();
     return 1;
   }
   else {
-    ui->printMsg(F("Result: "));
-    ui->printlnMsg(calcChecksumStr);
-    ui->printError(F("Checksum Error"));
+    ui.printMsg(F("Result: "));
+    ui.printlnMsg(calcChecksumStr);
+    ui.printError(F("Checksum Error"));
     return 0;
   }
 }
@@ -901,8 +901,8 @@ void readSRAM_GBA(unsigned long sramSize, uint32_t pos) {
   outputFile.close();
 
   // Signal end of process
-  ui->printlnMsg(F("Done"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Done"));
+  ui.flushOutput();
 }
 
 void writeSRAM_GBA(const String &inputFilePath, unsigned long sramSize, uint32_t pos) {
@@ -924,8 +924,8 @@ void writeSRAM_GBA(const String &inputFilePath, unsigned long sramSize, uint32_t
   }
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F("SRAM writing finished"));
-  ui->flushOutput();
+  ui.printlnMsg(F("SRAM writing finished"));
+  ui.flushOutput();
 }
 
 unsigned long verifySRAM_GBA(const String &filePath, unsigned long sramSize, uint32_t pos) {
@@ -1005,8 +1005,8 @@ void readFRAM_GBA (unsigned long framSize) {
   outputFile.close();
 
   // Signal end of process
-  ui->printlnMsg(F("Done"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Done"));
+  ui.flushOutput();
 }
 
 // Write file to SRAM
@@ -1057,8 +1057,8 @@ void writeFRAM_GBA (const String &inputFilePath, unsigned long framSize) {
   }
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F("SRAM writing finished"));
-  ui->flushOutput();
+  ui.printlnMsg(F("SRAM writing finished"));
+  ui.flushOutput();
 }
 
 // Check if the SRAM was written without any error
@@ -1362,8 +1362,8 @@ void readFLASH_GBA(const String &outputFilePath, unsigned long flashSize, uint32
   PORTH |= (1 << 0);
 
   // Signal end of process
-  ui->printlnMsg(F("Done"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Done"));
+  ui.flushOutput();
 }
 
 void busyCheck_GBA(int currByte) {
@@ -1389,8 +1389,8 @@ void writeFLASH_GBA(const String &inputFilePath, unsigned long flashSize, uint32
   // Set data port to output
   DDRC = 0xFF;
 
-  ui->printMsg(F("Writing flash..."));
-  ui->flushOutput();
+  ui.printMsg(F("Writing flash..."));
+  ui.flushOutput();
 
   //open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -1423,8 +1423,8 @@ void writeFLASH_GBA(const String &inputFilePath, unsigned long flashSize, uint32
 
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F("done"));
-  ui->flushOutput();
+  ui.printlnMsg(F("done"));
+  ui.flushOutput();
 }
 
 // Check if the Flashrom was written without any error
@@ -1443,8 +1443,8 @@ void verifyFLASH_GBA(const String &filePath, unsigned long flashSize, uint32_t p
   PORTH &= ~((1 << 0) | (1 << 6));
 
   // Signal beginning of process
-  ui->printMsg(F("Verify..."));
-  ui->flushOutput();
+  ui.printMsg(F("Verify..."));
+  ui.flushOutput();
 
   unsigned long wrError = 0;
 
@@ -1471,11 +1471,11 @@ void verifyFLASH_GBA(const String &filePath, unsigned long flashSize, uint32_t p
   PORTH |= (1 << 0);
 
   if (wrError == 0) {
-    ui->printlnMsg(F("OK"));
+    ui.printlnMsg(F("OK"));
   }
   else {
-    ui->printMsg(wrError);
-    ui->printError(F(" Errors"));
+    ui.printMsg(wrError);
+    ui.printError(F(" Errors"));
   }
 }
 
@@ -1484,9 +1484,9 @@ void verifyFLASH_GBA(const String &filePath, unsigned long flashSize, uint32_t p
 *****************************************/
 // Write eeprom from file
 void writeEeprom_GBA(const String &inputFilePath, word eepSize) {
-  ui->clearOutput();
-  ui->printMsg(F("Writing eeprom..."));
-  ui->flushOutput();
+  ui.clearOutput();
+  ui.printMsg(F("Writing eeprom..."));
+  ui.flushOutput();
 
   //open file on sd card
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
@@ -1505,8 +1505,8 @@ void writeEeprom_GBA(const String &inputFilePath, word eepSize) {
 
   // Close the file:
   inputFile.close();
-  ui->printlnMsg(F("done"));
-  ui->flushOutput();
+  ui.printlnMsg(F("done"));
+  ui.flushOutput();
 }
 
 // Read eeprom to file
@@ -1819,8 +1819,8 @@ void idFlashrom_GBA() {
       resetMX29GL128E_GBA();
     }
     else {
-      ui->printlnMsg(flashid);
-      ui->printErrorAndAbort(F("Unknown Flashid"), false);
+      ui.printlnMsg(flashid);
+      ui.printErrorAndAbort(F("Unknown Flashid"), false);
     }
   }
 }
@@ -2225,73 +2225,73 @@ void flashRepro_GBA() {
   idFlashrom_GBA();
 
   if ((strcmp(flashid, "8802") == 0) || (strcmp(flashid, "8816") == 0) || (strcmp(flashid, "227E") == 0)) {
-    ui->printMsg(F("ID: "));
-    ui->printMsg(flashid);
-    ui->printMsg(F(" Size: "));
-    ui->printMsg(cartSize / 0x100000);
-    ui->printlnMsg(F("MB"));
+    ui.printMsg(F("ID: "));
+    ui.printMsg(flashid);
+    ui.printMsg(F(" Size: "));
+    ui.printMsg(cartSize / 0x100000);
+    ui.printlnMsg(F("MB"));
     // MX29GL128E or MSP55LV128(N)
     if (strcmp(flashid, "227E") == 0) {
       // MX is 0xC2 and MSP55LV128 is 0x4 and MSP55LV128N 0x1
       if (romType == 0xC2) {
-        ui->printlnMsg(F("Macronix MX29GL128E"));
+        ui.printlnMsg(F("Macronix MX29GL128E"));
       }
       else if ((romType == 0x1) || (romType == 0x4)) {
-        ui->printlnMsg(F("Fujitsu MSP55LV128N"));
+        ui.printlnMsg(F("Fujitsu MSP55LV128N"));
       }
       else if ((romType == 0x89)) {
-        ui->printlnMsg(F("Intel PC28F256M29"));
+        ui.printlnMsg(F("Intel PC28F256M29"));
       }
       else if ((romType == 0x20)) {
-        ui->printlnMsg(F("ST M29W128GH"));
+        ui.printlnMsg(F("ST M29W128GH"));
       }
       else {
-        ui->printMsg(F("romType: 0x"));
-        ui->printlnMsg(romType, HEX);
-        ui->printErrorAndAbort(F("Unknown manufacturer"), false);
+        ui.printMsg(F("romType: 0x"));
+        ui.printlnMsg(romType, HEX);
+        ui.printErrorAndAbort(F("Unknown manufacturer"), false);
       }
     }
     // Intel 4000L0YBQ0
     else if (strcmp(flashid, "8802") == 0) {
-      ui->printlnMsg(F("Intel 4000L0YBQ0"));
+      ui.printlnMsg(F("Intel 4000L0YBQ0"));
     }
     // Intel 4400L0ZDQ0
     else if (strcmp(flashid, "8816") == 0) {
-      ui->printlnMsg(F("Intel 4400L0ZDQ0"));
+      ui.printlnMsg(F("Intel 4400L0ZDQ0"));
     }
-    ui->printlnMsg("");
-    ui->printlnMsg(F("This will erase your"));
-    ui->printlnMsg(F("Repro Cartridge."));
-    ui->printlnMsg(F("Please use 3.3V!"));
-    ui->printlnMsg("");
-    ui->printlnMsg(F("Press Button"));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg("");
+    ui.printlnMsg(F("This will erase your"));
+    ui.printlnMsg(F("Repro Cartridge."));
+    ui.printlnMsg(F("Please use 3.3V!"));
+    ui.printlnMsg("");
+    ui.printlnMsg(F("Press Button"));
+    ui.flushOutput();
+    ui.waitForUserInput();
 
     // Launch file browser
     String inputFilePath = fileBrowser(F("Select gba file"));
-    ui->clearOutput();
-    ui->flushOutput();
+    ui.clearOutput();
+    ui.flushOutput();
 
     // Open file on sd card
     SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
     // Get rom size from file
     fileSize = inputFile.fileSize();
-    ui->printMsg(F("File size: "));
-    ui->printMsg(fileSize / 0x100000);
-    ui->printlnMsg(F("MB"));
-    ui->flushOutput();
+    ui.printMsg(F("File size: "));
+    ui.printMsg(fileSize / 0x100000);
+    ui.printlnMsg(F("MB"));
+    ui.flushOutput();
 
     // Erase needed sectors
     if (strcmp(flashid, "8802") == 0) {
-      ui->printlnMsg(F("Erasing..."));
-      ui->flushOutput();
+      ui.printlnMsg(F("Erasing..."));
+      ui.flushOutput();
       eraseIntel4000_GBA();
       resetIntel_GBA(0x200000);
     }
     else if (strcmp(flashid, "8816") == 0) {
-      ui->printlnMsg(F("Erasing..."));
-      ui->flushOutput();
+      ui.printlnMsg(F("Erasing..."));
+      ui.flushOutput();
       eraseIntel4400_GBA();
       resetIntel_GBA(0x200000);
     }
@@ -2300,8 +2300,8 @@ void flashRepro_GBA() {
       //print_Error(F("Sector Protected"));
       //}
       //else {
-      ui->printlnMsg(F("Erasing..."));
-      ui->flushOutput();
+      ui.printlnMsg(F("Erasing..."));
+      ui.flushOutput();
       if ((romType == 0xC2) || (romType == 0x89) || (romType == 0x20)) {
         //MX29GL128E
         //PC28F256M29 (0x89)
@@ -2314,16 +2314,16 @@ void flashRepro_GBA() {
       //}
     }
     /* Skip blankcheck to save time
-      ui->printMsg(F("Blankcheck..."));
-      ui->flushOutput();
+      ui.printMsg(F("Blankcheck..."));
+      ui.flushOutput();
       if (blankcheckFlashrom_GBA()) {
-      ui->printlnMsg(F("OK"));
+      ui.printlnMsg(F("OK"));
     */
 
     //Write flashrom
-    ui->printMsg(F("Writing "));
-    ui->printlnMsg(inputFilePath);
-    ui->flushOutput();
+    ui.printMsg(F("Writing "));
+    ui.printlnMsg(inputFilePath);
+    ui.flushOutput();
     if ((strcmp(flashid, "8802") == 0) || (strcmp(flashid, "8816") == 0)) {
       writeIntel4000_GBA(inputFile);
     }
@@ -2343,8 +2343,8 @@ void flashRepro_GBA() {
     inputFile.close();
 
     // Verify
-    ui->printMsg(F("Verifying..."));
-    ui->flushOutput();
+    ui.printMsg(F("Verifying..."));
+    ui.flushOutput();
     if (strcmp(flashid, "8802") == 0) {
       // Don't know the correct size so just take some guesses
       resetIntel_GBA(0x8000);
@@ -2364,11 +2364,11 @@ void flashRepro_GBA() {
       delay(1000);
     }
     if (verifyFlashrom_GBA(inputFilePath) == 1) {
-      ui->printlnMsg(F("OK"));
-      ui->flushOutput();
+      ui.printlnMsg(F("OK"));
+      ui.flushOutput();
     }
     else {
-      ui->printErrorAndAbort(F("ERROR"), false);
+      ui.printErrorAndAbort(F("ERROR"), false);
     }
     /* Skipped blankcheck
       }
@@ -2378,9 +2378,9 @@ void flashRepro_GBA() {
     */
   }
   else {
-    ui->printMsg(F("ID: "));
-    ui->printlnMsg(flashid);
-    ui->printErrorAndAbort(F("Unknown Flash ID"), false);
+    ui.printMsg(F("ID: "));
+    ui.printlnMsg(flashid);
+    ui.printErrorAndAbort(F("Unknown Flash ID"), false);
   }
 }
 

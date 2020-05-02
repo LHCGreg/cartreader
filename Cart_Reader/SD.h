@@ -26,7 +26,7 @@ class SafeSDFile {
   void readOrDie(byte *buffer, size_t numBytes, const printable &errorMessage) {
     size_t numBytesRead = read(buffer, numBytes);
     if (numBytesRead != numBytes) {
-      ui->printErrorAndAbort(errorMessage, true);
+      ui.printErrorAndAbort(errorMessage, true);
     }
   }
 

@@ -100,14 +100,14 @@ void setup_WS()
   DDRG &= ~(1 << 5);
   PORTG |= (1 << 5);
 
-  ui->clearOutput();
+  ui.clearOutput();
 
   // unlock MMC
   if (!unlockMMC2003_WS())
-    ui->printErrorAndAbort(F("Can't initial MMC"), true);
+    ui.printErrorAndAbort(F("Can't initial MMC"), true);
 
   if (getCartInfo_WS() != 0xea)
-    ui->printErrorAndAbort(F("Rom header read error"), true);
+    ui.printErrorAndAbort(F("Rom header read error"), true);
 
   showCartInfo_WS();
 }
@@ -138,7 +138,7 @@ void wsMenu() {
       numMenuItems--;
     }
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("WS Menu"), menu, numMenuItems, item_ReadRom);
 
     if (answer == item_ReadRom) {
@@ -151,7 +151,7 @@ void wsMenu() {
     else if (answer == item_ReadSave) {
       switch (saveType) {
         case 0:
-          ui->printlnMsg(F("No save for this game"));
+          ui.printlnMsg(F("No save for this game"));
           break;
         case 1:
           readSRAM_WS();
@@ -160,14 +160,14 @@ void wsMenu() {
           readEEPROM_WS();
           break;
         default:
-          ui->printlnMsg(F("Unknown save type"));
+          ui.printlnMsg(F("Unknown save type"));
           break;
       }
     }
     else if (answer == item_WriteSave) {
       switch (saveType) {
         case 0:
-          ui->printlnMsg(F("No save for this game"));
+          ui.printlnMsg(F("No save for this game"));
           break;
         case 1: {
           String inputFilePath = fileBrowser(F("Select sav file"));
@@ -182,7 +182,7 @@ void wsMenu() {
           break;
         }
         default:
-          ui->printlnMsg(F("Unknown save type"));
+          ui.printlnMsg(F("Unknown save type"));
           break;
       }
     }
@@ -193,10 +193,10 @@ void wsMenu() {
       break;
     }
 
-    ui->printlnMsg(F(""));
-    ui->printlnMsg(F("Press Button..."));
-    ui->flushOutput();
-    ui->waitForUserInput();
+    ui.printlnMsg(F(""));
+    ui.printlnMsg(F("Press Button..."));
+    ui.flushOutput();
+    ui.waitForUserInput();
   }
 }
 
@@ -356,40 +356,40 @@ uint8_t getCartInfo_WS()
 
 void showCartInfo_WS()
 {
-  ui->clearOutput();
+  ui.clearOutput();
 
-  ui->printlnMsg(F("WS Cart Info"));
+  ui.printlnMsg(F("WS Cart Info"));
 
-  ui->printMsg(F("Game: "));
-  ui->printlnMsg(romName);
+  ui.printMsg(F("Game: "));
+  ui.printlnMsg(romName);
 
-  ui->printMsg(F("Rom Size: "));
+  ui.printMsg(F("Rom Size: "));
   if (cartSize == 0x00)
-    ui->printlnMsg(romSize, HEX);
+    ui.printlnMsg(romSize, HEX);
   else
   {
-    ui->printMsg((cartSize >> 17));
-    ui->printlnMsg(F(" Mb"));
+    ui.printMsg((cartSize >> 17));
+    ui.printlnMsg(F(" Mb"));
   }
 
-  ui->printMsg(F("Save: "));
+  ui.printMsg(F("Save: "));
   switch (saveType)
   {
-    case 0: ui->printlnMsg(F("None")); break;
-    case 1: ui->printMsg(F("Sram ")); ui->printMsg(sramSize); ui->printlnMsg(F(" Kb")); break;
-    case 2: ui->printMsg(F("Eeprom ")); ui->printMsg(sramSize); ui->printlnMsg(F(" Kb")); break;
-    default: ui->printlnMsg(sramSize, HEX); break;
+    case 0: ui.printlnMsg(F("None")); break;
+    case 1: ui.printMsg(F("Sram ")); ui.printMsg(sramSize); ui.printlnMsg(F(" Kb")); break;
+    case 2: ui.printMsg(F("Eeprom ")); ui.printMsg(sramSize); ui.printlnMsg(F(" Kb")); break;
+    default: ui.printlnMsg(sramSize, HEX); break;
   }
 
-  ui->printMsg(F("Vesion: 1."));
-  ui->printlnMsg(romVersion, HEX);
+  ui.printMsg(F("Vesion: 1."));
+  ui.printlnMsg(romVersion, HEX);
 
-  ui->printMsg(F("Checksum: "));
-  ui->printlnMsg(checksumStr);
+  ui.printMsg(F("Checksum: "));
+  ui.printlnMsg(checksumStr);
 
-  ui->printlnMsg(F("Press Button..."));
-  ui->flushOutput();
-  ui->waitForUserInput();
+  ui.printlnMsg(F("Press Button..."));
+  ui.flushOutput();
+  ui.waitForUserInput();
 }
 
 void getDeveloperName(uint8_t id, char *buf, size_t length)
@@ -501,14 +501,14 @@ void readSRAM_WS()
 
   outputFile.close();
 
-  ui->printlnMsg(F("Done"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Done"));
+  ui.flushOutput();
 }
 
 void verifySRAM_WS(const String & filePath)
 {
-  ui->printMsg(F("Verifying... "));
-  ui->flushOutput();
+  ui.printMsg(F("Verifying... "));
+  ui.flushOutput();
 
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
@@ -543,25 +543,25 @@ void verifySRAM_WS(const String & filePath)
 
   if (write_errors == 0)
   {
-    ui->printlnMsg(F("passed"));
+    ui.printlnMsg(F("passed"));
   }
   else
   {
-    ui->printlnMsg(F("failed"));
-    ui->printMsg(F("Error: "));
-    ui->printMsg(write_errors);
-    ui->printlnMsg(F(" bytes "));
-    ui->printError(F("did not verify."));
+    ui.printlnMsg(F("failed"));
+    ui.printMsg(F("Error: "));
+    ui.printMsg(write_errors);
+    ui.printlnMsg(F(" bytes "));
+    ui.printError(F("did not verify."));
   }
 }
 
 void writeSRAM_WS(const String &inputFilePath)
 {
-  ui->clearOutput();
-  ui->printMsg(F("Writing "));
-  ui->printMsg(inputFilePath);
-  ui->printlnMsg(F("..."));
-  ui->flushOutput();
+  ui.clearOutput();
+  ui.printMsg(F("Writing "));
+  ui.printMsg(inputFilePath);
+  ui.printlnMsg(F("..."));
+  ui.flushOutput();
 
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
@@ -593,8 +593,8 @@ void writeSRAM_WS(const String &inputFilePath)
 
   inputFile.close();
 
-  ui->printlnMsg(F("Writing finished"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Writing finished"));
+  ui.flushOutput();
 }
 
 void readEEPROM_WS()
@@ -635,13 +635,13 @@ void readEEPROM_WS()
 
   outputFile.close();
 
-  ui->printlnMsg(F("Done"));
+  ui.printlnMsg(F("Done"));
 }
 
 void verifyEEPROM_WS(const String &filePath)
 {
-  ui->printMsg(F("Verifying... "));
-  ui->flushOutput();
+  ui.printMsg(F("Verifying... "));
+  ui.flushOutput();
 
   SafeSDFile inputFile = SafeSDFile::openForReading(filePath);
 
@@ -683,25 +683,25 @@ void verifyEEPROM_WS(const String &filePath)
 
   if (write_errors == 0)
   {
-    ui->printlnMsg(F("passed"));
+    ui.printlnMsg(F("passed"));
   }
   else
   {
-    ui->printlnMsg(F("failed"));
-    ui->printMsg(F("Error: "));
-    ui->printMsg(write_errors);
-    ui->printlnMsg(F(" bytes "));
-    ui->printError(F("did not verify."));
+    ui.printlnMsg(F("failed"));
+    ui.printMsg(F("Error: "));
+    ui.printMsg(write_errors);
+    ui.printlnMsg(F(" bytes "));
+    ui.printError(F("did not verify."));
   }
 }
 
 void writeEEPROM_WS(const String &inputFilePath)
 {
-  ui->clearOutput();
-  ui->printMsg(F("Writing "));
-  ui->printMsg(inputFilePath);
-  ui->printlnMsg(F("..."));
-  ui->flushOutput();
+  ui.clearOutput();
+  ui.printMsg(F("Writing "));
+  ui.printMsg(inputFilePath);
+  ui.printlnMsg(F("..."));
+  ui.flushOutput();
 
   SafeSDFile inputFile = SafeSDFile::openForReading(inputFilePath);
 
@@ -740,7 +740,7 @@ void writeEEPROM_WS(const String &inputFilePath)
 
   inputFile.close();
 
-  ui->printlnMsg(F("Done"));
+  ui.printlnMsg(F("Done"));
 }
 
 void writeWitchOS_WS()
@@ -754,28 +754,28 @@ void writeWitchOS_WS()
   dataIn_WS();
   if (readWord_WS(0xe0004) || readWord_WS(0xe4004) || readWord_WS(0xec004) || readWord_WS(0xee004))
   {
-    ui->clearOutput();
-    ui->printError(F("OS sectors are protected!"));
+    ui.clearOutput();
+    ui.printError(F("OS sectors are protected!"));
   }
   else
   {
     String fbinPath = fileBrowser(F("Select fbin file"));
 
-    ui->clearOutput();
+    ui.clearOutput();
 
     SafeSDFile inputFile = SafeSDFile::openForReading(fbinPath);
 
-    ui->printlnMsg(F("Erasing OS..."));
-    ui->flushOutput();
+    ui.printlnMsg(F("Erasing OS..."));
+    ui.flushOutput();
     eraseWitchFlashSector_WS(0xe0000);
     eraseWitchFlashSector_WS(0xe4000);
     eraseWitchFlashSector_WS(0xec000);
     eraseWitchFlashSector_WS(0xee000);
 
-    ui->printMsg(F("Flashing OS "));
-    ui->printMsg(fbinPath);
-    ui->printlnMsg(F("..."));
-    ui->flushOutput();
+    ui.printMsg(F("Flashing OS "));
+    ui.printMsg(fbinPath);
+    ui.printlnMsg(F("..."));
+    ui.flushOutput();
 
     uint32_t fbin_length = inputFile.fileSize();
     uint32_t i, bytes_read;
@@ -830,7 +830,7 @@ void writeWitchOS_WS()
 
     inputFile.close();
 
-    ui->printlnMsg(F("Done"));
+    ui.printlnMsg(F("Done"));
   }
 
   dataOut_WS();
@@ -867,8 +867,8 @@ void eraseWitchFlashSector_WS(uint32_t sector_addr)
 
 boolean compareChecksum_WS(const String &wsFilePath)
 {
-  ui->printlnMsg(F("Calculating Checksum"));
-  ui->flushOutput();
+  ui.printlnMsg(F("Calculating Checksum"));
+  ui.flushOutput();
 
   SafeSDFile inputFile = SafeSDFile::openForReading(wsFilePath);
 
@@ -905,18 +905,18 @@ boolean compareChecksum_WS(const String &wsFilePath)
   char result[11];
   snprintf(result, 5, "%04" PRIX32, calLength);
   snprintf(result + 4, 11 - 4, "(%04" PRIX32 ")", checksum);
-  ui->printMsg(F("Result: "));
-  ui->printlnMsg(result);
+  ui.printMsg(F("Result: "));
+  ui.printlnMsg(result);
 
   if (checksum == calLength)
   {
-    ui->printlnMsg(F("Checksum matches"));
-    ui->flushOutput();
+    ui.printlnMsg(F("Checksum matches"));
+    ui.flushOutput();
     return 1;
   }
   else
   {
-    ui->printError(F("Checksum Error"));
+    ui.printError(F("Checksum Error"));
     return 0;
   }
 }

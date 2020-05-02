@@ -99,11 +99,11 @@ String pathGetDir(const String &path) {
 }
 
 void printSavingMessage(const String &outputFilePath) {
-  ui->clearOutput();
-  ui->printMsg(F("Saving to "));
-  ui->printMsg(outputFilePath);
-  ui->printlnMsg(F("..."));
-  ui->flushOutput();
+  ui.clearOutput();
+  ui.printMsg(F("Saving to "));
+  ui.printMsg(outputFilePath);
+  ui.printlnMsg(F("..."));
+  ui.flushOutput();
 }
 
 String getNextOutputPathWithNumberedFolder(const String &console, const String &fileType, const String &romName, const String &extension) {

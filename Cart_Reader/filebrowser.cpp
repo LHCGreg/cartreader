@@ -11,7 +11,7 @@ String fileBrowser(const __FlashStringHelper *browserTitle) {
   String folderPath = F("/");
   while (true) {
     SDFolderPagedAnswerSource answerSource(folderPath);
-    String fileChoice = ui->askQuestionWithPagedAnswers(browserTitle, answerSource);
+    String fileChoice = ui.askQuestionWithPagedAnswers(browserTitle, answerSource);
 
     // If user chose to go back, set folder to root
     if (fileChoice.length() == 0) {

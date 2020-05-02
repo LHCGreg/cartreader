@@ -70,7 +70,7 @@
 void aboutScreen() {
   String aboutMessage(F("Cartridge Reader\ngithub.com/sanni\n2019 Version "));
   aboutMessage.concat(ver);
-  ui->displayAbout(aboutMessage);
+  ui.displayAbout(aboutMessage);
 }
 
 // All included slots
@@ -93,7 +93,7 @@ void mainMenu() {
       item_Reset,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Cartridge Reader"), menu, ARRAY_LENGTH(menu), item_Addons);
 
     if (answer == item_Addons) {
@@ -138,7 +138,7 @@ void addonsMenu() {
       item_Back,
     };
 
-    const __FlashStringHelper *answer = ui->askMultipleChoiceQuestion(
+    const __FlashStringHelper *answer = ui.askMultipleChoiceQuestion(
       F("Choose Adapter"), menu, ARRAY_LENGTH(menu), item_NES);
 
     if (answer == item_NES) {
@@ -173,7 +173,7 @@ void setup() {
   //PORTD |= (1 << 7);
   PORTG |= (1 << 2);
 
-  ui->initialize();
+  ui.initialize();
 
   initializeSD(sdChipSelectPin, sdSpeed);
 
