@@ -67,7 +67,7 @@ SafeSDFile SafeSDFile::openForReading(const String &path) {
 
 SafeSDFile SafeSDFile::openForCreating(const String &path) {
   String containingDir = pathGetDir(path);
-  if (containingDir.length() > 0 && containingDir != "/") {
+  if (containingDir.length() > 0 && containingDir != "/" && !fileExists(path)) {
     mkdir(containingDir, true);
   }
   return SafeSDFile(sd, path, O_RDWR | O_CREAT | O_EXCL);
@@ -238,7 +238,7 @@ void copyFile(SafeSDFile &sourceFile, SafeSDFile &destFile, byte *buffer, size_t
 void mkdir(const char *path, bool createParentDirectories) {
   bool success = sd.mkdir(path, createParentDirectories);
   if (!success) {
-    String errorMessage = F("ERROR CREATING ");
+    String errorMessage = F("ERROR CREATING DIR ");
     errorMessage.concat(path);
     ui.printErrorAndAbort(errorMessage, true);
   }
@@ -246,6 +246,27 @@ void mkdir(const char *path, bool createParentDirectories) {
 
 void mkdir(const String &path, bool createParentDirectories) {
   mkdir(path.c_str(), createParentDirectories);
+}
+
+void chdirToRoot() {
+  bool success = sd.chdir();
+  if (!success) {
+    ui.printErrorAndAbort(F("CHDIR TO ROOT FAILED\nSD ERROR"), true);
+  }
+}
+
+void chdir(const char *path) {
+  bool success = sd.chdir(path);
+  if (!success) {
+    String errorMessage = F("CHDIR ");
+    errorMessage.concat(path);
+    errorMessage.concat(F(" FAILED\nSD ERROR"));
+    ui.printErrorAndAbort(errorMessage, true);
+  }
+}
+
+void chdir(const String &path) {
+  chdir(path.c_str());
 }
 
 bool fileExists(const char *path) {

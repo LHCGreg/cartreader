@@ -48,6 +48,7 @@ class SerialUserInterface : public UserInterface {
   private:
   static const unsigned long N64_UPDATE_FREQUENCY_MILLIS = 500;
   unsigned long m_lastN64UpdateMillis = 0;
+  uint8_t m_lastN64BenchmarkPromptDisplayed = 99;
 
   byte readByte();
   String readCommand();

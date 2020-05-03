@@ -637,7 +637,7 @@ void setMapper() {
 
   String prompt;
   if (ui.supportsLargeMessages()) {
-    prompt = String(F("SUPPORTED MAPPERS:"));
+    prompt = String(F("SUPPORTED MAPPERS:\r\n"));
     for (byte i = 0; i < mapcount; i++) {
       uint16_t index = i * fieldsPerMapper;
       byte mapselect = pgm_read_byte(mapsize + index);

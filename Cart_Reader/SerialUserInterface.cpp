@@ -104,17 +104,117 @@ void SerialUserInterface::updateN64SkippingTest(int8_t prevStickX, int8_t stickX
 }
 
 void SerialUserInterface::printN64BenchmarkPrompt(uint8_t testNumber) {
-  // TODO
+  if (m_lastN64BenchmarkPromptDisplayed == testNumber) {
+    return;
+  }
+
+  switch (testNumber) {
+    case 1:
+      Serial.println(F("Benchmark (Quit with Z)"));
+      Serial.println(F("Hold Stick Up then press A"));
+      break;
+    case 2:
+      Serial.println(F("Up-Right"));
+      break;
+    case 3:
+      Serial.println(F("Right"));
+      break;
+    case 4:
+      Serial.println(F("Down-Right"));
+      break;
+    case 5:
+      Serial.println(F("Down"));
+      break;
+    case 6:
+      Serial.println(F("Down-Left"));
+      break;
+    case 7:
+      Serial.println(F("Left"));
+      break;
+    case 8:
+      Serial.println(F("Up-Left"));
+      break;
+
+      m_lastN64BenchmarkPromptDisplayed = testNumber;
+  }
 }
 
 void SerialUserInterface::printN64BenchmarkResults(const String &anastick, int8_t upX, int8_t upY, int8_t upRightX, int8_t upRightY,
                               int8_t rightX, int8_t rightY, int8_t downRightX, int8_t downRightY,
                               int8_t downX, int8_t downY, int8_t downLeftX, int8_t downLeftY,
                               int8_t leftX, int8_t leftY, int8_t upLeftX, int8_t upLeftY) {
-  // TODO
+  uint8_t promptNumber;
+  if (anastick == F("YOURS")) {
+    promptNumber = 20;
+  }
+  else {
+    promptNumber = 21;
+  }
+
+  if (promptNumber == m_lastN64BenchmarkPromptDisplayed) {
+    return;
+  }
+
+  m_lastN64BenchmarkPromptDisplayed = promptNumber;
+
+  Serial.println();
+  Serial.println();
+  Serial.println(anastick);
+
+  Serial.print(F("Up: ("));
+  Serial.print(upX);
+  Serial.print(F(", "));
+  Serial.print(upY);
+  Serial.println(F(")"));
+
+  Serial.print(F("Up-Right: ("));
+  Serial.print(upRightX);
+  Serial.print(F(", "));
+  Serial.print(upRightY);
+  Serial.println(F(")"));
+
+  Serial.print(F("Right: ("));
+  Serial.print(rightX);
+  Serial.print(F(", "));
+  Serial.print(rightY);
+  Serial.println(F(")"));
+
+  Serial.print(F("Down-Right: ("));
+  Serial.print(downRightX);
+  Serial.print(F(", "));
+  Serial.print(downRightY);
+  Serial.println(F(")"));
+
+  Serial.print(F("Down: ("));
+  Serial.print(downX);
+  Serial.print(F(", "));
+  Serial.print(downY);
+  Serial.println(F(")"));
+
+  Serial.print(F("Down-Left: ("));
+  Serial.print(downLeftX);
+  Serial.print(F(", "));
+  Serial.print(downLeftY);
+  Serial.println(F(")"));
+
+  Serial.print(F("Left: ("));
+  Serial.print(leftX);
+  Serial.print(F(", "));
+  Serial.print(leftY);
+  Serial.println(F(")"));
+
+  Serial.print(F("Up-Left: ("));
+  Serial.print(upLeftX);
+  Serial.print(F(", "));
+  Serial.print(upLeftY);
+  Serial.println(F(")"));
+
+  Serial.println();
+  Serial.println(F("(Quit with Z)"));
+  Serial.println();
 }
 
-  uint32_t SerialUserInterface::readNumber(uint8_t numDigits, uint32_t defaultValue, uint32_t maxValue, const String &prompt, const __FlashStringHelper *outOfRangeMessage) {
+uint32_t SerialUserInterface::readNumber(uint8_t numDigits, uint32_t defaultValue, uint32_t maxValue, const String &prompt, const __FlashStringHelper *outOfRangeMessage) {
   while (true) {
     Serial.println(prompt);
     String numberString = readCommand();

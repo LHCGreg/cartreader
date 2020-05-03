@@ -177,6 +177,17 @@ void setup() {
 
   initializeSD(sdChipSelectPin, sdSpeed);
 
+  // ui.printlnMsg("Creating dir 1023");
+  // ui.flushOutput();
+  // //mkdir("/NES/CART/665", false);
+  // chdir("NES/CART");
+  mkdir("1023", true);
+
+  // ui.printlnMsg("Creating dir again");
+  // ui.flushOutput();
+  // mkdir("1023", true);
+  // //mkdir("/NES/CART/665", true);
+
   startMenu();
 }
 

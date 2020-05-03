@@ -7,7 +7,7 @@
 
 // Comment out to change to Serial Output
 // be sure to change the Arduino Serial Monitor to no line ending
-#define enable_OLED
+// #define enable_OLED
 
 // Skip OLED start-up animation
 //#define fast_start
